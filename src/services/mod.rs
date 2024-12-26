@@ -1,2 +1,2 @@
-pub mod instagram;
 pub mod downloader;
+pub mod instagram;
