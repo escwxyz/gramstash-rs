@@ -44,6 +44,7 @@ impl InstagramService {
 
     pub async fn get_media_info(&self, url: &str) -> Result<MediaInfo, BotError> {
         // Parse and validate the URL
+        // TODO:
         let parsed_url = Url::parse(url).map_err(|_| BotError::InvalidUrl("Invalid Instagram URL".into()))?;
 
         // Extract post ID from URL
@@ -217,8 +218,10 @@ impl InstagramService {
             .ok_or_else(|| BotError::InvalidUrl("No path segments found".into()))?
             .collect();
 
+        info!("Path segments: {:?}", path_segments);
+
         match path_segments.as_slice() {
-            [_, "p", post_id] | [_, "reel", post_id] => Ok(post_id.to_string()),
+            ["stories", _, post_id] | ["reel", post_id] | ["p", post_id] => Ok(post_id.to_string()),
             _ => Err(BotError::InvalidUrl("Invalid Instagram post URL format".into())),
         }
     }

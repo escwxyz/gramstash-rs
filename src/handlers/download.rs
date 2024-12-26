@@ -5,10 +5,12 @@ use teloxide::prelude::*;
 use teloxide::types::InputFile;
 
 pub async fn handle(bot: Bot, msg: Message, url: String, downloader: &DownloaderService) -> ResponseResult<()> {
-    // Send processing message
+
+    info!("Downloading media from {}", url);
+
     let processing_msg = bot.send_message(msg.chat.id, "⏳ Processing your request...").await?;
 
-    // Validate URL
+    info!("Validating URL...");
     if !url.contains("instagram.com") {
         bot.edit_message_text(
             msg.chat.id,
@@ -19,16 +21,18 @@ pub async fn handle(bot: Bot, msg: Message, url: String, downloader: &Downloader
         return Ok(());
     }
 
-    // Initialize Instagram service
+    info!("Initializing Instagram service...");
     let instagram_service = InstagramService::new();
 
-    // Process the download
+    info!("Processing the download...");
     match process_download(&bot, &msg, &instagram_service, &downloader, &url).await {
         Ok(_) => {
+            info!("Download completed!");
             bot.edit_message_text(msg.chat.id, processing_msg.id, "✅ Download completed!")
                 .await?;
         }
         Err(e) => {
+            info!("Error processing download: {}", e);
             let error_message = format!("❌ Error: {}", e);
             bot.edit_message_text(msg.chat.id, processing_msg.id, error_message)
                 .await?;
@@ -45,10 +49,10 @@ async fn process_download(
     downloader: &DownloaderService,
     url: &str,
 ) -> Result<(), BotError> {
-    // Extract media info
+    info!("Extracting media info...");
     let media_info = instagram_service.get_media_info(url).await?;
 
-    // Send appropriate message based on media type
+    info!("Sending appropriate message based on media type...");
     match media_info.media_type {
         MediaType::Image => {
             let file_path = downloader.download_media(&media_info.url, msg.chat.id.0).await?;
@@ -56,8 +60,9 @@ async fn process_download(
             bot.send_photo(msg.chat.id, InputFile::file(file_path)).await?;
         }
         MediaType::Video => {
-            // Send a message if video is large
+            info!("Checking if video is large...");
             if media_info.file_size > 50_000_000 {
+                info!("Video is large, sending download link...");
                 bot.send_message(
                     msg.chat.id,
                     "⚠️ This video is larger than 50MB. Sending download link instead.",
@@ -70,7 +75,7 @@ async fn process_download(
             bot.send_video(msg.chat.id, InputFile::file(file_path)).await?;
         }
         MediaType::Carousel => {
-            // Handle multiple media items
+            info!("Handling multiple media items...");
             for item in media_info.carousel_items {
                 match item.media_type {
                     MediaType::Image => {
