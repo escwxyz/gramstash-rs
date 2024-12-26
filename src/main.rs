@@ -21,7 +21,11 @@ mod utils;
 async fn shuttle_main(
     #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
 ) -> Result<BotService, shuttle_runtime::Error> {
-    pretty_env_logger::init();
+  // Initialize logger only if it hasn't been initialized yet
+    if std::env::var_os("RUST_LOG").is_none() {
+        std::env::set_var("RUST_LOG", "info");
+    }
+    let _ = pretty_env_logger::try_init_timed();
 
     info!("Starting bot...");
 
@@ -64,6 +68,8 @@ async fn shuttle_main(
     // Create bot instance
     info!("Creating bot instance...");
     let bot = Bot::with_client(telegram_token, client);
+
+    info!("Creating downloader service with redis url: {}", redis_url);
 
     let downloader = DownloaderService::new(PathBuf::from("downloads"), &redis_url).await?;
 
