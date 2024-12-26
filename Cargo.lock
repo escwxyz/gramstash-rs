@@ -913,7 +913,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "instagram-telegram-bot"
+name = "instasnaper-bot"
 version = "0.1.0"
 dependencies = [
  "anyhow",

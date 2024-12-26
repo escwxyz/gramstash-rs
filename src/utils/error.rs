@@ -1,5 +1,4 @@
 use teloxide::RequestError;
-// use teloxide::serde_multipart::error::Error as MultipartError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum BotError {
