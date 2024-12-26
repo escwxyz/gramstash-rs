@@ -1,9 +1,9 @@
+use crate::utils::error::BotError;
 use anyhow::Result;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use url::Url;
-use crate::utils::error::BotError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MediaType {
@@ -44,27 +44,28 @@ impl InstagramService {
 
     pub async fn get_media_info(&self, url: &str) -> Result<MediaInfo, BotError> {
         // Parse and validate the URL
-        let parsed_url = Url::parse(url)
-            .map_err(|_| BotError::InvalidUrl("Invalid Instagram URL".into()))?;
-        
+        let parsed_url = Url::parse(url).map_err(|_| BotError::InvalidUrl("Invalid Instagram URL".into()))?;
+
         // Extract post ID from URL
         let post_id = self.extract_post_id(&parsed_url)?;
-        
+
         // Get the media info using Instagram's API
         let media_info = self.fetch_media_info(&post_id).await?;
-        
+
         Ok(media_info)
     }
 
     async fn fetch_media_info(&self, post_id: &str) -> Result<MediaInfo, BotError> {
         // Instagram GraphQL API endpoint
+        // TODO: need to test this
         let api_url = format!(
             "https://www.instagram.com/graphql/query/?query_hash={}&variables={}",
             "2c4c2e343a8f64c625ba02b2aa12c7f8",
             format!("{{\"shortcode\":\"{}\"}}", post_id)
         );
 
-        let response = self.client
+        let response = self
+            .client
             .get(&api_url)
             .send()
             .await
@@ -77,10 +78,7 @@ impl InstagramService {
             )));
         }
 
-        let data: serde_json::Value = response
-            .json()
-            .await
-            .map_err(|e| BotError::ParseError(e.to_string()))?;
+        let data: serde_json::Value = response.json().await.map_err(|e| BotError::ParseError(e.to_string()))?;
 
         self.parse_media_response(data)
     }
@@ -100,7 +98,10 @@ impl InstagramService {
             "GraphImage" => self.parse_image(media),
             "GraphVideo" => self.parse_video(media),
             "GraphSidecar" => self.parse_carousel(media),
-            _ => Err(BotError::UnsupportedMedia(format!("Unsupported media type: {}", typename))),
+            _ => Err(BotError::UnsupportedMedia(format!(
+                "Unsupported media type: {}",
+                typename
+            ))),
         }
     }
 
@@ -152,7 +153,9 @@ impl InstagramService {
 
         let mut carousel_items = Vec::new();
         for edge in edges {
-            let node = edge.get("node").ok_or_else(|| BotError::ParseError("Missing node".into()))?;
+            let node = edge
+                .get("node")
+                .ok_or_else(|| BotError::ParseError("Missing node".into()))?;
             let is_video = node.get("is_video").and_then(|v| v.as_bool()).unwrap_or(false);
 
             let item = if is_video {
@@ -209,7 +212,8 @@ impl InstagramService {
     }
 
     fn extract_post_id(&self, url: &Url) -> Result<String, BotError> {
-        let path_segments: Vec<_> = url.path_segments()
+        let path_segments: Vec<_> = url
+            .path_segments()
             .ok_or_else(|| BotError::InvalidUrl("No path segments found".into()))?
             .collect();
 

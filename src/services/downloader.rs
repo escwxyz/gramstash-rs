@@ -1,14 +1,17 @@
 // TODO: implement this
 
-use std::path::{Path, PathBuf};
+use anyhow::Result;
+use redis::AsyncCommands;
+use reqwest::Client;
+use sha2::{Digest, Sha256};
+use std::path::PathBuf;
+use std::time::Duration;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use reqwest::Client;
-use std::time::Duration;
-use redis::{AsyncCommands, RedisResult};
-use sha2::{Sha256, Digest};
-use anyhow::Result;
 
+use crate::utils::error::BotError;
+
+#[derive(Clone)]
 pub struct DownloaderService {
     client: Client,
     redis: redis::Client,
@@ -16,17 +19,61 @@ pub struct DownloaderService {
     rate_limiter: RateLimiter,
 }
 
+#[derive(Clone)]
 struct RateLimiter {
     redis: redis::Client,
 }
 
+impl RateLimiter {
+    pub fn new(redis_url: &str) -> Result<Self> {
+        let redis = redis::Client::open(redis_url)?;
+        Ok(Self { redis })
+    }
+
+    pub async fn check_limit(&self, chat_id: i64) -> Result<(), BotError> {
+        let mut conn = self
+            .redis
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| BotError::NetworkError(format!("Redis connection error: {}", e)))?;
+
+        let key = format!("rate_limit:{}:{}", chat_id, chrono::Utc::now().date_naive());
+
+        let count: Option<i32> = conn
+            .get(&key)
+            .await
+            .map_err(|e| BotError::NetworkError(format!("Redis error: {}", e)))?;
+
+        if count.unwrap_or(0) >= 1 {
+            return Err(BotError::ApiError(
+                "Daily download limit reached. Try again tomorrow!".into(),
+            ));
+        }
+
+        // Set with 24-hour expiry
+        let _: () = redis::pipe()
+            .atomic()
+            .incr(&key, 1)
+            .expire(&key, 24 * 3600)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| BotError::NetworkError(format!("Redis error: {}", e)))?;
+
+        Ok(())
+    }
+}
+
 impl DownloaderService {
-    pub fn new(storage_path: PathBuf, redis_url: &str) -> Result<Self> {
-        let client = Client::builder()
-            .timeout(Duration::from_secs(30))
-            .build()?;
+    pub async fn new(storage_path: PathBuf, redis_url: &str) -> Result<Self> {
+        let client = Client::builder().timeout(Duration::from_secs(30)).build()?;
+
+        info!("Initializing Redis client...");
 
         let redis = redis::Client::open(redis_url)?;
+
+        info!("Redis client initialized");
+        // Create storage directory if it doesn't exist
+        tokio::fs::create_dir_all(&storage_path).await?;
 
         Ok(Self {
             client,
@@ -36,116 +83,80 @@ impl DownloaderService {
         })
     }
 
-    pub async fn download_media(&self, url: &str, chat_id: i64) -> Result<PathBuf> {
-        // Check rate limit
-        // TODO: implement this
-        // self.rate_limiter.check_limit(chat_id).await?;
+    pub async fn download_media(&self, url: &str, chat_id: i64) -> Result<PathBuf, BotError> {
+        // Check rate limit first
+        self.rate_limiter.check_limit(chat_id).await?;
 
-        // Generate unique filename from URL
-        let file_hash = self.generate_file_hash(url);
-        let file_path = self.storage_path.join(&file_hash);
+        // Generate a unique filename based on URL and timestamp
+        // TODO: test it
+        let file_hash = {
+            let mut hasher = Sha256::new();
+            hasher.update(url.as_bytes());
+            hasher.update(chrono::Utc::now().timestamp().to_string().as_bytes());
+            format!("{:x}", hasher.finalize())
+        };
 
-        // Check if file exists in cache
-        if file_path.exists() {
-            return Ok(file_path);
+        // Check if we already have this file cached
+        let cache_key = format!("media_cache:{}", file_hash);
+        let mut redis_conn = self
+            .redis
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| BotError::NetworkError(format!("Redis error: {}", e)))?;
+
+        if let Ok(cached_path) = redis_conn.get::<_, String>(&cache_key).await {
+            let cached_path = PathBuf::from(cached_path);
+            if cached_path.exists() {
+                return Ok(cached_path);
+            }
         }
 
-        // Download file
-        let response = self.client.get(url).send().await?;
-        let content = response.bytes().await?;
+        // If the file is not cached, download it
+        let response = self
+            .client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| BotError::NetworkError(format!("Failed to download: {}", e)))?;
 
-        // Create directory if it doesn't exist
-        fs::create_dir_all(&self.storage_path).await?;
+        // Get content type and extension
+        let content_type = response
+            .headers()
+            .get("content-type")
+            .and_then(|ct| ct.to_str().ok())
+            .unwrap_or("application/octet-stream");
 
-        // Save file
-        let mut file = fs::File::create(&file_path).await?;
-        file.write_all(&content).await?;
+        let extension = if content_type.contains("image") {
+            "jpg"
+        } else if content_type.contains("video") {
+            "mp4"
+        } else {
+            "bin"
+        };
 
-        // Store metadata in Redis
-        // TODO: implement this
-        // self.store_metadata(&file_hash, url, chat_id).await?;
+        // Create file path
+        let file_path = self.storage_path.join(format!("{}.{}", file_hash, extension));
+
+        // Download and save the file
+        let bytes = response
+            .bytes()
+            .await
+            .map_err(|e| BotError::NetworkError(format!("Failed to read response: {}", e)))?;
+
+        let mut file = fs::File::create(&file_path)
+            .await
+            .map_err(|e| BotError::NetworkError(format!("Failed to create file: {}", e)))?;
+
+        file.write_all(&bytes)
+            .await
+            .map_err(|e| BotError::NetworkError(format!("Failed to write file: {}", e)))?;
+
+        // Cache the file path in Redis (with 24-hour expiry)
+        let _: () = redis_conn
+            .set_ex(&cache_key, file_path.to_str().unwrap(), 24 * 3600)
+            .await
+            .map_err(|e| BotError::NetworkError(format!("Redis error: {}", e)))?;
 
         Ok(file_path)
     }
-
-    fn generate_file_hash(&self, url: &str) -> String {
-        let mut hasher = Sha256::new();
-        hasher.update(url.as_bytes());
-        format!("{:x}", hasher.finalize())
-    }
-
-    // TODO: implement this
-    // async fn store_metadata(&self, file_hash: &str, url: &str, chat_id: i64) -> RedisResult<()> {
-
-    //     let mut conn = self.redis.get_multiplexed_async_connection().await?;
-        
-    //     // Store URL -> hash mapping
-    //     conn.set_ex(
-    //         format!("url:{}", url),
-    //         file_hash,
-    //         24 * 3600, // 24 hours TTL
-    //     ).await?;
-
-    //     // Store download info
-    //     conn.hset(
-    //         format!("file:{}", file_hash),
-    //         &[
-    //             ("url", url),
-    //             ("chat_id", &chat_id.to_string()),
-    //             ("timestamp", &chrono::Utc::now().timestamp().to_string()),
-    //         ],
-    //     ).await?;
-
-    //     Ok(())
-    // }
-
-    // TODO: implement this
-
-    // pub async fn cleanup_old_files(&self, max_age_hours: u64) -> Result<()> {
-    //     let cutoff = chrono::Utc::now() - chrono::Duration::hours(max_age_hours as i64);
-        
-    //     let mut conn = self.redis.get_multiplexed_async_connection().await?;
-    //     let files: Vec<String> = conn.keys("file:*").await?;
-
-    //     for file_key in files {
-    //         let timestamp: i64 = conn.hget(&file_key, "timestamp").await?;
-    //         if timestamp < cutoff.timestamp() {
-    //             // Delete file and metadata
-    //             let file_hash = file_key.trim_start_matches("file:");
-    //             let file_path = self.storage_path.join(file_hash);
-                
-    //             if file_path.exists() {
-    //                 fs::remove_file(&file_path).await?;
-    //             }
-    //             conn.del(&file_key).await?;
-    //         }
-    //     }
-
-    //     Ok(())
-    // }
-}
-
-impl RateLimiter {
-    pub fn new(redis_url: &str) -> Result<Self> {
-        let redis = redis::Client::open(redis_url)?;
-        Ok(Self { redis })
-    }
-
-    // TODO: implement this
-    // async fn check_limit(&self, chat_id: i64) -> Result<()> {
-    //     let mut conn = self.redis.get_multiplexed_async_connection().await?;
-    //     let key = format!("rate:{}:{}", chat_id, chrono::Utc::now().date_naive());
-        
-    //     let count: Option<i32> = conn.get(&key).await?;
-    //     let count = count.unwrap_or(0);
-
-    //     if count >= 50 { // 50 downloads per day limit
-    //         anyhow::bail!("Rate limit exceeded. Try again tomorrow!");
-    //     }
-
-    //     conn.incr(&key, 1).await?;
-    //     conn.expire(&key, 24 * 3600).await?; // 24 hours TTL
-
-    //     Ok(())
-    // }
 }

@@ -1,4 +1,5 @@
 use teloxide::RequestError;
+// use teloxide::serde_multipart::error::Error as MultipartError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum BotError {
@@ -16,9 +17,23 @@ pub enum BotError {
     BotError(#[from] RequestError),
 }
 
-// Implement conversion from url::ParseError
 impl From<url::ParseError> for BotError {
     fn from(err: url::ParseError) -> Self {
         BotError::InvalidUrl(err.to_string())
+    }
+}
+
+impl From<redis::RedisError> for BotError {
+    fn from(err: redis::RedisError) -> Self {
+        BotError::NetworkError(format!("Redis error: {}", err))
+    }
+}
+
+impl From<BotError> for RequestError {
+    fn from(err: BotError) -> Self {
+        match err {
+            BotError::BotError(request_err) => request_err,
+            _ => RequestError::Api(teloxide::ApiError::Unknown(err.to_string())),
+        }
     }
 }
