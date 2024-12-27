@@ -4,6 +4,8 @@ use error::BotError;
 use tokio::fs;
 
 pub mod error;
+pub mod http;
+
 // Clean up old files (can be called periodically)
 pub async fn cleanup_old_files(storage_path: PathBuf, max_age_hours: u64) -> Result<(), BotError> {
     info!("Cleaning up old files...");

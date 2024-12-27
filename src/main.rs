@@ -1,10 +1,9 @@
 use bot::BotService;
 use config::Config;
-use reqwest::Proxy;
 use services::downloader::DownloaderService;
-use std::{net::TcpStream, path::PathBuf, sync::Arc, time::Duration};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 use teloxide::Bot;
-use utils::cleanup_old_files;
+use utils::{cleanup_old_files, http};
 
 extern crate pretty_env_logger;
 #[macro_use]
@@ -37,34 +36,7 @@ async fn shuttle_main(
         instagram_doc_id,
     } = Config::get(&secrets);
 
-    // TODO: remove this after testing, this is for debugging
-    #[cfg(debug_assertions)]
-    let client = {
-        info!("Debug mode, using proxy");
-        let proxy_url = "socks5://127.0.0.1:1080";
-        let proxy_addr = "127.0.0.1:1080";
-        match TcpStream::connect_timeout(&proxy_addr.parse().unwrap(), Duration::from_secs(5)) {
-            Ok(_) => info!("Successfully connected to proxy at {}", proxy_addr),
-            Err(e) => {
-                error!("Failed to connect to proxy at {}: {:?}", proxy_addr, e);
-                return Err(shuttle_runtime::Error::Custom(anyhow::anyhow!(
-                    "Failed to connect to proxy: {:?}",
-                    e
-                )));
-            }
-        };
-
-        let proxy = Proxy::all(proxy_url).expect("Failed to create proxy");
-
-        reqwest::Client::builder()
-            .proxy(proxy)
-            .timeout(Duration::from_secs(60))
-            .build()
-            .expect("Failed to build client")
-    };
-
-    #[cfg(not(debug_assertions))]
-    let client = reqwest::Client::new();
+    let client = http::create_default_client();
 
     // Create bot instance
     info!("Creating bot instance...");
@@ -74,7 +46,7 @@ async fn shuttle_main(
 
     let downloader = DownloaderService::new(
         PathBuf::from("downloads"),
-        &redis_url,
+        // &redis_url,
         instagram_api_endpoint,
         instagram_doc_id,
     )

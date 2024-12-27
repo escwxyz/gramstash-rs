@@ -98,7 +98,6 @@ impl InstagramService {
 
     // TODO
     fn parse_media_response(&self, data: serde_json::Value) -> Result<MediaInfo, BotError> {
-
         let media = data
             .get("data")
             .and_then(|d| d.get("xdt_shortcode_media"))
@@ -125,30 +124,29 @@ impl InstagramService {
     }
 
     fn parse_xdt_graph_sidecar(&self, media: &serde_json::Value) -> Result<MediaInfo, BotError> {
-       
         // Get display URL from the first image
         let display_url = media
             .get("display_url")
             .and_then(|u| u.as_str())
             .ok_or_else(|| BotError::ParseError("Missing display URL".into()))?
             .to_string();
-    
+
         // Get dimensions for file size estimation
         let width = media
             .get("dimensions")
             .and_then(|d| d.get("width"))
             .and_then(|w| w.as_u64())
             .unwrap_or(1080);
-    
+
         let height = media
             .get("dimensions")
             .and_then(|d| d.get("height"))
             .and_then(|h| h.as_u64())
             .unwrap_or(1080);
-    
+
         // Estimate file size based on dimensions
         let file_size = width * height * 4 + 1024; // Basic estimation: 4 bytes per pixel + overhead
-    
+
         // Create carousel items from display resources
         let carousel_items = media
             .get("display_resources")
@@ -161,19 +159,13 @@ impl InstagramService {
                     .and_then(|u| u.as_str())
                     .ok_or_else(|| BotError::ParseError("Missing carousel item URL".into()))?
                     .to_string();
-    
-                let width = item
-                    .get("config_width")
-                    .and_then(|w| w.as_u64())
-                    .unwrap_or(1080);
-    
-                let height = item
-                    .get("config_height")
-                    .and_then(|h| h.as_u64())
-                    .unwrap_or(1080);
-    
+
+                let width = item.get("config_width").and_then(|w| w.as_u64()).unwrap_or(1080);
+
+                let height = item.get("config_height").and_then(|h| h.as_u64()).unwrap_or(1080);
+
                 let item_file_size = width * height * 4 + 1024;
-    
+
                 Ok(CarouselItem {
                     url,
                     media_type: MediaType::Image, // XDTGraphSidecar items are typically images
@@ -181,7 +173,7 @@ impl InstagramService {
                 })
             })
             .collect::<Result<Vec<CarouselItem>, BotError>>()?;
-    
+
         Ok(MediaInfo {
             url: display_url,
             media_type: MediaType::Carousel,
