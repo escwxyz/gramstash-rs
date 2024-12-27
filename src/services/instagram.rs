@@ -67,8 +67,6 @@ impl InstagramService {
             }
         });
 
-        info!("Making request to: {} with body: {:?}", api_url, body);
-
         let response = self
             .client
             .post(&api_url)
@@ -88,9 +86,6 @@ impl InstagramService {
             )));
         }
 
-        info!("Response status: {}", response.status());
-
-        // Let reqwest handle decompression automatically
         let data: serde_json::Value = response.json().await.map_err(|e| {
             error!("JSON parse error: {:?}", e);
             BotError::ParseError(e.to_string())
@@ -101,27 +96,98 @@ impl InstagramService {
         self.parse_media_response(data)
     }
 
-    // TODO: test
+    // TODO
     fn parse_media_response(&self, data: serde_json::Value) -> Result<MediaInfo, BotError> {
+
         let media = data
             .get("data")
-            .and_then(|d| d.get("shortcode_media"))
+            .and_then(|d| d.get("xdt_shortcode_media"))
             .ok_or_else(|| BotError::ParseError("Invalid response structure".into()))?;
 
+        info!("Media: {:?}", media);
         let typename = media
             .get("__typename")
             .and_then(|t| t.as_str())
             .ok_or_else(|| BotError::ParseError("Missing typename".into()))?;
 
+        info!("Typename: {:?}", typename);
+
         match typename {
             "GraphImage" => self.parse_image(media),
             "GraphVideo" => self.parse_video(media),
             "GraphSidecar" => self.parse_carousel(media),
+            "XDTGraphSidecar" => self.parse_xdt_graph_sidecar(media),
             _ => Err(BotError::UnsupportedMedia(format!(
                 "Unsupported media type: {}",
                 typename
             ))),
         }
+    }
+
+    fn parse_xdt_graph_sidecar(&self, media: &serde_json::Value) -> Result<MediaInfo, BotError> {
+       
+        // Get display URL from the first image
+        let display_url = media
+            .get("display_url")
+            .and_then(|u| u.as_str())
+            .ok_or_else(|| BotError::ParseError("Missing display URL".into()))?
+            .to_string();
+    
+        // Get dimensions for file size estimation
+        let width = media
+            .get("dimensions")
+            .and_then(|d| d.get("width"))
+            .and_then(|w| w.as_u64())
+            .unwrap_or(1080);
+    
+        let height = media
+            .get("dimensions")
+            .and_then(|d| d.get("height"))
+            .and_then(|h| h.as_u64())
+            .unwrap_or(1080);
+    
+        // Estimate file size based on dimensions
+        let file_size = width * height * 4 + 1024; // Basic estimation: 4 bytes per pixel + overhead
+    
+        // Create carousel items from display resources
+        let carousel_items = media
+            .get("display_resources")
+            .and_then(|r| r.as_array())
+            .ok_or_else(|| BotError::ParseError("Missing display resources".into()))?
+            .iter()
+            .map(|item| {
+                let url = item
+                    .get("src")
+                    .and_then(|u| u.as_str())
+                    .ok_or_else(|| BotError::ParseError("Missing carousel item URL".into()))?
+                    .to_string();
+    
+                let width = item
+                    .get("config_width")
+                    .and_then(|w| w.as_u64())
+                    .unwrap_or(1080);
+    
+                let height = item
+                    .get("config_height")
+                    .and_then(|h| h.as_u64())
+                    .unwrap_or(1080);
+    
+                let item_file_size = width * height * 4 + 1024;
+    
+                Ok(CarouselItem {
+                    url,
+                    media_type: MediaType::Image, // XDTGraphSidecar items are typically images
+                    file_size: item_file_size,
+                })
+            })
+            .collect::<Result<Vec<CarouselItem>, BotError>>()?;
+    
+        Ok(MediaInfo {
+            url: display_url,
+            media_type: MediaType::Carousel,
+            file_size,
+            carousel_items,
+        })
     }
 
     fn parse_image(&self, media: &serde_json::Value) -> Result<MediaInfo, BotError> {
