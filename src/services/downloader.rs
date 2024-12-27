@@ -11,12 +11,15 @@ use tokio::io::AsyncWriteExt;
 
 use crate::utils::error::BotError;
 
+use super::instagram::InstagramService;
+
 #[derive(Clone)]
 pub struct DownloaderService {
     client: Client,
     redis: redis::Client,
     storage_path: PathBuf,
     rate_limiter: RateLimiter,
+    pub instagram_service: InstagramService,
 }
 
 #[derive(Clone)]
@@ -64,7 +67,12 @@ impl RateLimiter {
 }
 
 impl DownloaderService {
-    pub async fn new(storage_path: PathBuf, redis_url: &str) -> Result<Self> {
+    pub async fn new(
+        storage_path: PathBuf,
+        redis_url: &str,
+        instagram_api_endpoint: String,
+        instagram_doc_id: String,
+    ) -> Result<Self> {
         let client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
         info!("Initializing Redis client...");
@@ -75,11 +83,39 @@ impl DownloaderService {
         // Create storage directory if it doesn't exist
         tokio::fs::create_dir_all(&storage_path).await?;
 
+        info!("Initializing Instagram service...");
+
+        // Configure Instagram client with proxy in debug mode
+        #[cfg(debug_assertions)]
+        let instagram_client = {
+            info!("Debug mode: configuring Instagram client with proxy");
+            let proxy_url = "socks5://127.0.0.1:1080";
+            Client::builder()
+                .proxy(reqwest::Proxy::all(proxy_url).expect("Failed to create proxy"))
+                .timeout(Duration::from_secs(60))
+                .connect_timeout(Duration::from_secs(30))
+                .pool_idle_timeout(Duration::from_secs(90))
+                .tcp_keepalive(Duration::from_secs(60))
+                .build()
+                .expect("Failed to build Instagram client with proxy")
+        };
+
+        // Use regular client in release mode
+        #[cfg(not(debug_assertions))]
+        let instagram_client = Client::builder()
+            .timeout(Duration::from_secs(30))
+            .build()
+            .expect("Failed to build Instagram client");
+
+        let instagram_service =
+            InstagramService::new(instagram_client.clone(), instagram_api_endpoint, instagram_doc_id);
+
         Ok(Self {
             client,
             redis,
             storage_path,
             rate_limiter: RateLimiter::new(redis_url)?,
+            instagram_service,
         })
     }
 

@@ -1,8 +1,7 @@
 use crate::utils::error::BotError;
 use anyhow::Result;
-use reqwest::Client;
+use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,50 +26,60 @@ pub struct CarouselItem {
     pub file_size: u64,
 }
 
+#[derive(Clone)]
 pub struct InstagramService {
     client: Client,
+    api_endpoint: String,
+    doc_id: String,
 }
 
 impl InstagramService {
-    pub fn new() -> Self {
-        let client = Client::builder()
-            .timeout(Duration::from_secs(30))
-            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-            .build()
-            .expect("Failed to create HTTP client");
-
-        Self { client }
+    pub fn new(client: Client, api_endpoint: String, doc_id: String) -> Self {
+        Self {
+            client,
+            api_endpoint,
+            doc_id,
+        }
     }
 
     pub async fn get_media_info(&self, url: &str) -> Result<MediaInfo, BotError> {
-        // Parse and validate the URL
-        // TODO:
+        info!("Parsing URL: {}", url);
         let parsed_url = Url::parse(url).map_err(|_| BotError::InvalidUrl("Invalid Instagram URL".into()))?;
 
-        // Extract post ID from URL
-        let post_id = self.extract_post_id(&parsed_url)?;
+        info!("Extracting shortcode from URL...");
+        let shortcode = self.extract_shortcode(&parsed_url)?;
 
-        // Get the media info using Instagram's API
-        let media_info = self.fetch_media_info(&post_id).await?;
+        info!("Shortcode: {}", shortcode);
+
+        info!("Fetching media info from Instagram's API...");
+        let media_info = self.fetch_media_info(&shortcode).await?;
 
         Ok(media_info)
     }
 
-    async fn fetch_media_info(&self, post_id: &str) -> Result<MediaInfo, BotError> {
-        // Instagram GraphQL API endpoint
-        // TODO: need to test this
-        let api_url = format!(
-            "https://www.instagram.com/graphql/query/?query_hash={}&variables={}",
-            "2c4c2e343a8f64c625ba02b2aa12c7f8",
-            format!("{{\"shortcode\":\"{}\"}}", post_id)
-        );
+    async fn fetch_media_info(&self, shortcode: &str) -> Result<MediaInfo, BotError> {
+        let api_url = self.api_endpoint.clone();
+
+        let body = serde_json::json!({
+            "doc_id": self.doc_id,
+            "variables": {
+                "shortcode": shortcode
+            }
+        });
+
+        info!("Making request to: {} with body: {:?}", api_url, body);
 
         let response = self
             .client
-            .get(&api_url)
+            .post(&api_url)
+            .header(header::ACCEPT, "*/*")
+            .header(header::CONTENT_TYPE, "application/json")
+            // .header(header::ACCEPT_ENCODING, "gzip, deflate, br")
+            .header(header::HOST, "www.instagram.com")
+            .json(&body)
             .send()
             .await
-            .map_err(|e| BotError::NetworkError(e.to_string()))?;
+            .map_err(|e| BotError::ApiError(e.to_string()))?;
 
         if !response.status().is_success() {
             return Err(BotError::ApiError(format!(
@@ -79,11 +88,20 @@ impl InstagramService {
             )));
         }
 
-        let data: serde_json::Value = response.json().await.map_err(|e| BotError::ParseError(e.to_string()))?;
+        info!("Response status: {}", response.status());
+
+        // Let reqwest handle decompression automatically
+        let data: serde_json::Value = response.json().await.map_err(|e| {
+            error!("JSON parse error: {:?}", e);
+            BotError::ParseError(e.to_string())
+        })?;
+
+        info!("Parsed JSON: {:?}", data);
 
         self.parse_media_response(data)
     }
 
+    // TODO: test
     fn parse_media_response(&self, data: serde_json::Value) -> Result<MediaInfo, BotError> {
         let media = data
             .get("data")
@@ -212,7 +230,7 @@ impl InstagramService {
         })
     }
 
-    fn extract_post_id(&self, url: &Url) -> Result<String, BotError> {
+    fn extract_shortcode(&self, url: &Url) -> Result<String, BotError> {
         let path_segments: Vec<_> = url
             .path_segments()
             .ok_or_else(|| BotError::InvalidUrl("No path segments found".into()))?
@@ -221,7 +239,7 @@ impl InstagramService {
         info!("Path segments: {:?}", path_segments);
 
         match path_segments.as_slice() {
-            ["stories", _, post_id] | ["reel", post_id] | ["p", post_id] => Ok(post_id.to_string()),
+            ["stories", _, shortcode] | ["reel", shortcode, _] | ["p", shortcode, _] => Ok(shortcode.to_string()),
             _ => Err(BotError::InvalidUrl("Invalid Instagram post URL format".into())),
         }
     }

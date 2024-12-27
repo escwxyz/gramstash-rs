@@ -21,7 +21,6 @@ mod utils;
 async fn shuttle_main(
     #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
 ) -> Result<BotService, shuttle_runtime::Error> {
-  // Initialize logger only if it hasn't been initialized yet
     if std::env::var_os("RUST_LOG").is_none() {
         std::env::set_var("RUST_LOG", "info");
     }
@@ -34,6 +33,8 @@ async fn shuttle_main(
     let Config {
         telegram_token,
         redis_url,
+        instagram_api_endpoint,
+        instagram_doc_id,
     } = Config::get(&secrets);
 
     // TODO: remove this after testing, this is for debugging
@@ -71,7 +72,13 @@ async fn shuttle_main(
 
     info!("Creating downloader service with redis url: {}", redis_url);
 
-    let downloader = DownloaderService::new(PathBuf::from("downloads"), &redis_url).await?;
+    let downloader = DownloaderService::new(
+        PathBuf::from("downloads"),
+        &redis_url,
+        instagram_api_endpoint,
+        instagram_doc_id,
+    )
+    .await?;
 
     info!("Bot instance created");
     let bot_service = BotService { bot, downloader };

@@ -1,7 +1,8 @@
 use teloxide::{prelude::*, types::ParseMode, utils::markdown::escape};
 
 pub async fn handle(bot: Bot, msg: Message) -> ResponseResult<()> {
-    let user_name = msg.from
+    let user_name = msg
+        .from
         .map(|user| escape(&user.first_name))
         .unwrap_or_else(|| escape("there"));
 

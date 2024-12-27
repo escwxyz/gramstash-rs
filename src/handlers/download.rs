@@ -1,11 +1,10 @@
 use crate::services::downloader::DownloaderService;
-use crate::services::instagram::{InstagramService, MediaType};
+use crate::services::instagram::MediaType;
 use crate::utils::error::BotError;
 use teloxide::prelude::*;
 use teloxide::types::InputFile;
 
 pub async fn handle(bot: Bot, msg: Message, url: String, downloader: &DownloaderService) -> ResponseResult<()> {
-
     info!("Downloading media from {}", url);
 
     let processing_msg = bot.send_message(msg.chat.id, "⏳ Processing your request...").await?;
@@ -21,11 +20,8 @@ pub async fn handle(bot: Bot, msg: Message, url: String, downloader: &Downloader
         return Ok(());
     }
 
-    info!("Initializing Instagram service...");
-    let instagram_service = InstagramService::new();
-
     info!("Processing the download...");
-    match process_download(&bot, &msg, &instagram_service, &downloader, &url).await {
+    match process_download(&bot, &msg, &downloader, &url).await {
         Ok(_) => {
             info!("Download completed!");
             bot.edit_message_text(msg.chat.id, processing_msg.id, "✅ Download completed!")
@@ -42,15 +38,9 @@ pub async fn handle(bot: Bot, msg: Message, url: String, downloader: &Downloader
     Ok(())
 }
 
-async fn process_download(
-    bot: &Bot,
-    msg: &Message,
-    instagram_service: &InstagramService,
-    downloader: &DownloaderService,
-    url: &str,
-) -> Result<(), BotError> {
+async fn process_download(bot: &Bot, msg: &Message, downloader: &DownloaderService, url: &str) -> Result<(), BotError> {
     info!("Extracting media info...");
-    let media_info = instagram_service.get_media_info(url).await?;
+    let media_info = downloader.instagram_service.get_media_info(url).await?;
 
     info!("Sending appropriate message based on media type...");
     match media_info.media_type {
