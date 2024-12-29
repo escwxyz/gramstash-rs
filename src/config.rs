@@ -23,5 +23,5 @@ pub struct InstagramConfig {
 #[derive(Clone, Debug)]
 pub struct RateLimitConfig {
     pub daily_limit: u32,
-    pub window_secs: i64, // typically 24 * 3600 for daily
+    pub window_secs: u64,
 }

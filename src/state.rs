@@ -68,7 +68,7 @@ impl AppState {
                 window_secs: secret_store
                     .get("RATE_LIMIT_WINDOW_SECS")
                     .ok_or_else(|| anyhow::anyhow!("Missing RATE_LIMIT_WINDOW_SECS"))?
-                    .parse::<i64>()
+                    .parse::<u64>()
                     .map_err(|_| anyhow::anyhow!("Invalid RATE_LIMIT_WINDOW_SECS"))?,
             },
         })

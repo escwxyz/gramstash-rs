@@ -1,13 +1,13 @@
 use anyhow::Result;
 use redis::AsyncCommands;
 use std::time::{SystemTime, UNIX_EPOCH};
-use teloxide::types::{ChatId, UserId};
+use teloxide::types::ChatId;
 
 use crate::state::AppState;
 
 pub struct RateLimiter {
     max_requests: u32,
-    window_seconds: i64,
+    window_seconds: u64,
 }
 
 impl RateLimiter {
@@ -19,24 +19,31 @@ impl RateLimiter {
         }
     }
 
-    // TODO: maybe chat_id alone is enough
-    fn generate_key(&self, user_id: UserId, chat_id: ChatId) -> String {
-        let current = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() / self.window_seconds as u64;
+    fn generate_key(&self, chat_id: ChatId) -> String {
+        let current_window = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() / self.window_seconds;
 
-        format!("rate_limit:{}:{}:{}", user_id.0, chat_id.0, current)
+        format!("rate_limit:{}:{}", chat_id.0, current_window)
     }
 
-    pub async fn check_rate_limit(&self, user_id: UserId, chat_id: ChatId) -> Result<bool> {
-        // TODO: allow to bypass rate limit for admins and premium users
-        let key = self.generate_key(user_id, chat_id);
-        let state = AppState::get();
-        let mut conn = state.redis.get_connection().await?;
+    pub async fn check_rate_limit(&self, chat_id: ChatId) -> Result<bool> {
+        // Block group chats
+        if chat_id.0 < 0 {
+            return Ok(false);
+        }
 
-        let counter = conn.incr::<_, u32, u32>(&key, 1).await?;
+        let key = self.generate_key(chat_id);
+        let mut conn = AppState::get().redis.get_connection().await?;
+
+        let counter: u32 = conn.incr::<_, u32, u32>(&key, 1).await?;
 
         if counter == 1 {
-            conn.expire::<_, i64>(&key, self.window_seconds).await?;
+            conn.expire::<_, i64>(&key, self.window_seconds as i64).await?;
         }
+
+        // TODO: Future enhancement - bypass for premium users
+        // if is_premium_user(chat_id).await? {
+        //     return Ok(true);
+        // }
 
         Ok(counter <= self.max_requests)
     }

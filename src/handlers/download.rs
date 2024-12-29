@@ -54,10 +54,7 @@ async fn process_download(
     rate_limiter: &RateLimiter,
 ) -> Result<()> {
     // Check rate limit
-    if !rate_limiter
-        .check_rate_limit(msg.from.as_ref().unwrap().id, msg.chat.id)
-        .await?
-    {
+    if !rate_limiter.check_rate_limit(msg.chat.id).await? {
         bot.send_message(msg.chat.id, "Daily download limit reached. Try again tomorrow!")
             .await?;
         return Ok(());
