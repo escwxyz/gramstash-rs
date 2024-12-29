@@ -1,10 +1,10 @@
-use crate::services::instagram::{InstagramService, MediaType};
+use crate::services::cache::CacheService;
+use crate::services::instagram::{InstagramService, MediaInfo, MediaType};
 use crate::services::ratelimiter::RateLimiter;
-use crate::utils::error::BotError;
-use anyhow::Result;
+use crate::utils::parse_url;
+use anyhow::{anyhow, Context, Result};
 use teloxide::prelude::*;
 use teloxide::types::InputFile;
-use url::Url;
 
 pub async fn handle(
     bot: Bot,
@@ -13,8 +13,6 @@ pub async fn handle(
     instagram_service: &InstagramService,
     rate_limiter: &RateLimiter,
 ) -> ResponseResult<()> {
-    info!("Downloading media from {}", url);
-
     let processing_msg = bot.send_message(msg.chat.id, "⏳ Processing your request...").await?;
 
     info!("Validating URL...");
@@ -29,11 +27,23 @@ pub async fn handle(
     }
 
     info!("Processing the download...");
-    match process_download(&bot, &msg, &url, &instagram_service, &rate_limiter).await {
-        Ok(_) => {
-            info!("Download completed!");
-            bot.edit_message_text(msg.chat.id, processing_msg.id, "✅ Download completed!")
+
+    match process_download(&bot, &msg, &url, instagram_service, rate_limiter).await {
+        Ok(status) => {
+            if status < 0 {
+                info!("Reached daily download limit");
+
+                bot.edit_message_text(
+                    msg.chat.id,
+                    processing_msg.id,
+                    "⚠️ Daily download limit reached. Try again tomorrow!",
+                )
                 .await?;
+            } else {
+                info!("Download completed!");
+                bot.edit_message_text(msg.chat.id, processing_msg.id, "✅ Download completed!")
+                    .await?;
+            }
         }
         Err(e) => {
             info!("Error processing download: {}", e);
@@ -52,26 +62,42 @@ async fn process_download(
     url: &str,
     instagram_service: &InstagramService,
     rate_limiter: &RateLimiter,
-) -> Result<()> {
+) -> Result<i32> {
     // Check rate limit
     if !rate_limiter.check_rate_limit(msg.chat.id).await? {
-        bot.send_message(msg.chat.id, "Daily download limit reached. Try again tomorrow!")
-            .await?;
-        return Ok(());
+        return Ok(-1);
     }
+    info!("Parsing URL...");
+    let parsed_url = parse_url(url)?;
+    info!("Extracting shortcode...");
+    let shortcode = instagram_service.extract_shortcode(&parsed_url)?;
+    info!("Checking cache...");
+    let cached_media_info = CacheService::get_media_info(&shortcode).await?;
 
-    // TODO: we need to check cache here before fetching from Instagram's API
+    info!("Cached media info: {:?}", cached_media_info);
 
-    info!("Extracting media info...");
-    let media_info = instagram_service.get_media_info(url).await?;
+    let media_info = match cached_media_info {
+        Some(media_info) => {
+            info!("Media info found in cache, sending media...");
+            media_info
+        }
+        None => {
+            info!("Media info not found in cache, fetching from Instagram...");
+            let media_info = instagram_service.get_media_info(&shortcode).await?;
+            CacheService::set_media_info(&shortcode, &media_info).await?;
+            media_info
+        }
+    };
 
-    info!("Sending appropriate message based on media type...");
+    send_media(bot, msg, &media_info).await?;
+    Ok(1)
+}
+
+async fn send_media(bot: &Bot, msg: &Message, media_info: &MediaInfo) -> Result<()> {
+    info!("Sending media...");
     match media_info.media_type {
         MediaType::Image => {
-            // downloader.process_media(&media_info, msg.chat.id.0).await?;
-            let parsed_url =
-                Url::parse(&media_info.url).map_err(|e| BotError::ParseError(format!("Invalid image URL: {}", e)))?;
-
+            let parsed_url = parse_url(&media_info.url)?;
             bot.send_photo(msg.chat.id, InputFile::url(parsed_url)).await?;
         }
         // MediaType::Video => {
@@ -112,7 +138,6 @@ async fn process_download(
         _ => {
             info!("Unsupported media type: {:?}", media_info.media_type);
         }
-    }
-
+    };
     Ok(())
 }

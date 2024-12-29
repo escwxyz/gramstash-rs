@@ -3,7 +3,7 @@ use once_cell::sync::OnceCell;
 use shuttle_runtime::SecretStore;
 
 use crate::{
-    config::{AppConfig, InstagramConfig, RateLimitConfig, RedisConfig, TelegramConfig},
+    config::{AppConfig, CacheConfig, InstagramConfig, RateLimitConfig, RedisConfig, TelegramConfig},
     utils::redis::RedisClient,
 };
 
@@ -70,6 +70,13 @@ impl AppState {
                     .ok_or_else(|| anyhow::anyhow!("Missing RATE_LIMIT_WINDOW_SECS"))?
                     .parse::<u64>()
                     .map_err(|_| anyhow::anyhow!("Invalid RATE_LIMIT_WINDOW_SECS"))?,
+            },
+            cache: CacheConfig {
+                expiry_secs: secret_store
+                    .get("CACHE_EXPIRY_SECS")
+                    .ok_or_else(|| anyhow::anyhow!("Missing CACHE_EXPIRY_SECS"))?
+                    .parse::<u64>()
+                    .map_err(|_| anyhow::anyhow!("Invalid CACHE_EXPIRY_SECS"))?,
             },
         })
     }

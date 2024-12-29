@@ -1,5 +1,5 @@
-use crate::utils::{error::BotError, http};
-use anyhow::Result;
+use crate::utils::http;
+use anyhow::{anyhow, Context, Result};
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -16,7 +16,7 @@ pub enum MediaType {
 pub struct MediaInfo {
     pub url: String,
     pub media_type: MediaType,
-    pub file_size: u64,
+    // pub file_size: u64,
     pub carousel_items: Vec<CarouselItem>,
 }
 
@@ -24,7 +24,7 @@ pub struct MediaInfo {
 pub struct CarouselItem {
     pub url: String,
     pub media_type: MediaType,
-    pub file_size: u64,
+    // pub file_size: u64,
 }
 
 #[derive(Clone)]
@@ -47,24 +47,11 @@ impl InstagramService {
         }
     }
 
-    pub async fn get_media_info(&self, url: &str) -> Result<MediaInfo, BotError> {
-        info!("Parsing URL: {}", url);
-        let parsed_url = Url::parse(url).map_err(|_| BotError::InvalidUrl("Invalid Instagram URL".into()))?;
-
-        info!("Extracting shortcode from URL...");
-        let shortcode = self.extract_shortcode(&parsed_url)?;
-
-        info!("Shortcode: {}", shortcode);
-
-        // TODO: we need to check cache here before fetching from Instagram's API
-
-        info!("Fetching media info from Instagram's API...");
-        let media_info = self.fetch_media_info(&shortcode).await?;
-
-        Ok(media_info)
+    pub async fn get_media_info(&self, shortcode: &str) -> Result<MediaInfo> {
+        Ok(self.fetch_media_info(&shortcode).await?)
     }
 
-    async fn fetch_media_info(&self, shortcode: &str) -> Result<MediaInfo, BotError> {
+    async fn fetch_media_info(&self, shortcode: &str) -> Result<MediaInfo> {
         let api_url = self.api_endpoint.clone();
 
         let body = serde_json::json!({
@@ -84,35 +71,29 @@ impl InstagramService {
             .json(&body)
             .send()
             .await
-            .map_err(|e| BotError::ApiError(e.to_string()))?;
+            .context("Failed to fetch from instagram API")?;
 
         if !response.status().is_success() {
-            return Err(BotError::ApiError(format!(
-                "Instagram API returned status: {}",
-                response.status()
-            )));
+            return Err(anyhow!("Instagram API returned status: {}", response.status()));
         }
 
-        let data: serde_json::Value = response.json().await.map_err(|e| {
-            error!("JSON parse error: {:?}", e);
-            BotError::ParseError(e.to_string())
-        })?;
+        let data: serde_json::Value = response.json().await.context("Failed to parse JSON")?;
 
         self.parse_media_response(data)
     }
 
     // TODO
-    fn parse_media_response(&self, data: serde_json::Value) -> Result<MediaInfo, BotError> {
+    fn parse_media_response(&self, data: serde_json::Value) -> Result<MediaInfo> {
         let media = data
             .get("data")
             .and_then(|d| d.get("xdt_shortcode_media"))
-            .ok_or_else(|| BotError::ParseError("Invalid response structure".into()))?;
+            .ok_or_else(|| anyhow!("Invalid response structure"))?;
 
         info!("Media: {:?}", media);
         let typename = media
             .get("__typename")
             .and_then(|t| t.as_str())
-            .ok_or_else(|| BotError::ParseError("Missing typename".into()))?;
+            .ok_or_else(|| anyhow!("Missing typename"))?;
 
         info!("Typename: {:?}", typename);
 
@@ -123,14 +104,11 @@ impl InstagramService {
             "XDTGraphSidecar" => self.parse_xdt_graph_sidecar(media),
             // TODO: support stories
             // TODO: support reels
-            _ => Err(BotError::UnsupportedMedia(format!(
-                "Unsupported media type: {}",
-                typename
-            ))),
+            _ => Err(anyhow!("Unspported media type: {}", typename)),
         }
     }
 
-    fn get_dimensions(&self, media: &serde_json::Value) -> Result<(u64, u64), BotError> {
+    fn get_dimensions(&self, media: &serde_json::Value) -> Result<(u64, u64)> {
         let width = media
             .get("dimensions")
             .and_then(|d| d.get("width"))
@@ -146,57 +124,57 @@ impl InstagramService {
         Ok((width, height))
     }
 
-    fn parse_xdt_graph_sidecar(&self, media: &serde_json::Value) -> Result<MediaInfo, BotError> {
+    fn parse_xdt_graph_sidecar(&self, media: &serde_json::Value) -> Result<MediaInfo> {
         // Get display URL from the first image
         let display_url = media
             .get("display_url")
             .and_then(|u| u.as_str())
-            .ok_or_else(|| BotError::ParseError("Missing display URL".into()))?
+            .ok_or_else(|| anyhow!("Missing display URL"))?
             .to_string();
 
         // Get dimensions for file size estimation
-        let (width, height) = self.get_dimensions(media)?;
+        // let (width, height) = self.get_dimensions(media)?;
 
         // Estimate file size based on dimensions
-        let file_size = width * height * 4 + 1024; // Basic estimation: 4 bytes per pixel + overhead
+        // let file_size = width * height * 4 + 1024; // Basic estimation: 4 bytes per pixel + overhead
 
         // Create carousel items from display resources
         let carousel_items = media
             .get("display_resources")
             .and_then(|r| r.as_array())
-            .ok_or_else(|| BotError::ParseError("Missing display resources".into()))?
+            .ok_or_else(|| anyhow!("Missing display resources"))?
             .iter()
             .map(|item| {
                 let url = item
                     .get("src")
                     .and_then(|u| u.as_str())
-                    .ok_or_else(|| BotError::ParseError("Missing carousel item URL".into()))?
+                    .ok_or_else(|| anyhow!("Missing carousel item URL"))?
                     .to_string();
 
-                let width = item.get("config_width").and_then(|w| w.as_u64()).unwrap_or(1080);
+                // let width = item.get("config_width").and_then(|w| w.as_u64()).unwrap_or(1080);
 
-                let height = item.get("config_height").and_then(|h| h.as_u64()).unwrap_or(1080);
+                // let height = item.get("config_height").and_then(|h| h.as_u64()).unwrap_or(1080);
 
-                let item_file_size = width * height * 4 + 1024;
+                // let item_file_size = width * height * 4 + 1024;
 
                 Ok(CarouselItem {
                     url,
                     media_type: MediaType::Image, // TODO: XDTGraphSidecar items are typically images
-                    file_size: item_file_size,
+                                                  // file_size: item_file_size,
                 })
             })
-            .collect::<Result<Vec<CarouselItem>, BotError>>()?;
+            .collect::<Result<Vec<CarouselItem>>>()?;
 
         Ok(MediaInfo {
             url: display_url,
             media_type: MediaType::Carousel,
-            file_size,
+            // file_size,
             carousel_items,
         })
     }
 
     // For single image post
-    fn parse_image(&self, media: &serde_json::Value) -> Result<MediaInfo, BotError> {
+    fn parse_image(&self, media: &serde_json::Value) -> Result<MediaInfo> {
         let (width, height) = self.get_dimensions(media)?;
 
         // Find the display resource that matches original dimensions
@@ -222,53 +200,51 @@ impl InstagramService {
             .to_string();
 
         if url.is_empty() {
-            return Err(BotError::ParseError("Missing image URL".into()));
+            return Err(anyhow!("Missing image URL"));
         }
 
         // Estimate file size based on dimensions
-        let file_size = width * height * 4 + 1024;
+        // let file_size = width * height * 4 + 1024;
 
         Ok(MediaInfo {
             url,
             media_type: MediaType::Image,
-            file_size,
+            // file_size,
             carousel_items: vec![],
         })
     }
 
-    fn parse_video(&self, media: &serde_json::Value) -> Result<MediaInfo, BotError> {
+    fn parse_video(&self, media: &serde_json::Value) -> Result<MediaInfo> {
         let url = media
             .get("video_url")
             .and_then(|u| u.as_str())
-            .ok_or_else(|| BotError::ParseError("Missing video URL".into()))?
+            .ok_or_else(|| anyhow!("Missing video URL"))?
             .to_string();
 
-        let file_size = media
-            .get("video_duration")
-            .and_then(|d| d.as_f64())
-            .map(|duration| (duration * 1_000_000.0) as u64) // Rough estimate: 1MB per second
-            .unwrap_or(0);
+        // let file_size = media
+        //     .get("video_duration")
+        //     .and_then(|d| d.as_f64())
+        //     .map(|duration| (duration * 1_000_000.0) as u64) // Rough estimate: 1MB per second
+        //     .unwrap_or(0);
 
         Ok(MediaInfo {
             url,
             media_type: MediaType::Video,
-            file_size,
+            // file_size,
             carousel_items: vec![],
         })
     }
 
-    fn parse_carousel(&self, media: &serde_json::Value) -> Result<MediaInfo, BotError> {
+    fn parse_carousel(&self, media: &serde_json::Value) -> Result<MediaInfo> {
         let edges = media
             .get("edge_sidecar_to_children")
             .and_then(|e| e.get("edges"))
             .and_then(|e| e.as_array())
-            .ok_or_else(|| BotError::ParseError("Missing carousel edges".into()))?;
+            .ok_or_else(|| anyhow!("Missing carousel edges"))?;
 
         let mut carousel_items = Vec::new();
         for edge in edges {
-            let node = edge
-                .get("node")
-                .ok_or_else(|| BotError::ParseError("Missing node".into()))?;
+            let node = edge.get("node").ok_or_else(|| anyhow!("Missing node"))?;
             let is_video = node.get("is_video").and_then(|v| v.as_bool()).unwrap_or(false);
 
             let item = if is_video {
@@ -283,75 +259,76 @@ impl InstagramService {
         Ok(MediaInfo {
             url: "".to_string(), // Carousel doesn't have a single URL
             media_type: MediaType::Carousel,
-            file_size: carousel_items.iter().map(|item| item.file_size).sum(),
+            // file_size: carousel_items.iter().map(|item| item.file_size).sum(),
             carousel_items,
         })
     }
 
-    fn parse_carousel_image(&self, node: &serde_json::Value) -> Result<CarouselItem, BotError> {
+    fn parse_carousel_image(&self, node: &serde_json::Value) -> Result<CarouselItem> {
         let url = node
             .get("display_url")
             .and_then(|u| u.as_str())
-            .ok_or_else(|| BotError::ParseError("Missing carousel image URL".into()))?
+            .ok_or_else(|| anyhow!("Missing carousel image URL"))?
             .to_string();
 
-        let estimated_size = self.estimate_file_size(node)?;
+        // let estimated_size = self.estimate_file_size(node)?;
 
         Ok(CarouselItem {
             url,
             media_type: MediaType::Image,
-            file_size: estimated_size,
+            // file_size: estimated_size,
         })
     }
 
-    fn parse_carousel_video(&self, node: &serde_json::Value) -> Result<CarouselItem, BotError> {
+    fn parse_carousel_video(&self, node: &serde_json::Value) -> Result<CarouselItem> {
         let url = node
             .get("video_url")
             .and_then(|u| u.as_str())
-            .ok_or_else(|| BotError::ParseError("Missing carousel video URL".into()))?
+            .ok_or_else(|| anyhow!("Missing carousel video URL"))?
             .to_string();
 
-        let file_size = node
-            .get("video_duration")
-            .and_then(|d| d.as_f64())
-            .map(|duration| (duration * 1_000_000.0) as u64)
-            .unwrap_or(0);
+        // let file_size = node
+        //     .get("video_duration")
+        //     .and_then(|d| d.as_f64())
+        //     .map(|duration| (duration * 1_000_000.0) as u64)
+        //     .unwrap_or(0);
 
         Ok(CarouselItem {
             url,
             media_type: MediaType::Video,
-            file_size,
+            // file_size,
         })
     }
 
-    fn extract_shortcode(&self, url: &Url) -> Result<String, BotError> {
+    pub fn extract_shortcode(&self, url: &Url) -> Result<String> {
         let path_segments: Vec<_> = url
             .path_segments()
-            .ok_or_else(|| BotError::InvalidUrl("No path segments found".into()))?
+            .ok_or_else(|| anyhow!("No path segments found"))?
             .collect();
 
         info!("Path segments: {:?}", path_segments);
 
         match path_segments.as_slice() {
+            // TODO: support more formats
             ["stories", _, shortcode] | ["reel", shortcode, _] | ["p", shortcode, _] => Ok(shortcode.to_string()),
-            _ => Err(BotError::InvalidUrl("Invalid Instagram post URL format".into())),
+            _ => Err(anyhow!("Invalid Instagram post URL format")),
         }
     }
 
-    fn estimate_file_size(&self, media: &serde_json::Value) -> Result<u64, BotError> {
-        let width = media
-            .get("dimensions")
-            .and_then(|d| d.get("width"))
-            .and_then(|w| w.as_u64())
-            .unwrap_or(1080);
+    // fn estimate_file_size(&self, media: &serde_json::Value) -> Result<u64> {
+    //     let width = media
+    //         .get("dimensions")
+    //         .and_then(|d| d.get("width"))
+    //         .and_then(|w| w.as_u64())
+    //         .unwrap_or(1080);
 
-        let height = media
-            .get("dimensions")
-            .and_then(|d| d.get("height"))
-            .and_then(|h| h.as_u64())
-            .unwrap_or(1080);
+    //     let height = media
+    //         .get("dimensions")
+    //         .and_then(|d| d.get("height"))
+    //         .and_then(|h| h.as_u64())
+    //         .unwrap_or(1080);
 
-        // Rough estimate: 4 bytes per pixel + overhead
-        Ok(width * height * 4 + 1024)
-    }
+    //     // Rough estimate: 4 bytes per pixel + overhead
+    //     Ok(width * height * 4 + 1024)
+    // }
 }

@@ -4,6 +4,7 @@ pub struct AppConfig {
     pub telegram: TelegramConfig,
     pub instagram: InstagramConfig,
     pub rate_limit: RateLimitConfig,
+    pub cache: CacheConfig,
 }
 
 #[derive(Clone, Debug)]
@@ -24,4 +25,9 @@ pub struct InstagramConfig {
 pub struct RateLimitConfig {
     pub daily_limit: u32,
     pub window_secs: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct CacheConfig {
+    pub expiry_secs: u64,
 }
