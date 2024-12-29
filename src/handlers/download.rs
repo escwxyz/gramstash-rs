@@ -2,7 +2,7 @@ use crate::services::cache::CacheService;
 use crate::services::instagram::{InstagramService, MediaInfo, MediaType};
 use crate::services::ratelimiter::RateLimiter;
 use crate::utils::parse_url;
-use anyhow::{anyhow, Context, Result};
+use anyhow::Result;
 use teloxide::prelude::*;
 use teloxide::types::InputFile;
 
@@ -112,7 +112,6 @@ async fn send_media(bot: &Bot, msg: &Message, media_info: &MediaInfo) -> Result<
         //         bot.send_message(msg.chat.id, &media_info.url).await?;
         //         return Ok(());
         //     }
-        //     let media_info = downloader.download_media(&media_info, msg.chat.id.0).await?;
         //     bot.send_video(msg.chat.id, InputFile::file(media_info.url)).await?;
         // }
         // MediaType::Carousel => {
@@ -120,12 +119,10 @@ async fn send_media(bot: &Bot, msg: &Message, media_info: &MediaInfo) -> Result<
         //     for item in media_info.carousel_items {
         //         match item.media_type {
         //             MediaType::Image => {
-        //                 let media_info = downloader.download_media(&item, msg.chat.id.0).await?;
         //                 bot.send_photo(msg.chat.id, InputFile::file(media_info.url)).await?;
         //             }
         //             MediaType::Video => {
         //                 if item.file_size <= 50_000_000 {
-        //                     let media_info = downloader.download_media(&item, msg.chat.id.0).await?;
         //                     bot.send_video(msg.chat.id, InputFile::file(media_info.url)).await?;
         //                 } else {
         //                     bot.send_message(msg.chat.id, &item.url).await?;

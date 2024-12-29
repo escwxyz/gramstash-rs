@@ -16,7 +16,6 @@ pub enum MediaType {
 pub struct MediaInfo {
     pub url: String,
     pub media_type: MediaType,
-    // pub file_size: u64,
     pub carousel_items: Vec<CarouselItem>,
 }
 
@@ -24,7 +23,6 @@ pub struct MediaInfo {
 pub struct CarouselItem {
     pub url: String,
     pub media_type: MediaType,
-    // pub file_size: u64,
 }
 
 #[derive(Clone)]
@@ -66,7 +64,6 @@ impl InstagramService {
             .post(&api_url)
             .header(header::ACCEPT, "*/*")
             .header(header::CONTENT_TYPE, "application/json")
-            // .header(header::ACCEPT_ENCODING, "gzip, deflate, br")
             .header(header::HOST, "www.instagram.com")
             .json(&body)
             .send()
@@ -100,8 +97,7 @@ impl InstagramService {
         match typename {
             "XDTGraphImage" => self.parse_image(media),
             "GraphVideo" => self.parse_video(media),
-            "GraphSidecar" => self.parse_carousel(media),
-            "XDTGraphSidecar" => self.parse_xdt_graph_sidecar(media),
+            "XDTGraphSidecar" => self.parse_carousel(media),
             // TODO: support stories
             // TODO: support reels
             _ => Err(anyhow!("Unspported media type: {}", typename)),
@@ -124,61 +120,22 @@ impl InstagramService {
         Ok((width, height))
     }
 
-    fn parse_xdt_graph_sidecar(&self, media: &serde_json::Value) -> Result<MediaInfo> {
-        // Get display URL from the first image
-        let display_url = media
-            .get("display_url")
-            .and_then(|u| u.as_str())
-            .ok_or_else(|| anyhow!("Missing display URL"))?
-            .to_string();
-
-        // Get dimensions for file size estimation
-        // let (width, height) = self.get_dimensions(media)?;
-
-        // Estimate file size based on dimensions
-        // let file_size = width * height * 4 + 1024; // Basic estimation: 4 bytes per pixel + overhead
-
-        // Create carousel items from display resources
-        let carousel_items = media
-            .get("display_resources")
-            .and_then(|r| r.as_array())
-            .ok_or_else(|| anyhow!("Missing display resources"))?
-            .iter()
-            .map(|item| {
-                let url = item
-                    .get("src")
-                    .and_then(|u| u.as_str())
-                    .ok_or_else(|| anyhow!("Missing carousel item URL"))?
-                    .to_string();
-
-                // let width = item.get("config_width").and_then(|w| w.as_u64()).unwrap_or(1080);
-
-                // let height = item.get("config_height").and_then(|h| h.as_u64()).unwrap_or(1080);
-
-                // let item_file_size = width * height * 4 + 1024;
-
-                Ok(CarouselItem {
-                    url,
-                    media_type: MediaType::Image, // TODO: XDTGraphSidecar items are typically images
-                                                  // file_size: item_file_size,
-                })
-            })
-            .collect::<Result<Vec<CarouselItem>>>()?;
-
-        Ok(MediaInfo {
-            url: display_url,
-            media_type: MediaType::Carousel,
-            // file_size,
-            carousel_items,
-        })
-    }
-
     // For single image post
     fn parse_image(&self, media: &serde_json::Value) -> Result<MediaInfo> {
-        let (width, height) = self.get_dimensions(media)?;
+        let url = self.find_display_url(media)?;
+
+        Ok(MediaInfo {
+            url,
+            media_type: MediaType::Image,
+            carousel_items: vec![],
+        })
+    }
+    // TODO: make it more versitile
+    fn find_display_url(&self, media_or_node: &serde_json::Value) -> Result<String> {
+        let (width, height) = self.get_dimensions(media_or_node)?;
 
         // Find the display resource that matches original dimensions
-        let url = media
+        let url = media_or_node
             .get("display_resources")
             .and_then(|resources| resources.as_array())
             .and_then(|resources| {
@@ -195,23 +152,11 @@ impl InstagramService {
             })
             .unwrap_or_else(|| {
                 // Fallback to display_url if display_resources fails
-                media.get("display_url").and_then(|u| u.as_str()).unwrap_or("")
+                media_or_node.get("display_url").and_then(|u| u.as_str()).unwrap_or("")
             })
             .to_string();
 
-        if url.is_empty() {
-            return Err(anyhow!("Missing image URL"));
-        }
-
-        // Estimate file size based on dimensions
-        // let file_size = width * height * 4 + 1024;
-
-        Ok(MediaInfo {
-            url,
-            media_type: MediaType::Image,
-            // file_size,
-            carousel_items: vec![],
-        })
+        Ok(url)
     }
 
     fn parse_video(&self, media: &serde_json::Value) -> Result<MediaInfo> {
@@ -221,16 +166,9 @@ impl InstagramService {
             .ok_or_else(|| anyhow!("Missing video URL"))?
             .to_string();
 
-        // let file_size = media
-        //     .get("video_duration")
-        //     .and_then(|d| d.as_f64())
-        //     .map(|duration| (duration * 1_000_000.0) as u64) // Rough estimate: 1MB per second
-        //     .unwrap_or(0);
-
         Ok(MediaInfo {
             url,
             media_type: MediaType::Video,
-            // file_size,
             carousel_items: vec![],
         })
     }
@@ -259,24 +197,15 @@ impl InstagramService {
         Ok(MediaInfo {
             url: "".to_string(), // Carousel doesn't have a single URL
             media_type: MediaType::Carousel,
-            // file_size: carousel_items.iter().map(|item| item.file_size).sum(),
             carousel_items,
         })
     }
 
     fn parse_carousel_image(&self, node: &serde_json::Value) -> Result<CarouselItem> {
-        let url = node
-            .get("display_url")
-            .and_then(|u| u.as_str())
-            .ok_or_else(|| anyhow!("Missing carousel image URL"))?
-            .to_string();
-
-        // let estimated_size = self.estimate_file_size(node)?;
-
+        let url = self.find_display_url(node)?;
         Ok(CarouselItem {
             url,
             media_type: MediaType::Image,
-            // file_size: estimated_size,
         })
     }
 
@@ -286,17 +215,9 @@ impl InstagramService {
             .and_then(|u| u.as_str())
             .ok_or_else(|| anyhow!("Missing carousel video URL"))?
             .to_string();
-
-        // let file_size = node
-        //     .get("video_duration")
-        //     .and_then(|d| d.as_f64())
-        //     .map(|duration| (duration * 1_000_000.0) as u64)
-        //     .unwrap_or(0);
-
         Ok(CarouselItem {
             url,
             media_type: MediaType::Video,
-            // file_size,
         })
     }
 
@@ -314,21 +235,4 @@ impl InstagramService {
             _ => Err(anyhow!("Invalid Instagram post URL format")),
         }
     }
-
-    // fn estimate_file_size(&self, media: &serde_json::Value) -> Result<u64> {
-    //     let width = media
-    //         .get("dimensions")
-    //         .and_then(|d| d.get("width"))
-    //         .and_then(|w| w.as_u64())
-    //         .unwrap_or(1080);
-
-    //     let height = media
-    //         .get("dimensions")
-    //         .and_then(|d| d.get("height"))
-    //         .and_then(|h| h.as_u64())
-    //         .unwrap_or(1080);
-
-    //     // Rough estimate: 4 bytes per pixel + overhead
-    //     Ok(width * height * 4 + 1024)
-    // }
 }
