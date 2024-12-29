@@ -10,6 +10,8 @@ pub enum BotError {
     ApiError(String),
     #[error("Parse error: {0}")]
     ParseError(String),
+    #[error("Redis error: {0}")]
+    RedisError(String),
     #[error("Unsupported media: {0}")]
     UnsupportedMedia(String),
     #[error("Bot error: {0}")]
@@ -24,7 +26,7 @@ impl From<url::ParseError> for BotError {
 
 impl From<redis::RedisError> for BotError {
     fn from(err: redis::RedisError) -> Self {
-        BotError::NetworkError(format!("Redis error: {}", err))
+        BotError::RedisError(err.to_string())
     }
 }
 

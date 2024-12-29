@@ -1,9 +1,8 @@
 use bot::BotService;
-use config::Config;
-use services::downloader::DownloaderService;
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use state::AppState;
+use std::sync::Arc;
 use teloxide::Bot;
-use utils::{cleanup_old_files, http};
+use utils::http;
 
 extern crate pretty_env_logger;
 #[macro_use]
@@ -14,46 +13,34 @@ mod commands;
 mod config;
 mod handlers;
 mod services;
+mod state;
 mod utils;
 
 #[shuttle_runtime::main]
 async fn shuttle_main(
     #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
 ) -> Result<BotService, shuttle_runtime::Error> {
+    info!("Starting bot...");
+
     if std::env::var_os("RUST_LOG").is_none() {
         std::env::set_var("RUST_LOG", "info");
     }
     let _ = pretty_env_logger::try_init_timed();
 
-    info!("Starting bot...");
+    info!("Initializing AppState...");
+    AppState::init(&secrets).await?;
 
-    info!("Getting config...");
+    info!("Initializing BotService...");
 
-    let Config {
-        telegram_token,
-        redis_url,
-        instagram_api_endpoint,
-        instagram_doc_id,
-    } = Config::get(&secrets);
+    let state = AppState::get();
 
     let client = http::create_default_client();
 
-    // Create bot instance
-    info!("Creating bot instance...");
-    let bot = Bot::with_client(telegram_token, client);
-
-    info!("Creating downloader service with redis url: {}", redis_url);
-
-    let downloader = DownloaderService::new(
-        PathBuf::from("downloads"),
-        // &redis_url,
-        instagram_api_endpoint,
-        instagram_doc_id,
-    )
-    .await?;
+    let bot_service = BotService {
+        bot: Bot::with_client(state.config.telegram.0.clone(), client),
+    };
 
     info!("Bot instance created");
-    let bot_service = BotService { bot, downloader };
 
     Ok(bot_service)
 }
@@ -63,7 +50,8 @@ impl shuttle_runtime::Service for BotService {
     async fn bind(self, _addr: std::net::SocketAddr) -> Result<(), shuttle_runtime::Error> {
         let shared_self = Arc::new(self);
 
-        start_cleanup_job().await;
+        // TODO
+        // start_cleanup_job().await;
 
         shared_self.start().await.expect("Failed to start bot");
 
@@ -71,14 +59,15 @@ impl shuttle_runtime::Service for BotService {
     }
 }
 
-async fn start_cleanup_job() {
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(60 * 60));
-        loop {
-            interval.tick().await;
-            if let Err(e) = cleanup_old_files(PathBuf::from("downloads"), 24).await {
-                log::error!("Cleanup error: {}", e);
-            }
-        }
-    });
-}
+// #[allow(unused)]
+// async fn start_cleanup_job() {
+//     tokio::spawn(async move {
+//         let mut interval = tokio::time::interval(Duration::from_secs(60 * 60));
+//         loop {
+//             interval.tick().await;
+//             if let Err(e) = cleanup_old_files(PathBuf::from("downloads"), 24).await {
+//                 log::error!("Cleanup error: {}", e);
+//             }
+//         }
+//     });
+// }

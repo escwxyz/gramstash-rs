@@ -1,4 +1,4 @@
-use crate::utils::error::BotError;
+use crate::utils::{error::BotError, http};
 use anyhow::Result;
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
@@ -11,6 +11,7 @@ pub enum MediaType {
     Carousel,
 }
 
+// TODO: improve this struct
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MediaInfo {
     pub url: String,
@@ -28,13 +29,17 @@ pub struct CarouselItem {
 
 #[derive(Clone)]
 pub struct InstagramService {
-    client: Client,
-    api_endpoint: String,
-    doc_id: String,
+    pub client: Client,
+    pub api_endpoint: String,
+    pub doc_id: String,
 }
 
 impl InstagramService {
-    pub fn new(client: Client, api_endpoint: String, doc_id: String) -> Self {
+    pub fn new(api_endpoint: String, doc_id: String) -> Self {
+        info!("Initializing InstagramService");
+        let client = http::create_download_client();
+        info!("HTTP client initialized");
+
         Self {
             client,
             api_endpoint,
@@ -50,6 +55,8 @@ impl InstagramService {
         let shortcode = self.extract_shortcode(&parsed_url)?;
 
         info!("Shortcode: {}", shortcode);
+
+        // TODO: we need to check cache here before fetching from Instagram's API
 
         info!("Fetching media info from Instagram's API...");
         let media_info = self.fetch_media_info(&shortcode).await?;
@@ -91,8 +98,6 @@ impl InstagramService {
             BotError::ParseError(e.to_string())
         })?;
 
-        info!("Parsed JSON: {:?}", data);
-
         self.parse_media_response(data)
     }
 
@@ -112,10 +117,12 @@ impl InstagramService {
         info!("Typename: {:?}", typename);
 
         match typename {
-            "GraphImage" => self.parse_image(media),
+            "XDTGraphImage" => self.parse_image(media),
             "GraphVideo" => self.parse_video(media),
             "GraphSidecar" => self.parse_carousel(media),
             "XDTGraphSidecar" => self.parse_xdt_graph_sidecar(media),
+            // TODO: support stories
+            // TODO: support reels
             _ => Err(BotError::UnsupportedMedia(format!(
                 "Unsupported media type: {}",
                 typename
@@ -123,15 +130,7 @@ impl InstagramService {
         }
     }
 
-    fn parse_xdt_graph_sidecar(&self, media: &serde_json::Value) -> Result<MediaInfo, BotError> {
-        // Get display URL from the first image
-        let display_url = media
-            .get("display_url")
-            .and_then(|u| u.as_str())
-            .ok_or_else(|| BotError::ParseError("Missing display URL".into()))?
-            .to_string();
-
-        // Get dimensions for file size estimation
+    fn get_dimensions(&self, media: &serde_json::Value) -> Result<(u64, u64), BotError> {
         let width = media
             .get("dimensions")
             .and_then(|d| d.get("width"))
@@ -143,6 +142,20 @@ impl InstagramService {
             .and_then(|d| d.get("height"))
             .and_then(|h| h.as_u64())
             .unwrap_or(1080);
+
+        Ok((width, height))
+    }
+
+    fn parse_xdt_graph_sidecar(&self, media: &serde_json::Value) -> Result<MediaInfo, BotError> {
+        // Get display URL from the first image
+        let display_url = media
+            .get("display_url")
+            .and_then(|u| u.as_str())
+            .ok_or_else(|| BotError::ParseError("Missing display URL".into()))?
+            .to_string();
+
+        // Get dimensions for file size estimation
+        let (width, height) = self.get_dimensions(media)?;
 
         // Estimate file size based on dimensions
         let file_size = width * height * 4 + 1024; // Basic estimation: 4 bytes per pixel + overhead
@@ -168,7 +181,7 @@ impl InstagramService {
 
                 Ok(CarouselItem {
                     url,
-                    media_type: MediaType::Image, // XDTGraphSidecar items are typically images
+                    media_type: MediaType::Image, // TODO: XDTGraphSidecar items are typically images
                     file_size: item_file_size,
                 })
             })
@@ -182,20 +195,43 @@ impl InstagramService {
         })
     }
 
+    // For single image post
     fn parse_image(&self, media: &serde_json::Value) -> Result<MediaInfo, BotError> {
+        let (width, height) = self.get_dimensions(media)?;
+
+        // Find the display resource that matches original dimensions
         let url = media
-            .get("display_url")
-            .and_then(|u| u.as_str())
-            .ok_or_else(|| BotError::ParseError("Missing image URL".into()))?
+            .get("display_resources")
+            .and_then(|resources| resources.as_array())
+            .and_then(|resources| {
+                resources
+                    .iter()
+                    .find(|resource| {
+                        let res_width = resource.get("config_width").and_then(|w| w.as_u64()).unwrap_or(0);
+                        let res_height = resource.get("config_height").and_then(|h| h.as_u64()).unwrap_or(0);
+                        res_width == width && res_height == height
+                    })
+                    .or_else(|| resources.last()) // Fallback to highest resolution if no exact match
+                    .and_then(|resource| resource.get("src"))
+                    .and_then(|u| u.as_str())
+            })
+            .unwrap_or_else(|| {
+                // Fallback to display_url if display_resources fails
+                media.get("display_url").and_then(|u| u.as_str()).unwrap_or("")
+            })
             .to_string();
 
-        // Estimate file size based on resolution
-        let estimated_size = self.estimate_file_size(media)?;
+        if url.is_empty() {
+            return Err(BotError::ParseError("Missing image URL".into()));
+        }
+
+        // Estimate file size based on dimensions
+        let file_size = width * height * 4 + 1024;
 
         Ok(MediaInfo {
             url,
             media_type: MediaType::Image,
-            file_size: estimated_size,
+            file_size,
             carousel_items: vec![],
         })
     }

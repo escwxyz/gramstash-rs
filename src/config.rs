@@ -1,42 +1,27 @@
-use shuttle_runtime::SecretStore;
-
-#[derive(Debug)]
-pub struct Config {
-    pub telegram_token: String,
-    pub redis_url: String,
-    pub instagram_api_endpoint: String,
-    pub instagram_doc_id: String,
+#[derive(Clone, Debug)]
+pub struct AppConfig {
+    pub redis: RedisConfig,
+    pub telegram: TelegramConfig,
+    pub instagram: InstagramConfig,
+    pub rate_limit: RateLimitConfig,
 }
 
-impl Config {
-    pub fn get(secret_store: &SecretStore) -> Self {
-        let telegram_token = secret_store
-            .get("TELEGRAM_BOT_TOKEN")
-            .expect("Failed to get the telegram token!");
-        let redis_host = secret_store
-            .get("UPSTASH_REDIS_HOST")
-            .expect("Failed to get the redis host!");
-        let redis_port = secret_store
-            .get("UPSTASH_REDIS_PORT")
-            .expect("Failed to get the redis port!");
-        let redis_password = secret_store
-            .get("UPSTASH_REDIS_PASSWORD")
-            .expect("Failed to get the redis password!");
+#[derive(Clone, Debug)]
+pub struct RedisConfig {
+    pub url: String,
+}
 
-        let instagram_api_endpoint = secret_store
-            .get("INSTAGRAM_API_ENDPOINT")
-            .expect("Failed to get the instagram api endpoint!");
-        let instagram_doc_id = secret_store
-            .get("INSTAGRAM_DOC_ID")
-            .expect("Failed to get the instagram doc id!");
+#[derive(Clone, Debug)]
+pub struct TelegramConfig(pub String);
 
-        let redis_url = format!("redis://default:{}@{}:{}", redis_password, redis_host, redis_port);
+#[derive(Clone, Debug)]
+pub struct InstagramConfig {
+    pub api_endpoint: String,
+    pub doc_id: String,
+}
 
-        Self {
-            telegram_token,
-            redis_url,
-            instagram_api_endpoint,
-            instagram_doc_id,
-        }
-    }
+#[derive(Clone, Debug)]
+pub struct RateLimitConfig {
+    pub daily_limit: u32,
+    pub window_secs: i64, // typically 24 * 3600 for daily
 }

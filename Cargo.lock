@@ -920,6 +920,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "log",
+ "once_cell",
  "pretty_env_logger",
  "redis",
  "reqwest",
@@ -1493,6 +1494,7 @@ dependencies = [
  "futures-util",
  "itertools 0.13.0",
  "itoa",
+ "native-tls",
  "num-bigint",
  "percent-encoding",
  "pin-project-lite",
@@ -1500,6 +1502,7 @@ dependencies = [
  "sha1_smol",
  "socket2",
  "tokio",
+ "tokio-native-tls",
  "tokio-util",
  "url",
 ]

@@ -2,7 +2,8 @@ use teloxide::{macros::BotCommands, prelude::ResponseResult, types::Message, Bot
 
 use crate::{
     handlers::{download, help, start},
-    services::downloader::DownloaderService,
+    services::{instagram::InstagramService, ratelimiter::RateLimiter},
+    state::AppState,
 };
 
 #[derive(BotCommands, Clone)]
@@ -16,10 +17,19 @@ pub enum Command {
     Download { url: String },
 }
 
-pub async fn answer(bot: Bot, msg: Message, cmd: Command, downloader: DownloaderService) -> ResponseResult<()> {
+pub async fn answer(bot: Bot, msg: Message, cmd: Command) -> ResponseResult<()> {
+    let state = AppState::get();
+
+    let rate_limiter = RateLimiter::new();
+
+    let instagram_api_endpoint = state.config.instagram.api_endpoint.clone();
+    let instagram_doc_id = state.config.instagram.doc_id.clone();
+
+    let instagram_service = InstagramService::new(instagram_api_endpoint, instagram_doc_id);
+
     match cmd {
         Command::Start => start::handle(bot, msg).await,
         Command::Help => help::handle(bot, msg).await,
-        Command::Download { url } => download::handle(bot, msg, url, &downloader).await,
+        Command::Download { url } => download::handle(bot, msg, url, &instagram_service, &rate_limiter).await,
     }
 }
