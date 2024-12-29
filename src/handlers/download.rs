@@ -63,6 +63,12 @@ async fn process_download(
     instagram_service: &InstagramService,
     rate_limiter: &RateLimiter,
 ) -> Result<i32> {
+
+    // Block group chats
+    if msg.chat.id.0 < 0 {
+        return Err(anyhow::anyhow!("Group chats are not supported"));
+    }
+
     // Check rate limit
     if !rate_limiter.check_rate_limit(msg.chat.id).await? {
         return Ok(-1);
@@ -114,24 +120,22 @@ async fn send_media(bot: &Bot, msg: &Message, media_info: &MediaInfo) -> Result<
         //     }
         //     bot.send_video(msg.chat.id, InputFile::file(media_info.url)).await?;
         // }
-        // MediaType::Carousel => {
-        //     info!("Handling multiple media items...");
-        //     for item in media_info.carousel_items {
-        //         match item.media_type {
-        //             MediaType::Image => {
-        //                 bot.send_photo(msg.chat.id, InputFile::file(media_info.url)).await?;
-        //             }
-        //             MediaType::Video => {
-        //                 if item.file_size <= 50_000_000 {
-        //                     bot.send_video(msg.chat.id, InputFile::file(media_info.url)).await?;
-        //                 } else {
-        //                     bot.send_message(msg.chat.id, &item.url).await?;
-        //                 }
-        //             }
-        //             _ => continue,
-        //         }
-        //     }
-        // }
+        MediaType::Carousel => {
+            info!("Handling multiple media items...");
+            for item in media_info.carousel_items.clone() {
+                match item.media_type {
+                    MediaType::Image => {
+                        let parsed_url = parse_url(&item.url)?;
+                        bot.send_photo(msg.chat.id, InputFile::url(parsed_url)).await?;
+                    }
+                    MediaType::Video => {
+                        let parsed_url = parse_url(&item.url)?;
+                        bot.send_video(msg.chat.id, InputFile::url(parsed_url)).await?;
+                    }
+                    _ => continue,
+                }
+            }
+        }
         _ => {
             info!("Unsupported media type: {:?}", media_info.media_type);
         }

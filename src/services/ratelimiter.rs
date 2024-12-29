@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use redis::AsyncCommands;
-use std::time::{SystemTime, UNIX_EPOCH};
 use teloxide::types::ChatId;
 
 use crate::state::AppState;
@@ -19,37 +18,22 @@ impl RateLimiter {
         }
     }
 
-    fn generate_key(&self, chat_id: ChatId) -> String {
-        let current_window = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() / self.window_seconds;
-
-        format!("rate_limit:{}:{}", chat_id.0, current_window)
-    }
-
     pub async fn check_rate_limit(&self, chat_id: ChatId) -> Result<bool> {
-        // Block group chats
-        if chat_id.0 < 0 {
-            return Err(anyhow::anyhow!("Group chats are not supported"));
-        }
-
-        let key = self.generate_key(chat_id);
-
         let mut conn = AppState::get().redis.get_connection().await?;
+        let key = format!("rate_limit:{}:{}", chat_id.0, chrono::Utc::now().date_naive());
 
-        let counter: u32 = conn
-            .incr::<_, u32, u32>(&key, 1)
-            .await
-            .context("Failed to increment rate limit counter")?;
+        let exists: bool = conn.exists(&key).await.context("Failed to check key existence")?;
 
-        if counter == 1 {
-            conn.expire::<_, i64>(&key, self.window_seconds as i64)
+        if !exists {
+            conn.set_ex::<_,_,u64>(&key, 1, self.window_seconds)
                 .await
-                .context("Failed to set rate limit expiry")?;
+                .context("Failed to set initial rate limit")?;
+            return Ok(true);
         }
 
-        // TODO: Future enhancement - bypass for premium users
-        // if is_premium_user(chat_id).await? {
-        //     return Ok(true);
-        // }
+        let counter: u32 = conn.incr(&key, 1)
+            .await
+            .context("Failed to increment counter")?;
 
         Ok(counter <= self.max_requests)
     }

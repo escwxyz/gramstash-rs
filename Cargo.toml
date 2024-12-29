@@ -21,3 +21,6 @@ teloxide = { version = "0.13.0", features = ["macros", "throttle"] }
 thiserror = "2.0.9"
 tokio = { version = "1.42.0", features = ["full"] }
 url = "2.5.2"
+
+# [dev-dependencies]
+# teloxide_tests = "0.2.0"
