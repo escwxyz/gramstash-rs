@@ -25,15 +25,13 @@ impl RateLimiter {
         let exists: bool = conn.exists(&key).await.context("Failed to check key existence")?;
 
         if !exists {
-            conn.set_ex::<_,_,u64>(&key, 1, self.window_seconds)
+            conn.set_ex::<_, _, String>(&key, 1, self.window_seconds)
                 .await
                 .context("Failed to set initial rate limit")?;
             return Ok(true);
         }
 
-        let counter: u32 = conn.incr(&key, 1)
-            .await
-            .context("Failed to increment counter")?;
+        let counter: u32 = conn.incr(&key, 1).await.context("Failed to increment counter")?;
 
         Ok(counter <= self.max_requests)
     }

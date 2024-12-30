@@ -63,7 +63,6 @@ async fn process_download(
     instagram_service: &InstagramService,
     rate_limiter: &RateLimiter,
 ) -> Result<i32> {
-
     // Block group chats
     if msg.chat.id.0 < 0 {
         return Err(anyhow::anyhow!("Group chats are not supported"));
@@ -106,20 +105,10 @@ async fn send_media(bot: &Bot, msg: &Message, media_info: &MediaInfo) -> Result<
             let parsed_url = parse_url(&media_info.url)?;
             bot.send_photo(msg.chat.id, InputFile::url(parsed_url)).await?;
         }
-        // MediaType::Video => {
-        //     info!("Checking if video is large...");
-        //     if media_info.file_size > 50_000_000 {
-        //         info!("Video is large, sending download link...");
-        //         bot.send_message(
-        //             msg.chat.id,
-        //             "⚠️ This video is larger than 50MB. Sending download link instead.",
-        //         )
-        //         .await?;
-        //         bot.send_message(msg.chat.id, &media_info.url).await?;
-        //         return Ok(());
-        //     }
-        //     bot.send_video(msg.chat.id, InputFile::file(media_info.url)).await?;
-        // }
+        MediaType::Video => {
+            let parsed_url = parse_url(&media_info.url)?;
+            bot.send_video(msg.chat.id, InputFile::url(parsed_url)).await?;
+        }
         MediaType::Carousel => {
             info!("Handling multiple media items...");
             for item in media_info.carousel_items.clone() {
@@ -135,9 +124,6 @@ async fn send_media(bot: &Bot, msg: &Message, media_info: &MediaInfo) -> Result<
                     _ => continue,
                 }
             }
-        }
-        _ => {
-            info!("Unsupported media type: {:?}", media_info.media_type);
         }
     };
     Ok(())

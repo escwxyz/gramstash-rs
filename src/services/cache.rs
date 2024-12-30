@@ -24,7 +24,7 @@ impl CacheService {
         let key = Self::generate_key(shortcode);
 
         let json = serde_json::to_string(media_info)?;
-        conn.set_ex::<_, _, u64>(&key, json, expiry_secs).await?;
+        conn.set_ex::<_, _, String>(&key, json, expiry_secs).await?;
 
         Ok(())
     }

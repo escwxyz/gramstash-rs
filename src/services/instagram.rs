@@ -96,10 +96,9 @@ impl InstagramService {
 
         match typename {
             "XDTGraphImage" => self.parse_image(media),
-            "GraphVideo" => self.parse_video(media),
+            "XDTGraphVideo" => self.parse_video(media),
             "XDTGraphSidecar" => self.parse_carousel(media),
             // TODO: support stories
-            // TODO: support reels
             _ => Err(anyhow!("Unspported media type: {}", typename)),
         }
     }
@@ -130,7 +129,7 @@ impl InstagramService {
             carousel_items: vec![],
         })
     }
-    // TODO: make it more versitile
+
     fn find_display_url(&self, media_or_node: &serde_json::Value) -> Result<String> {
         let (width, height) = self.get_dimensions(media_or_node)?;
 
@@ -159,6 +158,7 @@ impl InstagramService {
         Ok(url)
     }
 
+    // For reels
     fn parse_video(&self, media: &serde_json::Value) -> Result<MediaInfo> {
         let url = media
             .get("video_url")
