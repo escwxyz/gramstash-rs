@@ -34,7 +34,7 @@ async fn shuttle_main(
 
     let state = AppState::get();
 
-    let client = http::create_default_client();
+    let client = http::create_telegram_client();
 
     let bot_service = BotService {
         bot: Bot::with_client(state.config.telegram.0.clone(), client),
