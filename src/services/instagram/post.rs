@@ -1,59 +1,22 @@
-use crate::utils::http;
+use crate::state::AppState;
+
+use super::{CarouselItem, InstagramService, MediaInfo, MediaType};
 use anyhow::{anyhow, Context, Result};
-use reqwest::{header, Client};
-use serde::{Deserialize, Serialize};
 use url::Url;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum MediaType {
-    Image,
-    Video,
-    Carousel,
-}
-
-// TODO: improve this struct
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MediaInfo {
-    pub url: String,
-    pub media_type: MediaType,
-    pub carousel_items: Vec<CarouselItem>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CarouselItem {
-    pub url: String,
-    pub media_type: MediaType,
-}
-
-#[derive(Clone)]
-pub struct InstagramService {
-    pub client: Client,
-    pub api_endpoint: String,
-    pub doc_id: String,
-}
-
 impl InstagramService {
-    pub fn new(api_endpoint: String, doc_id: String) -> Self {
-        info!("Initializing InstagramService");
-        let client = http::create_download_client();
-        info!("HTTP client initialized");
-
-        Self {
-            client,
-            api_endpoint,
-            doc_id,
-        }
-    }
-
     pub async fn get_media_info(&self, shortcode: &str) -> Result<MediaInfo> {
         Ok(self.fetch_media_info(&shortcode).await?)
     }
 
     async fn fetch_media_info(&self, shortcode: &str) -> Result<MediaInfo> {
-        let api_url = self.api_endpoint.clone();
+        let state = AppState::get();
+
+        let api_url = state.config.instagram.api_endpoint.clone();
+        let doc_id = state.config.instagram.doc_id.clone();
 
         let body = serde_json::json!({
-            "doc_id": self.doc_id,
+            "doc_id": doc_id,
             "variables": {
                 "shortcode": shortcode
             }
@@ -62,9 +25,6 @@ impl InstagramService {
         let response = self
             .client
             .post(&api_url)
-            .header(header::ACCEPT, "*/*")
-            .header(header::CONTENT_TYPE, "application/json")
-            .header(header::HOST, "www.instagram.com")
             .json(&body)
             .send()
             .await
@@ -230,8 +190,7 @@ impl InstagramService {
         info!("Path segments: {:?}", path_segments);
 
         match path_segments.as_slice() {
-            // TODO: support more formats
-            ["stories", _, shortcode] | ["reel", shortcode, _] | ["p", shortcode, _] => Ok(shortcode.to_string()),
+            ["reel", shortcode, _] | ["p", shortcode, _] => Ok(shortcode.to_string()),
             _ => Err(anyhow!("Invalid Instagram post URL format")),
         }
     }
