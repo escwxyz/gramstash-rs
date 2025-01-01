@@ -1,7 +1,13 @@
 [package]
-name = "instasnaper-bot"
+name = "gramstash"
 version = "0.1.0"
 edition = "2021"
+authors = ["Jie Wang <linsijia628@gmail.com>"]
+description = "A Telegram bot to download media from Instagram"
+repository = "https://github.com/escwxyz/gramstash"
+license = "Apache-2.0"
+readme = "README.md"
+keywords = ["telegram", "bot", "instagram", "download"]
 publish = false
 
 [dependencies]

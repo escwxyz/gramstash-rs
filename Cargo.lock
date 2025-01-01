@@ -696,6 +696,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
+name = "gramstash"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "log",
+ "once_cell",
+ "pretty_env_logger",
+ "redis",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "shuttle-runtime",
+ "teloxide",
+ "thiserror 2.0.9",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -957,28 +979,6 @@ checksum = "62f822373a4fe84d4bb149bf54e584a7f4abec90e072ed49cda0edea5b95471f"
 dependencies = [
  "equivalent",
  "hashbrown 0.15.2",
-]
-
-[[package]]
-name = "instasnaper-bot"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "log",
- "once_cell",
- "pretty_env_logger",
- "redis",
- "reqwest",
- "serde",
- "serde_json",
- "sha2",
- "shuttle-runtime",
- "teloxide",
- "thiserror 2.0.9",
- "tokio",
- "url",
 ]
 
 [[package]]
