@@ -1,64 +1,109 @@
-use anyhow::Result;
-use teloxide::prelude::*;
-use teloxide::Bot;
+use std::sync::Arc;
 
-use crate::commands::{answer, Command};
+use anyhow::Result;
+use dptree;
+use serde::Deserialize;
+use serde::Serialize;
+use teloxide::dispatching::dialogue::ErasedStorage;
+use teloxide::dispatching::dialogue::InMemStorage;
+use teloxide::dispatching::dialogue::Storage;
+use teloxide::dispatching::dialogue::{serializer::Json, RedisStorage};
+use teloxide::dispatching::UpdateHandler;
+use teloxide::prelude::*;
+use teloxide::types::MessageId;
+use teloxide::Bot;
+use teloxide::RequestError;
+
+use crate::handlers;
+
+use crate::handlers::command::Command;
+use crate::services::instagram::types::MediaContent;
+use crate::state::AppState;
+
+#[derive(Clone, Default, Serialize, Deserialize)]
+pub enum DialogueState {
+    #[default]
+    Start,
+    AwaitingPostLink {
+        message_id: MessageId,
+    },
+    AwaitingStoryLink {
+        message_id: MessageId,
+    },
+    ConfirmDownload {
+        content: MediaContent,
+    },
+    // Downloaded,
+}
+
+type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 pub struct BotService {
     pub bot: Bot,
 }
 
 impl BotService {
-    pub async fn start(&self) -> Result<()> {
+    pub async fn start(&self) -> HandlerResult {
         let bot = self.bot.clone();
+        info!("Initializing Dialogue Storage");
+        let storage: Arc<ErasedStorage<DialogueState>> = if AppState::get().config.dialogue.use_redis {
+            info!("Using Redis Storage");
+            RedisStorage::open(AppState::get().config.redis.url.as_str(), Json)
+                .await?
+                .erase()
+        } else {
+            info!("Using In-Memory Storage");
+            InMemStorage::new().erase()
+        };
+        info!("Dialogue Storage initialized");
 
-        let handler = Update::filter_message()
-            .branch(
-                dptree::filter(|msg: Message| {
-                    if let Some(text) = msg.text() {
-                        if text.starts_with('/') {
-                            let parts: Vec<&str> = text.split_whitespace().collect();
-                            match parts[0] {
-                                "/login" if parts.len() != 3 => return true,
-                                "/download" if parts.len() != 2 => return true,
-                                _ => return false,
-                            }
-                        }
-                    }
-                    false
-                })
-                .endpoint(handle_invalid_command),
-            )
-            .branch(dptree::entry().filter_command::<Command>().endpoint(answer));
+        let handler = handler_tree();
 
         Dispatcher::builder(bot, handler)
+            .dependencies(dptree::deps![storage])
             .enable_ctrlc_handler()
             .build()
             .dispatch()
             .await;
+
         Ok(())
     }
 }
 
-async fn handle_invalid_command(bot: Bot, msg: Message) -> ResponseResult<()> {
-    let command = msg.text().unwrap_or("").split_whitespace().next().unwrap_or("");
+fn get_command_handler() -> UpdateHandler<RequestError> {
+    Update::filter_message()
+        .filter_command::<Command>()
+        .endpoint(handlers::command::command_handler)
+}
 
-    let error_msg = match command {
-        "/login" => format!(
-            "⚠️ Invalid login format.\n\nUsage: {}\n\nExample: /login myusername mypassword",
-            Command::Login {
-                username: String::new(),
-                password: String::new()
-            }
-            .usage()
-        ),
-        "/download" => format!(
-            "⚠️ Please provide a URL.\n\nUsage: {}",
-            Command::Download { url: String::new() }.usage()
-        ),
-        _ => "❌ Invalid command format. Use /help to see available commands.".to_string(),
-    };
+fn get_message_handler() -> UpdateHandler<RequestError> {
+    Update::filter_message()
+        .enter_dialogue::<Message, ErasedStorage<DialogueState>, DialogueState>()
+        .branch(
+            dptree::case![DialogueState::Start].branch(
+                dptree::filter(|msg: Message| msg.text().map(|text| text == "🏠 Main Menu").unwrap_or(false))
+                    .endpoint(handlers::command::handle_start),
+            ),
+        )
+        .branch(
+            dptree::case![DialogueState::AwaitingPostLink { message_id }]
+                .endpoint(handlers::message::download::handle_post_link),
+        )
+        .branch(
+            dptree::case![DialogueState::AwaitingStoryLink { message_id }]
+                .endpoint(handlers::message::download::handle_story_link),
+        )
+}
 
-    bot.send_message(msg.chat.id, error_msg).await?;
-    Ok(())
+fn get_callback_handler() -> UpdateHandler<RequestError> {
+    Update::filter_callback_query()
+        .enter_dialogue::<CallbackQuery, ErasedStorage<DialogueState>, DialogueState>()
+        .branch(dptree::entry().endpoint(handlers::callback::handle_callback))
+}
+
+pub fn handler_tree() -> UpdateHandler<RequestError> {
+    dptree::entry()
+        .branch(get_command_handler())
+        .branch(get_message_handler())
+        .branch(get_callback_handler())
 }

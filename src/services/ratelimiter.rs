@@ -1,4 +1,3 @@
-use anyhow::Context;
 use redis::AsyncCommands;
 use teloxide::types::ChatId;
 
@@ -18,21 +17,35 @@ impl RateLimiter {
         }
     }
 
-    pub async fn check_rate_limit(&self, chat_id: ChatId) -> BotResult<bool> {
+    pub async fn check_rate_limit(&self, chat_id: ChatId, shortcode: &str) -> BotResult<bool> {
         let mut conn = AppState::get().redis.get_connection().await?;
-        let key = format!("rate_limit:{}:{}", chat_id.0, chrono::Utc::now().date_naive());
 
-        let exists: bool = conn.exists(&key).await.context("Failed to check key existence")?;
+        let key = format!(
+            "rate_limit:{}:{}:{}",
+            chat_id.0,
+            shortcode,
+            chrono::Utc::now().date_naive()
+        );
 
-        if !exists {
-            conn.set_ex::<_, _, String>(&key, 1, self.window_seconds)
-                .await
-                .context("Failed to set initial rate limit")?;
+        let exists: bool = conn.exists(&key).await?;
+
+        info!("Rate limit key exists: {}", exists);
+
+        if exists {
+            conn.incr::<_, _, u32>(&key, 1).await?;
             return Ok(true);
         }
 
-        let counter: u32 = conn.incr(&key, 1).await.context("Failed to increment counter")?;
+        let pattern = format!("rate_limit:{}:*:{}", chat_id.0, chrono::Utc::now().date_naive());
+        let keys: Vec<String> = conn.keys(&pattern).await?;
 
-        Ok(counter <= self.max_requests)
+        if keys.len() >= self.max_requests as usize {
+            info!("User has {} cached downloads", keys.len());
+            return Ok(false);
+        }
+
+        conn.set_ex::<_, _, String>(&key, 1, self.window_seconds).await?;
+
+        Ok(true)
     }
 }

@@ -1,5 +1,3 @@
-pub mod download;
-pub mod help;
-pub mod login;
-pub mod logout;
-pub mod start;
+pub mod callback;
+pub mod command;
+pub mod message;

@@ -17,16 +17,17 @@ chrono = { version = "0.4.39", features = ["serde"] }
 log = "0.4.22"
 once_cell = "1.20.2"
 pretty_env_logger = "0.5.0"
-redis = { version = "0.27.6", features = ["tokio-comp", "connection-manager", "tokio-native-tls-comp"] }
+redis = { version = "0.24", default-features = false, features = ["tokio-comp", "connection-manager", "tokio-native-tls-comp", "tls", "tls-native-tls"] }
+regex = "1.11.1"
 reqwest = { version = "0.11.27", features = ["json", "socks", "cookies"] }
 serde = { version = "1.0.216", features = ["derive"] }
 serde_json = "1.0.134"
 sha2 = "0.10"
 shuttle-runtime = "0.49.0"
-teloxide = { version = "0.13.0", features = ["macros", "throttle"] }
+teloxide = { version = "0.13.0", features = ["macros", "throttle", "redis-storage"] }
 thiserror = "2.0.9"
 tokio = { version = "1.42.0", features = ["full"] }
 url = "2.5.2"
 
-# [dev-dependencies]
-# teloxide_tests = "0.2.0"
+[dev-dependencies]
+teloxide_tests = "0.2.0"

@@ -9,12 +9,14 @@ extern crate pretty_env_logger;
 extern crate log;
 
 mod bot;
-mod commands;
 mod config;
 mod handlers;
 mod services;
 mod state;
 mod utils;
+
+#[cfg(test)]
+mod tests;
 
 #[shuttle_runtime::main]
 async fn shuttle_main(
@@ -54,3 +56,5 @@ impl shuttle_runtime::Service for BotService {
         Ok(())
     }
 }
+
+// TODO: implement a periodic background job to clear the dialogue storage

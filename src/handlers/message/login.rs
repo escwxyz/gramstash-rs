@@ -8,7 +8,7 @@ pub async fn handle(
     password: String,
     instagram_service: &InstagramService,
 ) -> ResponseResult<()> {
-    info!("Logging in with username: {} and password: {}", username, password);
+    info!("Login with username: {} and password: {}", username, password);
 
     match instagram_service.clone().login(&username, &password).await {
         Ok(_) => {

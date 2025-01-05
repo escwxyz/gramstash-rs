@@ -2,8 +2,7 @@ mod auth;
 mod post;
 mod service;
 mod story;
-mod types;
-mod utils;
+pub(crate) mod types;
 
 pub use service::InstagramService;
-pub use types::{CarouselItem, LoginResponse, MediaInfo, MediaType, SessionData, TwoFactorAuthPending};
+pub use types::{CarouselItem, LoginResponse, MediaInfo, SessionData, TwoFactorAuthPending};

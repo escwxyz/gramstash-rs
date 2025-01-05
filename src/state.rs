@@ -3,7 +3,7 @@ use once_cell::sync::OnceCell;
 use shuttle_runtime::SecretStore;
 
 use crate::{
-    config::{AppConfig, CacheConfig, InstagramConfig, RateLimitConfig, RedisConfig, TelegramConfig},
+    config::{AppConfig, CacheConfig, DialogueConfig, InstagramConfig, RateLimitConfig, RedisConfig, TelegramConfig},
     utils::redis::RedisClient,
 };
 
@@ -77,6 +77,18 @@ impl AppState {
                     .ok_or_else(|| anyhow::anyhow!("Missing CACHE_EXPIRY_SECS"))?
                     .parse::<u64>()
                     .map_err(|_| anyhow::anyhow!("Invalid CACHE_EXPIRY_SECS"))?,
+            },
+            dialogue: DialogueConfig {
+                use_redis: secret_store
+                    .get("DIALOGUE_USE_REDIS")
+                    .ok_or_else(|| anyhow::anyhow!("Missing DIALOGUE_USE_REDIS"))?
+                    .parse::<bool>()
+                    .map_err(|_| anyhow::anyhow!("Invalid DIALOGUE_USE_REDIS"))?,
+                clear_interval_secs: secret_store
+                    .get("DIALOGUE_CLEAR_INTERVAL_SECS")
+                    .ok_or_else(|| anyhow::anyhow!("Missing DIALOGUE_CLEAR_INTERVAL_SECS"))?
+                    .parse::<u64>()
+                    .map_err(|_| anyhow::anyhow!("Invalid DIALOGUE_CLEAR_INTERVAL_SECS"))?,
             },
         })
     }

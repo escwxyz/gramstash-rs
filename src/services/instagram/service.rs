@@ -1,10 +1,14 @@
 use std::sync::Arc;
 
 use reqwest::{cookie::Jar, Client};
+use url::Url;
 
-use crate::utils::http;
+use crate::utils::{
+    error::{BotError, BotResult},
+    http,
+};
 
-use super::{SessionData, TwoFactorAuthPending};
+use super::{types::InstagramIdentifier, SessionData, TwoFactorAuthPending};
 
 #[derive(Clone)]
 pub struct InstagramService {
@@ -27,6 +31,10 @@ impl InstagramService {
             user_id: None,
             username: None,
             csrf_token: None,
+            session_id: None,
+            device_id: None,
+            machine_id: None,
+            rur: None,
         };
 
         Self {
@@ -34,6 +42,28 @@ impl InstagramService {
             cookie_jar,
             session_data,
             two_factor_auth_pending: None,
+        }
+    }
+    pub fn parse_instagram_url(&self, url: &Url) -> BotResult<InstagramIdentifier> {
+        let path_segments: Vec<_> = url
+            .path_segments()
+            .ok_or_else(|| BotError::InvalidUrl("No path segments found".into()))?
+            .collect();
+
+        info!("Parsing Instagram URL with path segments: {:?}", path_segments);
+
+        match path_segments.as_slice() {
+            ["stories", username, story_id] => Ok(InstagramIdentifier::Story {
+                username: username.to_string(),
+                shortcode: story_id.to_string(),
+            }),
+            ["p", shortcode, ..] => Ok(InstagramIdentifier::Post {
+                shortcode: shortcode.to_string(),
+            }),
+            ["reel", shortcode, ..] => Ok(InstagramIdentifier::Reel {
+                shortcode: shortcode.to_string(),
+            }),
+            _ => Err(BotError::InvalidUrl("Invalid Instagram URL format".into())),
         }
     }
 }

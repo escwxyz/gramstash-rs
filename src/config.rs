@@ -5,6 +5,7 @@ pub struct AppConfig {
     pub instagram: InstagramConfig,
     pub rate_limit: RateLimitConfig,
     pub cache: CacheConfig,
+    pub dialogue: DialogueConfig,
 }
 
 #[derive(Clone, Debug)]
@@ -30,4 +31,11 @@ pub struct RateLimitConfig {
 #[derive(Clone, Debug)]
 pub struct CacheConfig {
     pub expiry_secs: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct DialogueConfig {
+    pub use_redis: bool,
+    // TODO: implement a background job to clear the dialogue storage
+    pub clear_interval_secs: u64,
 }
