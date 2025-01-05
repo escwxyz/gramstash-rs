@@ -1,13 +1,60 @@
 use crate::bot::DialogueState;
 use crate::services::cache::CacheService;
-use crate::services::instagram::types::{InstagramIdentifier, MediaContent, PostContent};
+use crate::services::instagram::types::{ContentType, InstagramIdentifier, MediaContent, PostContent};
 use crate::services::instagram::InstagramService;
 use crate::services::ratelimiter::RateLimiter;
 use crate::utils::error::BotError;
 use crate::utils::{extract_instagram_url, keyboard, parse_url};
 use teloxide::dispatching::dialogue::ErasedStorage;
 use teloxide::prelude::*;
-use teloxide::types::MessageId;
+use teloxide::types::{InputFile, InputMedia, InputMediaPhoto, InputMediaVideo, MaybeInaccessibleMessage, MessageId};
+
+pub async fn handle_download(bot: Bot, message: MaybeInaccessibleMessage, content: MediaContent) -> ResponseResult<()> {
+    bot.delete_message(message.chat().id, message.id()).await?;
+
+    let download_msg = bot.send_message(message.chat().id, "⬇️ Downloading...").await?;
+
+    match content {
+        MediaContent::Post(post_content) => {
+            info!("Downloading post: {:?}", post_content);
+            match post_content {
+                PostContent::Single { url, content_type } => {
+                    bot.delete_message(message.chat().id, download_msg.id).await?;
+                    let _ = match content_type {
+                        ContentType::Image => bot.send_photo(message.chat().id, InputFile::url(url)).await?,
+                        ContentType::Reel => bot.send_video(message.chat().id, InputFile::url(url)).await?,
+                    };
+
+                    send_download_complete_message(&bot, message.chat().id).await?;
+                }
+                PostContent::Carousel { items } => {
+                    // Delete the downloading message
+                    bot.delete_message(message.chat().id, download_msg.id).await?;
+                    let media_group = items
+                        .into_iter()
+                        .map(|item| match item.content_type {
+                            ContentType::Image => InputMedia::Photo(InputMediaPhoto::new(InputFile::url(item.url))),
+                            ContentType::Reel => InputMedia::Video(InputMediaVideo::new(InputFile::url(item.url))),
+                        })
+                        .collect::<Vec<_>>();
+
+                    bot.send_media_group(message.chat().id, media_group).await?;
+
+                    send_download_complete_message(&bot, message.chat().id).await?;
+                }
+            }
+        }
+        // TODO: implement story download
+        MediaContent::Story(story_content) => {
+            info!("Downloading story: {:?}", story_content);
+            bot.delete_message(message.chat().id, download_msg.id).await?;
+            bot.send_message(message.chat().id, "Story downloading is in progress...")
+                .await?;
+        }
+    }
+
+    Ok(())
+}
 
 pub async fn handle_post_link(
     bot: Bot,
@@ -20,8 +67,15 @@ pub async fn handle_post_link(
     let url = match validate_message(&msg) {
         Some(url) => url,
         None => {
-            bot.edit_message_text(msg.chat.id, msg.id, "❌ Please provide a valid Instagram URL.")
+            let msg = bot
+                .send_message(msg.chat.id, "❌ Please provide a valid Instagram URL.")
                 .await?;
+
+            dialogue
+                .update(DialogueState::AwaitingPostLink(msg.id))
+                .await
+                .map_err(|e| BotError::DialogueError(e.to_string()))?;
+
             return Ok(());
         }
     };
@@ -172,4 +226,12 @@ fn validate_message(msg: &Message) -> Option<String> {
         .and_then(extract_instagram_url)
         .and_then(|url| parse_url(&url).ok())
         .map(|url| url.to_string())
+}
+
+async fn send_download_complete_message(bot: &Bot, chat_id: ChatId) -> ResponseResult<()> {
+    bot.send_message(chat_id, "✅ Download completed! What would you like to do next?")
+        .reply_markup(keyboard::get_back_to_menu_keyboard())
+        .await?;
+
+    Ok(())
 }

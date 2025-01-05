@@ -24,16 +24,21 @@ use crate::state::AppState;
 pub enum DialogueState {
     #[default]
     Start,
-    AwaitingPostLink {
-        message_id: MessageId,
-    },
-    AwaitingStoryLink {
-        message_id: MessageId,
-    },
+    // Download
+    AwaitingPostLink(MessageId),
+    AwaitingStoryLink(MessageId),
     ConfirmDownload {
         content: MediaContent,
     },
-    // Downloaded,
+    // Authentication
+    // AwaitingUsername {
+    //     message_id: MessageId,
+    //     username: String,
+    // },
+    // AwaitingPassword {
+    //     message_id: MessageId,
+    //     username: String,
+    // },
 }
 
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
@@ -86,11 +91,11 @@ fn get_message_handler() -> UpdateHandler<RequestError> {
             ),
         )
         .branch(
-            dptree::case![DialogueState::AwaitingPostLink { message_id }]
+            dptree::case![DialogueState::AwaitingPostLink(message_id)]
                 .endpoint(handlers::message::download::handle_post_link),
         )
         .branch(
-            dptree::case![DialogueState::AwaitingStoryLink { message_id }]
+            dptree::case![DialogueState::AwaitingStoryLink(message_id)]
                 .endpoint(handlers::message::download::handle_story_link),
         )
 }

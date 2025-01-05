@@ -1,13 +1,14 @@
 use crate::{
     bot::DialogueState,
-    services::instagram::types::{ContentType, MediaContent, PostContent},
     utils::{error::BotError, keyboard},
 };
 use teloxide::{
     dispatching::dialogue::ErasedStorage,
     prelude::*,
-    types::{CallbackQuery, InputFile, InputMedia, InputMediaPhoto, InputMediaVideo, ParseMode},
+    types::{CallbackQuery, ParseMode},
 };
+
+use super::message::download::handle_download;
 
 pub async fn handle_callback(
     bot: Bot,
@@ -38,7 +39,7 @@ pub async fn handle_callback(
                 .map_err(|e| BotError::Other(e.into()))?;
 
             dialogue
-                .update(DialogueState::AwaitingPostLink { message_id: msg.id })
+                .update(DialogueState::AwaitingPostLink(msg.id))
                 .await
                 .map_err(|e| BotError::DialogueError(e.to_string()))?;
         }
@@ -53,7 +54,7 @@ pub async fn handle_callback(
                 .map_err(|e| BotError::Other(e.into()))?;
 
             dialogue
-                .update(DialogueState::AwaitingStoryLink { message_id: msg.id })
+                .update(DialogueState::AwaitingStoryLink(msg.id))
                 .await
                 .map_err(|e| BotError::DialogueError(e.to_string()))?;
         }
@@ -64,54 +65,7 @@ pub async fn handle_callback(
                 .await
                 .map_err(|e| BotError::DialogueError(e.to_string()))?
             {
-                bot.delete_message(message.chat().id, message.id()).await?;
-
-                let download_msg = bot.send_message(message.chat().id, "⬇️ Downloading...").await?;
-
-                match content {
-                    MediaContent::Post(post_content) => {
-                        info!("Downloading post: {:?}", post_content);
-                        match post_content {
-                            PostContent::Single { url, content_type } => {
-                                bot.delete_message(message.chat().id, download_msg.id).await?;
-                                let _ = match content_type {
-                                    ContentType::Image => {
-                                        bot.send_photo(message.chat().id, InputFile::url(url)).await?
-                                    }
-                                    ContentType::Reel => bot.send_video(message.chat().id, InputFile::url(url)).await?,
-                                };
-
-                                send_download_complete_message(&bot, message.chat().id).await?;
-                            }
-                            PostContent::Carousel { items } => {
-                                // Delete the downloading message
-                                bot.delete_message(message.chat().id, download_msg.id).await?;
-                                let media_group = items
-                                    .into_iter()
-                                    .map(|item| match item.content_type {
-                                        ContentType::Image => {
-                                            InputMedia::Photo(InputMediaPhoto::new(InputFile::url(item.url)))
-                                        }
-                                        ContentType::Reel => {
-                                            InputMedia::Video(InputMediaVideo::new(InputFile::url(item.url)))
-                                        }
-                                    })
-                                    .collect::<Vec<_>>();
-
-                                bot.send_media_group(message.chat().id, media_group).await?;
-
-                                send_download_complete_message(&bot, message.chat().id).await?;
-                            }
-                        }
-                    }
-                    // TODO: implement story download
-                    MediaContent::Story(story_content) => {
-                        info!("Downloading story: {:?}", story_content);
-                        bot.delete_message(message.chat().id, download_msg.id).await?;
-                        bot.send_message(message.chat().id, "Story downloading is in progress...")
-                            .await?;
-                    }
-                };
+                handle_download(bot.clone(), message, content).await?;
                 dialogue
                     .update(DialogueState::Start)
                     .await
@@ -180,14 +134,6 @@ pub async fn handle_callback(
     bot.answer_callback_query(&q.id)
         .await
         .map_err(|e| BotError::Other(e.into()))?;
-
-    Ok(())
-}
-
-async fn send_download_complete_message(bot: &Bot, chat_id: ChatId) -> ResponseResult<()> {
-    bot.send_message(chat_id, "✅ Download completed! What would you like to do next?")
-        .reply_markup(keyboard::get_back_to_menu_keyboard())
-        .await?;
 
     Ok(())
 }
