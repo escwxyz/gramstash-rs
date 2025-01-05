@@ -1,7 +1,6 @@
 use error::{BotError, BotResult};
 use once_cell::sync::Lazy;
 use regex::Regex;
-use teloxide::types::Message;
 use url::Url;
 
 pub mod error;
@@ -24,13 +23,4 @@ pub fn parse_url(url: &str) -> BotResult<Url> {
 
 pub fn extract_instagram_url(text: &str) -> Option<String> {
     INSTAGRAM_URL_REGEX.find(text).map(|m| m.as_str().to_string())
-}
-
-// TODO: where to put this?
-pub fn block_group_chats(msg: &Message) -> BotResult<()> {
-    if msg.chat.id.0 < 0 {
-        return Err(BotError::InvalidState("Group chats are not supported".into()));
-    }
-
-    Ok(())
 }

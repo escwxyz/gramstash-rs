@@ -17,6 +17,7 @@ use teloxide::RequestError;
 use crate::handlers;
 
 use crate::handlers::command::Command;
+use crate::services;
 use crate::services::instagram::types::MediaContent;
 use crate::state::AppState;
 
@@ -31,14 +32,14 @@ pub enum DialogueState {
         content: MediaContent,
     },
     // Authentication
-    // AwaitingUsername {
-    //     message_id: MessageId,
-    //     username: String,
-    // },
-    // AwaitingPassword {
-    //     message_id: MessageId,
-    //     username: String,
-    // },
+    AwaitingUsername {
+        message_id: MessageId,
+        username: String,
+    },
+    AwaitingPassword {
+        message_id: MessageId,
+        username: String,
+    },
 }
 
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
@@ -108,6 +109,14 @@ fn get_callback_handler() -> UpdateHandler<RequestError> {
 
 pub fn handler_tree() -> UpdateHandler<RequestError> {
     dptree::entry()
+        .filter_map_async(|update: Update| async move {
+            let is_private = services::middleware::check_private_chat(&update);
+            if !is_private {
+                warn!("Rejected message from group chat");
+                return None;
+            }
+            Some(update)
+        })
         .branch(get_command_handler())
         .branch(get_message_handler())
         .branch(get_callback_handler())
