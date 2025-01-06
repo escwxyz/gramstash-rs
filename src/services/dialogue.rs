@@ -22,10 +22,9 @@ pub enum DialogueState {
         username: String,
         prompt_msg_id: MessageId,
     },
-    ConfirmLogin {
-        username: String,
-        password: String,
-    },
+    LoggedIn,
+    AwaitingLogoutConfirmation(MessageId),
+    ConfirmLogout,
 }
 
 pub struct DialogueService;
@@ -37,19 +36,22 @@ impl DialogueService {
         let use_redis = state.config.dialogue.use_redis;
 
         if !use_redis {
+            debug!("Dialogue storage is not using Redis, skipping clear");
             return Ok(());
         }
 
-        info!("Clearing dialogue storage...");
+        debug!("Clearing dialogue storage...");
 
         let mut conn = state.redis.get_connection().await?;
-
+        debug!("Getting keys...");
         let keys: Vec<String> = conn.keys("[0-9]*").await?;
 
         for key in keys {
+            debug!("Clearing dialogue state for chat_id: {}", key);
             conn.del::<_, String>(&key).await?;
-            info!("Cleared dialogue state for chat_id: {}", key);
         }
+
+        debug!("Dialogue storage cleared");
 
         Ok(())
     }

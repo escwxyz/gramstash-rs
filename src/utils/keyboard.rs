@@ -1,5 +1,7 @@
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
+use crate::services::instagram::InstagramService;
+
 pub fn get_main_menu_keyboard() -> InlineKeyboardMarkup {
     InlineKeyboardMarkup::new([
         [InlineKeyboardButton::callback("📥 Download Content", "download_menu")],
@@ -24,10 +26,23 @@ pub fn get_confirm_download_keyboard() -> InlineKeyboardMarkup {
 }
 
 pub fn get_settings_keyboard() -> InlineKeyboardMarkup {
-    InlineKeyboardMarkup::new([
-        [InlineKeyboardButton::callback("🌐 Language", "language_menu")],
-        [InlineKeyboardButton::callback("🔙 Back to Main Menu", "main_menu")],
-    ])
+    let instagram_service = InstagramService::new();
+    let username = instagram_service.get_username();
+
+    let mut buttons = vec![[InlineKeyboardButton::callback("🌐 Language", "language_menu")]];
+
+    if username.is_none() {
+        buttons.push([InlineKeyboardButton::callback("🔑 Login", "login")]);
+    } else {
+        buttons.push([InlineKeyboardButton::callback(
+            format!("🔓 Logout {}", username.unwrap_or_default()),
+            "logout",
+        )]);
+    }
+
+    buttons.push([InlineKeyboardButton::callback("🔓 Back to Main Menu", "main_menu")]);
+
+    InlineKeyboardMarkup::new(buttons)
 }
 
 pub fn get_back_to_menu_keyboard() -> InlineKeyboardMarkup {

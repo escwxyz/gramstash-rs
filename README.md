@@ -52,8 +52,8 @@ DIALOGUE_CLEAR_INTERVAL_SECS = "your-dialogue-clear-interval-secs"
 - [x] Redis integration
 - [x] Rate limiting
 - [x] Dialogue state management
-- [ ] Unit tests
-- [ ] Instagram authentication
+- [x] Unit tests
+- [x] Instagram authentication
 - [ ] Story downloading
 - [ ] Highlight downloading
 - [ ] Internationalization

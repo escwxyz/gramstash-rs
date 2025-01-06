@@ -24,3 +24,53 @@ pub fn parse_url(url: &str) -> BotResult<Url> {
 pub fn extract_instagram_url(text: &str) -> Option<String> {
     INSTAGRAM_URL_REGEX.find(text).map(|m| m.as_str().to_string())
 }
+
+pub fn escape_markdown(text: &str) -> String {
+    const SPECIAL_CHARS: &[char] = &[
+        '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!',
+    ];
+
+    let mut escaped = String::with_capacity(text.len() * 2);
+    for c in text.chars() {
+        if SPECIAL_CHARS.contains(&c) {
+            escaped.push('\\');
+        }
+        escaped.push(c);
+    }
+    escaped
+}
+
+pub fn unescape_markdown(text: &str) -> String {
+    text.replace('\\', "")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_escape_markdown() {
+        assert_eq!(escape_markdown("hello_world"), "hello\\_world");
+        assert_eq!(escape_markdown("*bold*"), "\\*bold\\*");
+        assert_eq!(escape_markdown("user.name"), "user\\.name");
+        assert_eq!(escape_markdown("(test)"), "\\(test\\)");
+        assert_eq!(
+            escape_markdown("_*[]()~`>#+-=|{}.!"),
+            "\\_\\*\\[\\]\\(\\)\\~\\`\\>\\#\\+\\-\\=\\|\\{\\}\\.\\!"
+        );
+        assert_eq!(escape_markdown("normal text"), "normal text");
+    }
+
+    #[test]
+    fn test_unescape_markdown() {
+        assert_eq!(unescape_markdown("hello\\_world"), "hello_world");
+        assert_eq!(unescape_markdown("\\*bold\\*"), "*bold*");
+        assert_eq!(unescape_markdown("user\\.name"), "user.name");
+        assert_eq!(unescape_markdown("\\(test\\)"), "(test)");
+        assert_eq!(
+            unescape_markdown("\\_\\*\\[\\]\\(\\)\\~\\`\\>\\#\\+\\-\\=\\|\\{\\}\\.\\!"),
+            "_*[]()~`>#+-=|{}.!"
+        );
+        assert_eq!(unescape_markdown("normal text"), "normal text");
+    }
+}

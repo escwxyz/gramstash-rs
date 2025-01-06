@@ -80,16 +80,20 @@ fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Syn
             dptree::case![DialogueState::AwaitingStoryLink(message_id)]
                 .endpoint(handlers::message::download::handle_story_link),
         )
-    // .branch(
-    //     dptree::case![DialogueState::AwaitingUsername(msg_id)].endpoint(handlers::message::login::handle_username),
-    // )
-    // .branch(
-    //     dptree::case![DialogueState::AwaitingPassword {
-    //         username,
-    //         prompt_msg_id
-    //     }]
-    //     .endpoint(handlers::message::login::handle_password),
-    // )
+        .branch(
+            dptree::case![DialogueState::AwaitingUsername(msg_id)].endpoint(handlers::message::login::handle_username),
+        )
+        .branch(
+            dptree::case![DialogueState::AwaitingPassword {
+                username,
+                prompt_msg_id
+            }]
+            .endpoint(handlers::message::login::handle_password),
+        )
+        .branch(
+            dptree::case![DialogueState::AwaitingLogoutConfirmation(msg_id)]
+                .endpoint(handlers::message::logout::handle_logout),
+        )
 }
 
 fn get_callback_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {

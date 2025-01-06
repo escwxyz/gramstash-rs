@@ -5,20 +5,19 @@ use url::Url;
 
 #[derive(Debug, Deserialize)]
 pub struct LoginResponse {
-    pub message: String,
     pub status: String,
-    #[serde(default)]
-    pub authenticated: bool,
-    #[serde(default)]
-    pub user: bool,
-    #[serde(default)]
+    pub authenticated: Option<bool>,
+    pub user: Option<bool>,
+    #[serde(rename = "userId")]
     pub user_id: Option<String>,
-    #[serde(default)]
+    pub message: Option<String>,
     pub two_factor_required: Option<bool>,
-    #[serde(default)]
     pub two_factor_info: Option<TwoFactorInfo>,
-    #[serde(default)]
     pub checkpoint_url: Option<String>,
+    // #[serde(rename = "oneTapPrompt")]
+    // pub one_tap_prompt: Option<bool>,
+    // #[serde(rename = "has_onboarded_to_text_post_app")]
+    // pub has_onboarded_to_text_post_app: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -36,6 +35,21 @@ pub struct SessionData {
     pub device_id: Option<String>,  // ig_did
     pub machine_id: Option<String>, // mid
     pub rur: Option<String>,        // rur
+}
+
+impl Default for SessionData {
+    fn default() -> Self {
+        Self {
+            cookies: Vec::new(),
+            user_id: None,
+            username: None,
+            csrf_token: None,
+            session_id: None,
+            device_id: None,
+            machine_id: None,
+            rur: None,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
