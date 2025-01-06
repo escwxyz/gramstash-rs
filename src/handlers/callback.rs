@@ -1,6 +1,9 @@
 use crate::{
-    bot::DialogueState,
-    utils::{error::BotError, keyboard},
+    services::dialogue::DialogueState,
+    utils::{
+        error::{BotError, HandlerResult},
+        keyboard,
+    },
 };
 use teloxide::{
     dispatching::dialogue::ErasedStorage,
@@ -14,7 +17,7 @@ pub async fn handle_callback(
     bot: Bot,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     q: CallbackQuery,
-) -> ResponseResult<()> {
+) -> HandlerResult<()> {
     let data = q
         .data
         .ok_or_else(|| BotError::InvalidState("No callback data".into()))?;
@@ -122,6 +125,19 @@ pub async fn handle_callback(
                 .reply_markup(keyboard::get_main_menu_keyboard())
                 .await
                 .map_err(|e| BotError::Other(e.into()))?;
+        }
+        "login" => {
+            // Only ask for username first
+            let username_msg = bot
+                .edit_message_text(message.chat().id, message.id(), "Please input your Instagram username")
+                .await
+                .map_err(|e| BotError::Other(e.into()))?;
+
+            // Update state to await username
+            dialogue
+                .update(DialogueState::AwaitingUsername(username_msg.id))
+                .await
+                .map_err(|e| BotError::DialogueError(e.to_string()))?;
         }
         _ => {
             bot.answer_callback_query(&q.id)

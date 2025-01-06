@@ -53,4 +53,6 @@ impl From<anyhow::Error> for BotError {
     }
 }
 
+pub type HandlerResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
 pub type BotResult<T> = Result<T, BotError>;

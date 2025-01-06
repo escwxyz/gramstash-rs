@@ -1,15 +1,15 @@
-use crate::bot::DialogueState;
 use crate::services::cache::CacheService;
+use crate::services::dialogue::DialogueState;
 use crate::services::instagram::types::{ContentType, InstagramIdentifier, MediaContent, PostContent};
 use crate::services::instagram::InstagramService;
 use crate::services::ratelimiter::RateLimiter;
-use crate::utils::error::BotError;
+use crate::utils::error::{BotError, HandlerResult};
 use crate::utils::{extract_instagram_url, keyboard, parse_url};
 use teloxide::dispatching::dialogue::ErasedStorage;
 use teloxide::prelude::*;
 use teloxide::types::{InputFile, InputMedia, InputMediaPhoto, InputMediaVideo, MaybeInaccessibleMessage, MessageId};
 
-pub async fn handle_download(bot: Bot, message: MaybeInaccessibleMessage, content: MediaContent) -> ResponseResult<()> {
+pub async fn handle_download(bot: Bot, message: MaybeInaccessibleMessage, content: MediaContent) -> HandlerResult<()> {
     bot.delete_message(message.chat().id, message.id()).await?;
 
     let download_msg = bot.send_message(message.chat().id, "⬇️ Downloading...").await?;
@@ -61,7 +61,7 @@ pub async fn handle_post_link(
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
     message_id: MessageId,
-) -> ResponseResult<()> {
+) -> HandlerResult<()> {
     bot.delete_message(msg.chat.id, message_id).await?;
 
     let url = match validate_message(&msg) {
@@ -210,7 +210,7 @@ pub async fn handle_story_link(
     bot: Bot,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
-) -> ResponseResult<()> {
+) -> HandlerResult<()> {
     info!("Story link handler");
     bot.send_message(msg.chat.id, "Story downloading is in progress...")
         .await?;

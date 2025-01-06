@@ -1,6 +1,7 @@
 use teloxide::{macros::BotCommands, types::Message, Bot};
 use teloxide::{prelude::*, types::ParseMode, utils::markdown::escape};
 
+use crate::utils::error::HandlerResult;
 use crate::utils::keyboard;
 
 #[derive(BotCommands, Clone)]
@@ -12,14 +13,14 @@ pub enum Command {
     Help,
 }
 
-pub async fn command_handler(bot: Bot, msg: Message, cmd: Command) -> ResponseResult<()> {
+pub async fn command_handler(bot: Bot, msg: Message, cmd: Command) -> HandlerResult<()> {
     match cmd {
         Command::Start => handle_start(bot, msg).await,
         Command::Help => handle_help(bot, msg).await,
     }
 }
 
-pub async fn handle_start(bot: Bot, msg: Message) -> ResponseResult<()> {
+pub async fn handle_start(bot: Bot, msg: Message) -> HandlerResult<()> {
     let user_name = msg
         .from
         .map(|user| escape(&user.first_name))
@@ -40,7 +41,7 @@ pub async fn handle_start(bot: Bot, msg: Message) -> ResponseResult<()> {
     Ok(())
 }
 
-async fn handle_help(bot: Bot, msg: Message) -> ResponseResult<()> {
+async fn handle_help(bot: Bot, msg: Message) -> HandlerResult<()> {
     let help_text = format!("This is a help message");
 
     bot.send_message(msg.chat.id, help_text)

@@ -36,6 +36,5 @@ pub struct CacheConfig {
 #[derive(Clone, Debug)]
 pub struct DialogueConfig {
     pub use_redis: bool,
-    // TODO: implement a background job to clear the dialogue storage
     pub clear_interval_secs: u64,
 }

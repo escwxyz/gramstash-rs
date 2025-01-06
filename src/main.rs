@@ -1,8 +1,6 @@
 use bot::BotService;
 use state::AppState;
-use std::sync::Arc;
-use teloxide::Bot;
-use utils::http;
+use std::{sync::Arc, time::Duration};
 
 extern crate pretty_env_logger;
 #[macro_use]
@@ -32,14 +30,9 @@ async fn shuttle_main(
     info!("Initializing AppState...");
     AppState::init(&secrets).await?;
 
-    info!("Initializing BotService...");
-
     let state = AppState::get();
 
-    let client = http::create_telegram_client();
-    let bot_service = BotService {
-        bot: Bot::with_client(state.config.telegram.0.clone(), client),
-    };
+    let bot_service = BotService::new_from_state(&state);
 
     info!("Bot instance created");
 
@@ -51,10 +44,20 @@ impl shuttle_runtime::Service for BotService {
     async fn bind(self, _addr: std::net::SocketAddr) -> Result<(), shuttle_runtime::Error> {
         let shared_self = Arc::new(self);
 
+        tokio::spawn(async move {
+            // interval to clear the dialogue storage
+            let mut interval =
+                tokio::time::interval(Duration::from_secs(AppState::get().config.dialogue.clear_interval_secs));
+            loop {
+                if let Err(e) = services::dialogue::DialogueService::clear_dialogue_storage().await {
+                    error!("Failed to clear dialogue storage: {}", e);
+                }
+                interval.tick().await;
+            }
+        });
+
         shared_self.start().await.expect("Failed to start bot");
 
         Ok(())
     }
 }
-
-// TODO: implement a periodic background job to clear the dialogue storage
