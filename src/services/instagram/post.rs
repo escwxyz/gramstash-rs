@@ -12,7 +12,7 @@ use url::Url;
 
 impl InstagramService {
     pub async fn fetch_post_info(&self, shortcode: &str) -> BotResult<MediaInfo> {
-        let state = AppState::get();
+        let state = AppState::get()?;
 
         let api_url = state.config.instagram.api_endpoint.clone();
         let doc_id = state.config.instagram.doc_id.clone();
@@ -25,7 +25,7 @@ impl InstagramService {
         });
 
         let response = self
-            .client
+            .public_client
             .post(&api_url)
             .json(&body)
             .send()
