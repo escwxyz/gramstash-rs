@@ -44,7 +44,6 @@ pub struct SerializableCookie {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Session {
-    pub telegram_chat_id: Option<String>,
     pub telegram_user_id: Option<String>,
     pub instagram_user_id: Option<String>,
     pub session_data: Option<SessionData>,
@@ -54,7 +53,6 @@ pub struct Session {
 impl Default for Session {
     fn default() -> Self {
         Self {
-            telegram_chat_id: None,
             telegram_user_id: None,
             instagram_user_id: None,
             session_data: None,
@@ -75,28 +73,27 @@ impl SessionService {
         }
     }
 
-    pub async fn init_user_context(&mut self, telegram_chat_id: String, telegram_user_id: String) {
-        self.session.telegram_chat_id = Some(telegram_chat_id);
-        self.session.telegram_user_id = Some(telegram_user_id);
-    }
-
-    /// Get user context from local session
-    fn get_user_context(&self) -> BotResult<(&str, &str)> {
-        match (&self.session.telegram_chat_id, &self.session.telegram_user_id) {
-            (Some(chat_id), Some(user_id)) => Ok((chat_id, user_id)),
-            // TODO: handle this error
-            _ => Err(BotError::Other(anyhow::anyhow!("User context not initialized"))),
+    pub async fn init_telegram_user_context(&mut self, telegram_user_id: &str) {
+        info!("Initializing session for Telegram user ID {}", telegram_user_id);
+        self.session = Session {
+            telegram_user_id: Some(telegram_user_id.to_string()),
+            instagram_user_id: None,
+            session_data: None,
+            last_accessed: Utc::now(),
+        };
+        // Save initial session to Redis
+        if let Err(e) = self.upsert_session(telegram_user_id, &self.session).await {
+            error!("Failed to save initial session: {}", e);
         }
     }
 
-    fn create_session_key(telegram_chat_id: &str, telegram_user_id: &str) -> String {
-        format!("session:{}:{}", telegram_chat_id, telegram_user_id)
+    fn create_session_key(telegram_user_id: &str) -> String {
+        format!("session:{}", telegram_user_id)
     }
 
     /// Get session from Redis
-    pub async fn get_session(&self) -> BotResult<Option<Session>> {
-        let (telegram_chat_id, telegram_user_id) = self.get_user_context()?;
-        let key = Self::create_session_key(telegram_chat_id, telegram_user_id);
+    pub async fn get_session(&self, telegram_user_id: &str) -> BotResult<Option<Session>> {
+        let key = Self::create_session_key(telegram_user_id);
         let state = AppState::get()?;
         let mut conn = state.redis.get_connection().await?;
 
@@ -110,9 +107,9 @@ impl SessionService {
         }
     }
     // Create or update session on Redis
-    pub async fn upsert_session(&self, session: &Session) -> BotResult<()> {
-        let (telegram_chat_id, telegram_user_id) = self.get_user_context()?;
-        let key = Self::create_session_key(telegram_chat_id, telegram_user_id);
+    pub async fn upsert_session(&self, telegram_user_id: &str, session: &Session) -> BotResult<()> {
+        info!("Upserting session on Redis");
+        let key = Self::create_session_key(telegram_user_id);
         let state = AppState::get()?;
         let mut conn = state.redis.get_connection().await?;
 
@@ -122,14 +119,28 @@ impl SessionService {
 
         Ok(())
     }
-    #[allow(unused)]
-    pub async fn delete_session(&self) -> BotResult<()> {
-        let (telegram_chat_id, telegram_user_id) = self.get_user_context()?;
-        let key = Self::create_session_key(telegram_chat_id, telegram_user_id);
+    /// Update local session, and sync with session on Redis
+    pub async fn sync_session(&mut self, telegram_user_id: &str, session_data: SessionData) -> BotResult<()> {
+        self.session.session_data = Some(session_data.clone());
+        self.session.instagram_user_id = session_data.user_id;
+        self.session.last_accessed = Utc::now();
+        self.upsert_session(telegram_user_id, &self.session).await
+    }
+
+    pub async fn clear_session(&mut self, telegram_user_id: &str) -> BotResult<()> {
+        // Clear local session
+        self.session.session_data = None;
+
+        // Remove from Redis
+        self.delete_session(telegram_user_id).await
+    }
+
+    pub async fn delete_session(&self, telegram_user_id: &str) -> BotResult<()> {
+        let key = Self::create_session_key(telegram_user_id);
         let state = AppState::get()?;
         let mut conn = state.redis.get_connection().await?;
 
-        conn.del::<_, String>(&key).await?;
+        conn.del::<_, i32>(&key).await?;
 
         Ok(())
     }
