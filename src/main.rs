@@ -30,9 +30,9 @@ async fn shuttle_main(
     info!("Initializing AppState...");
     AppState::init(&secrets).await?;
 
-    let state = AppState::get();
+    let state = AppState::get()?;
 
-    let bot_service = BotService::new_from_state(&state);
+    let bot_service = BotService::new_from_state(&state).map_err(|_| anyhow::anyhow!("Failed to create BotService"))?;
 
     info!("Bot instance created");
 
@@ -43,11 +43,16 @@ async fn shuttle_main(
 impl shuttle_runtime::Service for BotService {
     async fn bind(self, _addr: std::net::SocketAddr) -> Result<(), shuttle_runtime::Error> {
         let shared_self = Arc::new(self);
-
         tokio::spawn(async move {
-            // interval to clear the dialogue storage
-            let mut interval =
-                tokio::time::interval(Duration::from_secs(AppState::get().config.dialogue.clear_interval_secs));
+            let state = match AppState::get() {
+                Ok(state) => state,
+                Err(e) => {
+                    error!("Failed to get AppState: {}", e);
+                    return;
+                }
+            };
+
+            let mut interval = tokio::time::interval(Duration::from_secs(state.config.dialogue.clear_interval_secs));
             loop {
                 if let Err(e) = services::dialogue::DialogueService::clear_dialogue_storage().await {
                     error!("Failed to clear dialogue storage: {}", e);

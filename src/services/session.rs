@@ -45,7 +45,6 @@ pub struct SerializableCookie {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Session {
     pub telegram_user_id: Option<String>,
-    pub instagram_user_id: Option<String>,
     pub session_data: Option<SessionData>,
     pub last_accessed: DateTime<Utc>,
 }
@@ -54,7 +53,6 @@ impl Default for Session {
     fn default() -> Self {
         Self {
             telegram_user_id: None,
-            instagram_user_id: None,
             session_data: None,
             last_accessed: Utc::now(),
         }
@@ -77,7 +75,6 @@ impl SessionService {
         info!("Initializing session for Telegram user ID {}", telegram_user_id);
         self.session = Session {
             telegram_user_id: Some(telegram_user_id.to_string()),
-            instagram_user_id: None,
             session_data: None,
             last_accessed: Utc::now(),
         };
@@ -117,12 +114,13 @@ impl SessionService {
             .map_err(|e| BotError::CacheError(format!("Failed to serialize session: {}", e)))?;
         conn.set::<_, _, String>(&key, serialized).await?;
 
+        info!("Session saved to Redis");
+
         Ok(())
     }
     /// Update local session, and sync with session on Redis
     pub async fn sync_session(&mut self, telegram_user_id: &str, session_data: SessionData) -> BotResult<()> {
         self.session.session_data = Some(session_data.clone());
-        self.session.instagram_user_id = session_data.user_id;
         self.session.last_accessed = Utc::now();
         self.upsert_session(telegram_user_id, &self.session).await
     }

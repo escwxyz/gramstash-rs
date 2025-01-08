@@ -11,7 +11,7 @@ pub struct CacheService;
 
 impl CacheService {
     pub async fn get_media_info(shortcode: &str) -> BotResult<Option<MediaInfo>> {
-        let mut conn = AppState::get().redis.get_connection().await?;
+        let mut conn = AppState::get()?.redis.get_connection().await?;
         let key = Self::generate_key(shortcode);
 
         let data: Option<String> = conn.get(&key).await.map_err(|e| BotError::CacheError(e.to_string()))?;
@@ -25,8 +25,8 @@ impl CacheService {
     }
 
     pub async fn set_media_info(shortcode: &str, media_info: &MediaInfo) -> BotResult<()> {
-        let expiry_secs = AppState::get().config.cache.expiry_secs;
-        let mut conn = AppState::get().redis.get_connection().await?;
+        let expiry_secs = AppState::get()?.config.cache.expiry_secs;
+        let mut conn = AppState::get()?.redis.get_connection().await?;
         let key = Self::generate_key(shortcode);
 
         let json = serde_json::to_string(media_info).map_err(|e| BotError::CacheError(e.to_string()))?;

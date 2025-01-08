@@ -9,16 +9,16 @@ pub struct RateLimiter {
 }
 
 impl RateLimiter {
-    pub fn new() -> Self {
-        let state = AppState::get();
-        Self {
+    pub fn new() -> BotResult<Self> {
+        let state = AppState::get()?;
+        Ok(Self {
             max_requests: state.config.rate_limit.daily_limit,
             window_seconds: state.config.rate_limit.window_secs,
-        }
+        })
     }
 
     pub async fn check_rate_limit(&self, chat_id: ChatId, shortcode: &str) -> BotResult<bool> {
-        let mut conn = AppState::get().redis.get_connection().await?;
+        let mut conn = AppState::get()?.redis.get_connection().await?;
 
         let key = format!(
             "rate_limit:{}:{}:{}",

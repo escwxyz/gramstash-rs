@@ -14,6 +14,7 @@ use crate::handlers::command::Command;
 use crate::services;
 use crate::services::dialogue::DialogueState;
 use crate::state::AppState;
+use crate::utils::error::BotResult;
 use crate::utils::error::HandlerResult;
 use crate::utils::http;
 
@@ -22,20 +23,20 @@ pub struct BotService {
 }
 
 impl BotService {
-    pub fn new_from_state(state: &AppState) -> Self {
+    pub fn new_from_state(state: &AppState) -> BotResult<Self> {
         info!("Initializing BotService...");
-        let client = http::create_telegram_client();
-        Self {
+        let client = http::create_telegram_client().map_err(|_| anyhow::anyhow!("Failed to create Telegram client"))?;
+        Ok(Self {
             bot: Bot::with_client(state.config.telegram.0.clone(), client),
-        }
+        })
     }
 
     pub async fn start(&self) -> HandlerResult<()> {
         let bot = self.bot.clone();
         info!("Initializing Dialogue Storage");
-        let storage: Arc<ErasedStorage<DialogueState>> = if AppState::get().config.dialogue.use_redis {
+        let storage: Arc<ErasedStorage<DialogueState>> = if AppState::get()?.config.dialogue.use_redis {
             info!("Using Redis Storage");
-            RedisStorage::open(AppState::get().config.redis.url.as_str(), Json)
+            RedisStorage::open(AppState::get()?.config.redis.url.as_str(), Json)
                 .await?
                 .erase()
         } else {
@@ -67,10 +68,9 @@ fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Syn
     Update::filter_message()
         .enter_dialogue::<Message, ErasedStorage<DialogueState>, DialogueState>()
         .branch(
-            dptree::case![DialogueState::Start].branch(
-                dptree::filter(|msg: Message| msg.text().map(|text| text == "🏠 Main Menu").unwrap_or(false))
-                    .endpoint(handlers::command::handle_start),
-            ),
+            // TODO: handle this better
+            dptree::filter(|msg: Message| msg.text().map(|text| text == "🏠 Main Menu").unwrap_or(false))
+                .endpoint(handlers::message::handle_main_menu),
         )
         .branch(
             dptree::case![DialogueState::AwaitingPostLink(message_id)]
@@ -94,6 +94,7 @@ fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Syn
             dptree::case![DialogueState::AwaitingLogoutConfirmation(msg_id)]
                 .endpoint(handlers::message::logout::handle_logout),
         )
+        .endpoint(handlers::message::handle_unknown_message)
 }
 
 fn get_callback_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
@@ -104,14 +105,40 @@ fn get_callback_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sy
 
 pub fn handler_tree() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
     dptree::entry()
-        .filter_map_async(|update: Update| async move {
-            let is_private = services::middleware::check_private_chat(&update);
-            if !is_private {
-                warn!("Rejected message from group chat");
-                return None;
-            }
-            Some(update)
-        })
+        .filter_map_async(
+            |update: Update, dialogue: Arc<ErasedStorage<DialogueState>>| async move {
+                if !services::middleware::check_private_chat(&update) {
+                    return None;
+                }
+                if let Some(telegram_user_id) = services::middleware::extract_user_id(&update) {
+                    info!("Processing update for user {}", telegram_user_id);
+
+                    // Get dialogue state
+                    let _dialogue_state = if let Some(chat) = update.chat() {
+                        let state = dialogue.get_dialogue(chat.id).await.ok().flatten();
+                        info!("Current dialogue state: {:?}", state);
+                        state
+                    } else {
+                        None
+                    };
+
+                    // Only handle session for None state (first interaction)
+                    // TODO: this is not working as expected
+                    // if dialogue_state.is_none() {
+                    //     info!("No dialogue state found - initializing session");
+                    //     if let Err(e) =
+                    //         services::middleware::handle_user_session(&telegram_user_id, &DialogueState::Start).await
+                    //     {
+                    //         error!("Failed to handle user session: {}", e);
+                    //     }
+                    // }
+
+                    Some(update)
+                } else {
+                    None
+                }
+            },
+        )
         .branch(get_command_handler())
         .branch(get_message_handler())
         .branch(get_callback_handler())

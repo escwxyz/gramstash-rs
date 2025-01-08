@@ -1,21 +1,31 @@
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
-use teloxide::types::MessageId;
+use teloxide::{dispatching::dialogue::ErasedStorage, prelude::Dialogue, types::MessageId};
 
-use crate::{state::AppState, utils::error::BotResult};
+use crate::{
+    state::AppState,
+    utils::error::{BotError, BotResult},
+};
 
 use super::instagram::types::MediaContent;
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, Debug)]
 pub enum DialogueState {
     #[default]
-    Start,
+    Start, // This is the first state of the dialogue
+    MainMenu, // This is the main menu state
+    SettingsMenu,
+    HelpMenu,
+    DownloadMenu,
     // Download
     AwaitingPostLink(MessageId),
     AwaitingStoryLink(MessageId),
     ConfirmDownload {
         content: MediaContent,
     },
+    DownloadCancelled,
+    DownloadComplete,
+    RateLimitReached,
     // Authentication
     AwaitingUsername(MessageId),
     AwaitingPassword {
@@ -30,28 +40,40 @@ pub enum DialogueState {
 pub struct DialogueService;
 
 impl DialogueService {
+    // this clear all dialogue states for all users
     pub async fn clear_dialogue_storage() -> BotResult<()> {
-        let state = AppState::get();
+        let state = AppState::get()?;
 
         let use_redis = state.config.dialogue.use_redis;
 
         if !use_redis {
-            debug!("Dialogue storage is not using Redis, skipping clear");
+            info!("Dialogue storage is not using Redis, skipping clear");
             return Ok(());
         }
 
-        debug!("Clearing dialogue storage...");
+        info!("Clearing dialogue storage...");
 
         let mut conn = state.redis.get_connection().await?;
-        debug!("Getting keys...");
         let keys: Vec<String> = conn.keys("[0-9]*").await?;
 
         for key in keys {
-            debug!("Clearing dialogue state for chat_id: {}", key);
-            conn.del::<_, String>(&key).await?;
+            info!("Clearing dialogue state for chat_id: {}", key);
+            conn.del::<_, i32>(&key).await?;
         }
 
-        debug!("Dialogue storage cleared");
+        info!("Dialogue storage cleared");
+
+        Ok(())
+    }
+
+    /// Reset the dialogue state to the start state
+    pub async fn reset_dialogue_state(
+        dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
+    ) -> BotResult<()> {
+        dialogue
+            .update(DialogueState::Start)
+            .await
+            .map_err(|e| BotError::DialogueError(e.to_string()))?;
 
         Ok(())
     }

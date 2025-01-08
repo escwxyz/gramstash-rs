@@ -1,31 +1,48 @@
+use std::sync::Arc;
+
 use once_cell::sync::OnceCell;
 
 use shuttle_runtime::SecretStore;
+use tokio::sync::Mutex;
 
 use crate::{
     config::{AppConfig, CacheConfig, DialogueConfig, InstagramConfig, RateLimitConfig, RedisConfig, TelegramConfig},
-    utils::redis::RedisClient,
+    services::{instagram::InstagramService, session::SessionService},
+    utils::{
+        error::{BotError, BotResult},
+        redis::RedisClient,
+    },
 };
 
 #[derive(Clone)]
 pub struct AppState {
     pub config: AppConfig,
     pub redis: RedisClient,
+    pub instagram: Arc<Mutex<InstagramService>>,
+    pub session: Arc<Mutex<SessionService>>,
 }
 
 pub static APP_STATE: OnceCell<AppState> = OnceCell::new();
 
 impl AppState {
-    pub async fn init(secret_store: &SecretStore) -> Result<(), anyhow::Error> {
+    pub async fn init(secret_store: &SecretStore) -> BotResult<()> {
         let config = Self::build_config(secret_store)?;
 
-        info!("Initializing Redis client...");
         let redis_url = config.redis.url.as_str();
 
         let redis = RedisClient::new(redis_url).await?;
 
+        let instagram = Arc::new(Mutex::new(InstagramService::new()?));
+
+        let session = Arc::new(Mutex::new(SessionService::new()));
+
         APP_STATE
-            .set(AppState { config, redis })
+            .set(AppState {
+                config,
+                redis,
+                instagram,
+                session,
+            })
             .map_err(|_| anyhow::anyhow!("App state already initialized"))?;
 
         Ok(())
@@ -93,7 +110,9 @@ impl AppState {
         })
     }
 
-    pub fn get() -> &'static AppState {
-        APP_STATE.get().expect("App state not initialized")
+    pub fn get() -> BotResult<&'static AppState> {
+        APP_STATE
+            .get()
+            .ok_or_else(|| BotError::AppStateError("App state not initialized".to_string()))
     }
 }
