@@ -1,21 +1,14 @@
 use dptree;
 use std::sync::Arc;
-use teloxide::dispatching::dialogue::ErasedStorage;
-use teloxide::dispatching::dialogue::InMemStorage;
-use teloxide::dispatching::dialogue::Storage;
-use teloxide::dispatching::dialogue::{serializer::Json, RedisStorage};
-use teloxide::dispatching::UpdateHandler;
+use teloxide::dispatching::dialogue::{serializer::Json, ErasedStorage, InMemStorage, RedisStorage, Storage};
+
 use teloxide::prelude::*;
 use teloxide::Bot;
 
-use crate::handlers;
-
-use crate::handlers::command::Command;
-use crate::services;
+use crate::handlers::{get_handler, Command};
 use crate::services::dialogue::DialogueState;
 use crate::state::AppState;
-use crate::utils::error::BotResult;
-use crate::utils::error::HandlerResult;
+use crate::utils::error::{BotResult, HandlerResult};
 use crate::utils::http;
 
 pub struct BotService {
@@ -24,7 +17,6 @@ pub struct BotService {
 
 impl BotService {
     pub fn new_from_state(state: &AppState) -> BotResult<Self> {
-        info!("Initializing BotService...");
         let client = http::create_telegram_client().map_err(|_| anyhow::anyhow!("Failed to create Telegram client"))?;
         Ok(Self {
             bot: Bot::with_client(state.config.telegram.0.clone(), client),
@@ -32,23 +24,38 @@ impl BotService {
     }
 
     pub async fn start(&self) -> HandlerResult<()> {
+        let config = &AppState::get()?.config;
+
+        // Test connection before proceeding
+        info!("Testing connection to Telegram API...");
+        match self.bot.get_me().await {
+            Ok(_) => info!("Successfully connected to Telegram API"),
+            Err(e) => {
+                error!("Failed to connect to Telegram API: {:?}", e);
+                return Err(anyhow::anyhow!("Failed to connect to Telegram API: {}", e).into());
+            }
+        }
+
         let bot = self.bot.clone();
-        info!("Initializing Dialogue Storage");
-        let storage: Arc<ErasedStorage<DialogueState>> = if AppState::get()?.config.dialogue.use_redis {
+        let storage: Arc<ErasedStorage<DialogueState>> = if config.dialogue.use_redis {
             info!("Using Redis Storage");
-            RedisStorage::open(AppState::get()?.config.redis.url.as_str(), Json)
-                .await?
-                .erase()
+            RedisStorage::open(config.redis.url.as_str(), Json).await?.erase()
         } else {
             info!("Using In-Memory Storage");
             InMemStorage::new().erase()
         };
-        info!("Dialogue Storage initialized");
 
-        let handler = handler_tree();
+        let admin_config = config.admin.clone();
+
+        setup_commands(&bot).await?;
+
+        let handler = get_handler();
 
         Dispatcher::builder(bot, handler)
-            .dependencies(dptree::deps![storage])
+            .dependencies(dptree::deps![storage, admin_config])
+            .error_handler(LoggingErrorHandler::with_custom_text(
+                "An error has occurred in the dispatcher",
+            ))
             .enable_ctrlc_handler()
             .build()
             .dispatch()
@@ -58,88 +65,30 @@ impl BotService {
     }
 }
 
-fn get_command_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
-    Update::filter_message()
-        .filter_command::<Command>()
-        .endpoint(handlers::command::command_handler)
-}
+pub async fn setup_commands(bot: &Bot) -> HandlerResult<()> {
+    info!("Setting up bot commands...");
+    match bot.set_my_commands(Command::user_commands()).await {
+        Ok(_) => info!("Successfully set up bot commands"),
+        Err(e) => {
+            error!("Failed to set bot commands: {:?}", e);
+            return Err(e.into());
+        }
+    }
 
-fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
-    Update::filter_message()
-        .enter_dialogue::<Message, ErasedStorage<DialogueState>, DialogueState>()
-        .branch(
-            // TODO: handle this better
-            dptree::filter(|msg: Message| msg.text().map(|text| text == "🏠 Main Menu").unwrap_or(false))
-                .endpoint(handlers::message::handle_main_menu),
-        )
-        .branch(
-            dptree::case![DialogueState::AwaitingPostLink(message_id)]
-                .endpoint(handlers::message::download::handle_post_link),
-        )
-        .branch(
-            dptree::case![DialogueState::AwaitingStoryLink(message_id)]
-                .endpoint(handlers::message::download::handle_story_link),
-        )
-        .branch(
-            dptree::case![DialogueState::AwaitingUsername(msg_id)].endpoint(handlers::message::login::handle_username),
-        )
-        .branch(
-            dptree::case![DialogueState::AwaitingPassword {
-                username,
-                prompt_msg_id
-            }]
-            .endpoint(handlers::message::login::handle_password),
-        )
-        .branch(
-            dptree::case![DialogueState::AwaitingLogoutConfirmation(msg_id)]
-                .endpoint(handlers::message::logout::handle_logout),
-        )
-        .endpoint(handlers::message::handle_unknown_message)
-}
+    // TODO
+    // Admin commands - set specifically for admin users
+    // let admin_config = AppState::get()?.config.admin.clone();
 
-fn get_callback_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
-    Update::filter_callback_query()
-        .enter_dialogue::<CallbackQuery, ErasedStorage<DialogueState>, DialogueState>()
-        .branch(dptree::entry().endpoint(handlers::callback::handle_callback))
-}
+    // // Try to set admin commands, but don't fail if we can't
+    // if let Err(e) = bot
+    //     .set_my_commands(Command::admin_commands())
+    //     .scope(BotCommandScope::Chat {
+    //         chat_id: Recipient::Id(ChatId(admin_config.telegram_user_id.0 as i64)),
+    //     })
+    //     .await
+    // {
+    //     warn!("Failed to set admin commands: {}", e);
+    // }
 
-pub fn handler_tree() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
-    dptree::entry()
-        .filter_map_async(
-            |update: Update, dialogue: Arc<ErasedStorage<DialogueState>>| async move {
-                if !services::middleware::check_private_chat(&update) {
-                    return None;
-                }
-                if let Some(telegram_user_id) = services::middleware::extract_user_id(&update) {
-                    info!("Processing update for user {}", telegram_user_id);
-
-                    // Get dialogue state
-                    let _dialogue_state = if let Some(chat) = update.chat() {
-                        let state = dialogue.get_dialogue(chat.id).await.ok().flatten();
-                        info!("Current dialogue state: {:?}", state);
-                        state
-                    } else {
-                        None
-                    };
-
-                    // Only handle session for None state (first interaction)
-                    // TODO: this is not working as expected
-                    // if dialogue_state.is_none() {
-                    //     info!("No dialogue state found - initializing session");
-                    //     if let Err(e) =
-                    //         services::middleware::handle_user_session(&telegram_user_id, &DialogueState::Start).await
-                    //     {
-                    //         error!("Failed to handle user session: {}", e);
-                    //     }
-                    // }
-
-                    Some(update)
-                } else {
-                    None
-                }
-            },
-        )
-        .branch(get_command_handler())
-        .branch(get_message_handler())
-        .branch(get_callback_handler())
+    Ok(())
 }

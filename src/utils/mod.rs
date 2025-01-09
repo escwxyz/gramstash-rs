@@ -1,7 +1,10 @@
 use error::{BotError, BotResult};
 use once_cell::sync::Lazy;
 use regex::Regex;
+use teloxide::types::UserId;
 use url::Url;
+
+use crate::state::AppState;
 
 pub mod error;
 pub mod http;
@@ -10,6 +13,11 @@ pub mod redis;
 
 static INSTAGRAM_URL_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"https?://(?:www\.)?instagram\.com/[^\s]+").unwrap());
+
+static INSTAGRAM_USERNAME_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^(?!.*\.\.)(?!.*\.$)[^\W][\w.]{0,29}$").unwrap());
+
+static INSTAGRAM_PASSWORD_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^.{8,}$").unwrap());
 
 pub fn parse_url(url: &str) -> BotResult<Url> {
     let parsed_url = Url::parse(url).map_err(|_| BotError::InvalidUrl("Invalid URL format".into()))?;
@@ -25,52 +33,15 @@ pub fn extract_instagram_url(text: &str) -> Option<String> {
     INSTAGRAM_URL_REGEX.find(text).map(|m| m.as_str().to_string())
 }
 
-pub fn escape_markdown(text: &str) -> String {
-    const SPECIAL_CHARS: &[char] = &[
-        '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!',
-    ];
-
-    let mut escaped = String::with_capacity(text.len() * 2);
-    for c in text.chars() {
-        if SPECIAL_CHARS.contains(&c) {
-            escaped.push('\\');
-        }
-        escaped.push(c);
-    }
-    escaped
+pub fn validate_instagram_username(username: &str) -> bool {
+    INSTAGRAM_USERNAME_REGEX.is_match(username)
 }
 
-pub fn unescape_markdown(text: &str) -> String {
-    text.replace('\\', "")
+pub fn validate_instagram_password(password: &str) -> bool {
+    INSTAGRAM_PASSWORD_REGEX.is_match(password)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_escape_markdown() {
-        assert_eq!(escape_markdown("hello_world"), "hello\\_world");
-        assert_eq!(escape_markdown("*bold*"), "\\*bold\\*");
-        assert_eq!(escape_markdown("user.name"), "user\\.name");
-        assert_eq!(escape_markdown("(test)"), "\\(test\\)");
-        assert_eq!(
-            escape_markdown("_*[]()~`>#+-=|{}.!"),
-            "\\_\\*\\[\\]\\(\\)\\~\\`\\>\\#\\+\\-\\=\\|\\{\\}\\.\\!"
-        );
-        assert_eq!(escape_markdown("normal text"), "normal text");
-    }
-
-    #[test]
-    fn test_unescape_markdown() {
-        assert_eq!(unescape_markdown("hello\\_world"), "hello_world");
-        assert_eq!(unescape_markdown("\\*bold\\*"), "*bold*");
-        assert_eq!(unescape_markdown("user\\.name"), "user.name");
-        assert_eq!(unescape_markdown("\\(test\\)"), "(test)");
-        assert_eq!(
-            unescape_markdown("\\_\\*\\[\\]\\(\\)\\~\\`\\>\\#\\+\\-\\=\\|\\{\\}\\.\\!"),
-            "_*[]()~`>#+-=|{}.!"
-        );
-        assert_eq!(unescape_markdown("normal text"), "normal text");
-    }
+pub fn is_admin(user_id: UserId) -> BotResult<bool> {
+    let admin_config = AppState::get()?.config.admin.clone();
+    Ok(admin_config.telegram_user_id == user_id)
 }

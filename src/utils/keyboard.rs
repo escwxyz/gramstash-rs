@@ -1,50 +1,77 @@
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
+use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, KeyboardMarkup};
 
-use crate::services::instagram::InstagramService;
+pub const DOWNLOAD_BUTTON: &str = "📥 Download";
+pub const PROFILE_BUTTON: &str = "👤 Profile";
 
-pub fn get_main_menu_keyboard() -> InlineKeyboardMarkup {
-    InlineKeyboardMarkup::new([
-        [InlineKeyboardButton::callback("📥 Download Content", "download_menu")],
-        [InlineKeyboardButton::callback("⚙️ Settings", "settings_menu")],
-        [InlineKeyboardButton::callback("ℹ️ Help", "help_menu")],
-    ])
+pub struct MainKeyboard;
+
+impl MainKeyboard {
+    pub fn get_keyboard() -> KeyboardMarkup {
+        KeyboardMarkup::new(vec![
+            vec![KeyboardButton::new(DOWNLOAD_BUTTON)],
+            vec![KeyboardButton::new(PROFILE_BUTTON)],
+        ])
+        .persistent()
+        .resize_keyboard()
+    }
 }
 
-pub fn get_download_menu_keyboard() -> InlineKeyboardMarkup {
-    InlineKeyboardMarkup::new([
-        [InlineKeyboardButton::callback("📸 Post/Reel", "download_post")],
-        [InlineKeyboardButton::callback("📖 Story", "download_story")],
-        [InlineKeyboardButton::callback("🔙 Back to Main Menu", "main_menu")],
-    ])
+pub struct MainMenu;
+
+impl MainMenu {
+    pub fn get_inline_keyboard() -> InlineKeyboardMarkup {
+        InlineKeyboardMarkup::new([
+            [InlineKeyboardButton::callback("📥 Download", "ask_for_download_link")],
+            [InlineKeyboardButton::callback("👤 Profile", "profile_menu")],
+        ])
+    }
 }
 
-pub fn get_confirm_download_keyboard() -> InlineKeyboardMarkup {
-    InlineKeyboardMarkup::new([[
-        InlineKeyboardButton::callback("✅ Confirm", "confirm"),
-        InlineKeyboardButton::callback("❌ Cancel", "cancel"),
-    ]])
-}
+pub struct DownloadMenu;
 
-pub fn get_settings_keyboard() -> InlineKeyboardMarkup {
-    let instagram_service = InstagramService::new();
-    let username = instagram_service.get_username();
-
-    let mut buttons = vec![[InlineKeyboardButton::callback("🌐 Language", "language_menu")]];
-
-    if username.is_none() {
-        buttons.push([InlineKeyboardButton::callback("🔑 Login", "login")]);
-    } else {
-        buttons.push([InlineKeyboardButton::callback(
-            format!("🔓 Logout {}", username.unwrap_or_default()),
-            "logout",
-        )]);
+impl DownloadMenu {
+    pub fn get_download_menu_inline_keyboard() -> InlineKeyboardMarkup {
+        InlineKeyboardMarkup::new([
+            [InlineKeyboardButton::callback(
+                "🔍 Continue Download",
+                "ask_for_download_link",
+            )],
+            [InlineKeyboardButton::callback("❌ Cancel Download", "cancel_download")],
+        ])
     }
 
-    buttons.push([InlineKeyboardButton::callback("🔓 Back to Main Menu", "main_menu")]);
-
-    InlineKeyboardMarkup::new(buttons)
+    pub fn get_confirm_download_keyboard() -> InlineKeyboardMarkup {
+        InlineKeyboardMarkup::new([
+            [InlineKeyboardButton::callback("✅ Confirm", "confirm_download")],
+            [InlineKeyboardButton::callback("❌ Cancel", "cancel_download")],
+        ])
+    }
 }
 
-pub fn get_back_to_menu_keyboard() -> InlineKeyboardMarkup {
-    InlineKeyboardMarkup::new([[InlineKeyboardButton::callback("🔙 Back to Menu", "main_menu")]])
+pub struct ProfileMenu;
+
+impl ProfileMenu {
+    pub fn get_profile_menu_inline_keyboard() -> InlineKeyboardMarkup {
+        let mut keyboard = Vec::new();
+        // todo user status
+        keyboard.push(vec![
+            InlineKeyboardButton::callback("🔑 Login", "auth_login"),
+            InlineKeyboardButton::callback("📊 Usage", "show_usage"),
+        ]);
+
+        keyboard.push(vec![InlineKeyboardButton::callback("❌ Cancel", "cancel")]);
+
+        InlineKeyboardMarkup::new(keyboard)
+    }
+}
+
+pub struct LanguageMenu;
+
+impl LanguageMenu {
+    pub fn get_inline_keyboard() -> InlineKeyboardMarkup {
+        InlineKeyboardMarkup::new([
+            [InlineKeyboardButton::callback("🇺🇸 English", "language_en")],
+            [InlineKeyboardButton::callback("🇨🇳 Chinese", "language_cn")],
+        ])
+    }
 }

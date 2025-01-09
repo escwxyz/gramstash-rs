@@ -1,38 +1,27 @@
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
-use teloxide::{dispatching::dialogue::ErasedStorage, prelude::Dialogue, types::MessageId};
+use teloxide::types::MessageId;
 
-use crate::{
-    state::AppState,
-    utils::error::{BotError, BotResult},
-};
+use crate::{state::AppState, utils::error::BotResult};
 
 use super::instagram::types::MediaContent;
 
+// TODO: reduce states
 #[derive(Clone, Default, Serialize, Deserialize, Debug)]
 pub enum DialogueState {
     #[default]
-    Start, // This is the first state of the dialogue
-    MainMenu, // This is the main menu state
-    SettingsMenu,
-    HelpMenu,
-    DownloadMenu,
+    Start,
     // Download
-    AwaitingPostLink(MessageId),
-    AwaitingStoryLink(MessageId),
+    AwaitingDownloadLink(MessageId),
     ConfirmDownload {
         content: MediaContent,
     },
-    DownloadCancelled,
-    DownloadComplete,
-    RateLimitReached,
     // Authentication
     AwaitingUsername(MessageId),
     AwaitingPassword {
         username: String,
         prompt_msg_id: MessageId,
     },
-    LoggedIn,
     AwaitingLogoutConfirmation(MessageId),
     ConfirmLogout,
 }
@@ -40,7 +29,8 @@ pub enum DialogueState {
 pub struct DialogueService;
 
 impl DialogueService {
-    // this clear all dialogue states for all users
+    /// Clear all dialogue states for all users
+    #[allow(dead_code)]
     pub async fn clear_dialogue_storage() -> BotResult<()> {
         let state = AppState::get()?;
 
@@ -62,18 +52,6 @@ impl DialogueService {
         }
 
         info!("Dialogue storage cleared");
-
-        Ok(())
-    }
-
-    /// Reset the dialogue state to the start state
-    pub async fn reset_dialogue_state(
-        dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
-    ) -> BotResult<()> {
-        dialogue
-            .update(DialogueState::Start)
-            .await
-            .map_err(|e| BotError::DialogueError(e.to_string()))?;
 
         Ok(())
     }

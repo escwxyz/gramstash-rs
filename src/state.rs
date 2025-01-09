@@ -3,10 +3,14 @@ use std::sync::Arc;
 use once_cell::sync::OnceCell;
 
 use shuttle_runtime::SecretStore;
+use teloxide::types::UserId;
 use tokio::sync::Mutex;
 
 use crate::{
-    config::{AppConfig, CacheConfig, DialogueConfig, InstagramConfig, RateLimitConfig, RedisConfig, TelegramConfig},
+    config::{
+        AdminConfig, AppConfig, CacheConfig, DialogueConfig, InstagramConfig, RateLimitConfig, RedisConfig,
+        TelegramConfig,
+    },
     services::{instagram::InstagramService, session::SessionService},
     utils::{
         error::{BotError, BotResult},
@@ -106,6 +110,15 @@ impl AppState {
                     .ok_or_else(|| anyhow::anyhow!("Missing DIALOGUE_CLEAR_INTERVAL_SECS"))?
                     .parse::<u64>()
                     .map_err(|_| anyhow::anyhow!("Invalid DIALOGUE_CLEAR_INTERVAL_SECS"))?,
+            },
+            admin: AdminConfig {
+                telegram_user_id: UserId(
+                    secret_store
+                        .get("ADMIN_TELEGRAM_USER_ID")
+                        .ok_or_else(|| anyhow::anyhow!("Missing ADMIN_TELEGRAM_USER_ID"))?
+                        .parse::<u64>()
+                        .map_err(|_| anyhow::anyhow!("Invalid ADMIN_TELEGRAM_USER_ID"))?,
+                ),
             },
         })
     }

@@ -1,3 +1,5 @@
+use teloxide::types::UserId;
+
 #[derive(Clone, Debug)]
 pub struct AppConfig {
     pub redis: RedisConfig,
@@ -6,6 +8,7 @@ pub struct AppConfig {
     pub rate_limit: RateLimitConfig,
     pub cache: CacheConfig,
     pub dialogue: DialogueConfig,
+    pub admin: AdminConfig,
 }
 
 #[derive(Clone, Debug)]
@@ -36,5 +39,11 @@ pub struct CacheConfig {
 #[derive(Clone, Debug)]
 pub struct DialogueConfig {
     pub use_redis: bool,
+    #[allow(unused)]
     pub clear_interval_secs: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct AdminConfig {
+    pub telegram_user_id: UserId,
 }
