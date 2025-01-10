@@ -6,7 +6,7 @@ use teloxide::{
     dptree::{self, filter},
     payloads::SendMessageSetters,
     prelude::{Dialogue, Requester},
-    types::{Message, Update},
+    types::{Message, ParseMode, Update},
     Bot,
 };
 
@@ -57,6 +57,7 @@ pub async fn handle_message_unknown(
         message.chat.id,
         "🤷‍♂️ Unknown message.\n\nPlease click the following keyboard buttons to continue.\n\n",
     )
+    .parse_mode(ParseMode::Html)
     .reply_markup(keyboard::MainMenu::get_inline_keyboard())
     .await?;
 

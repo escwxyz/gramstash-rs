@@ -2,7 +2,7 @@ use teloxide::{
     dispatching::dialogue::ErasedStorage,
     payloads::{EditMessageTextSetters, SendMessageSetters},
     prelude::{Dialogue, Requester},
-    types::{InputFile, InputMedia, InputMediaPhoto, InputMediaVideo},
+    types::{InputFile, InputMedia, InputMediaPhoto, InputMediaVideo, ParseMode},
     Bot,
 };
 
@@ -22,7 +22,12 @@ pub(super) async fn handle_callback_asking_for_download_link(
     message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {
     info!("handle_callback_asking_for_download_link");
-    bot.edit_message_text(message.chat().id, message.id(), "🔍 Please send me a message containing an Instagram content URL (post, story, reel, highlight) you want to download.")
+    bot.edit_message_text(
+        message.chat().id,
+        message.id(),
+        "🔍 Please send me a message containing an Instagram content URL (post, story, reel, highlight) you want to download.",
+    )
+    .parse_mode(ParseMode::Html)
     .await?;
 
     dialogue
@@ -40,13 +45,17 @@ pub(super) async fn handle_callback_confirm_download(
     info!("handle_callback_confirm_download");
     if let Some(DialogueState::ConfirmDownload { content }) = dialogue.get().await? {
         bot.delete_message(message.chat().id, message.id()).await?;
-        let download_msg = bot.send_message(message.chat().id, "⬇️ Downloading...").await?;
+        let download_msg = bot
+            .send_message(message.chat().id, "⬇️ Downloading...")
+            .parse_mode(ParseMode::Html)
+            .await?;
 
         bot.delete_message(message.chat().id, download_msg.id).await?;
 
         match content {
             MediaContent::Post(PostContent::Single { url, content_type }) => {
                 let _ = match content_type {
+                    // TODO add caption and meta data etc
                     ContentType::Image => bot.send_photo(message.chat().id, InputFile::url(url)).await?,
                     ContentType::Reel => bot.send_video(message.chat().id, InputFile::url(url)).await?,
                 };
@@ -70,6 +79,7 @@ pub(super) async fn handle_callback_confirm_download(
         message.chat().id,
         "✅ Download completed! What would you like to do next?",
     )
+    .parse_mode(ParseMode::Html)
     .reply_markup(keyboard::DownloadMenu::get_download_menu_inline_keyboard())
     .await?;
 
@@ -84,6 +94,7 @@ pub(super) async fn handle_callback_cancel_download(bot: &Bot, message: MaybeIna
         "Download cancelled. What would you like to do?",
     )
     .reply_markup(keyboard::MainMenu::get_inline_keyboard())
+    .parse_mode(ParseMode::Html)
     .await?;
 
     Ok(())

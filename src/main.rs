@@ -5,6 +5,8 @@ use std::sync::Arc;
 extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate rust_i18n;
 
 mod bot;
 mod command;
@@ -16,6 +18,8 @@ mod utils;
 
 #[cfg(test)]
 mod tests;
+
+i18n!("locales");
 
 #[shuttle_runtime::main]
 async fn shuttle_main(
@@ -32,6 +36,12 @@ async fn shuttle_main(
     AppState::init(&secrets).await?;
 
     let state = AppState::get()?;
+
+    let language = state.language.lock().await;
+    let locale = language.get_locale();
+    info!("Setting locale to {}", locale);
+    rust_i18n::set_locale(locale);
+    info!("Locale set to {}", locale);
 
     let bot_service = BotService::new_from_state(&state).map_err(|_| anyhow::anyhow!("Failed to create BotService"))?;
 

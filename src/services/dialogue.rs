@@ -24,6 +24,11 @@ pub enum DialogueState {
     },
     AwaitingLogoutConfirmation(MessageId),
     ConfirmLogout,
+    // Language
+    // AwaitingLanguage {
+    //     prompt_msg_id: MessageId,
+    //     language: String,
+    // },
 }
 
 pub struct DialogueService;

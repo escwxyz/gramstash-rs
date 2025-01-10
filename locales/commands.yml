@@ -1,0 +1,22 @@
+_version: 2
+commands.start:
+  en: "👋 Hi %{first_name}! Your ID is %{telegram_user_id}.\n\n\
+    Welcome to GramStash! I can help you download content from Instagram.\n\n\
+    Please select an option below:"
+  zh: "👋 你好 %{first_name}! 你的 ID 是 %{telegram_user_id}.\n\n\
+    欢迎使用 GramStash! 我可以帮助你从 Instagram 下载内容。\n\n\
+    请选择一个选项："
+commands.help:
+  en: "This is a help message\n\n
+    You can download content from Instagram by selecting the download option from the main menu.\n\n
+    You can also manage your profile and subscription by selecting the profile option from the main menu.\n\n
+    For faster access, you can simply click the persistent buttons in your keyboard.\n\n
+    Got any questions? Use /language to change the language of the bot.\n\n"
+  zh: "这是一个帮助消息\n\n
+    你可以通过从主菜单中选择下载选项从 Instagram 下载内容。\n\n
+    你也可以通过从主菜单中选择个人资料选项来管理你的个人资料和订阅。\n\n
+    为了更快地访问，你可以简单地点击键盘上的持久按钮。\n\n
+    有任何问题吗？使用 /language 更改机器人的语言。\n\n"
+commands.language:
+  en: "🌐 Please select a language below 👇"
+  zh: "🌐 请选择以下语言 👇"

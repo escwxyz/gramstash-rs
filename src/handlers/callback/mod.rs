@@ -1,4 +1,5 @@
 mod download;
+mod language;
 mod profile;
 
 use crate::{
@@ -30,8 +31,12 @@ async fn handle_callback(
         "cancel_download" => download::handle_callback_cancel_download(&bot, message).await?,
 
         // profile
-        "profile_menu" => profile::handle_callback_profile_menu(&bot, message).await?,
+        "profile_menu" | "cancel_auth" => profile::handle_callback_profile_menu(&bot, message).await?,
         "auth_login" => profile::handle_callback_auth_login(&bot, dialogue, message).await?,
+
+        // language
+        "language_en" => language::handle_callback_language_en(&bot, dialogue, message).await?,
+        "language_zh" => language::handle_callback_language_zh(&bot, dialogue, message).await?,
 
         _ => todo!(),
     }

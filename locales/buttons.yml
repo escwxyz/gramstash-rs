@@ -1,0 +1,25 @@
+_version: 2
+buttons.language_menu.en:
+  en: "🇺🇸 English"
+  zh: "🇺🇸 英文"
+buttons.language_menu.zh:
+  en: "🇨🇳 Chinese"
+  zh: "🇨🇳 中文"
+buttons.download_menu:
+  en: "🔍 Continue Download"
+  zh: "🔍 继续下载"
+buttons.download_menu:
+  en: "❌ Cancel Download"
+  zh: "❌ 取消下载"
+buttons.confirm_download.confirm:
+  en: "✅ Confirm"
+  zh: "✅ 确认"
+buttons.confirm_download.cancel:
+  en: "❌ Cancel"
+  zh: "❌ 取消"
+buttons.main_menu.download:
+  en: "📥 Download"
+  zh: "📥 下载"
+buttons.main_menu.profile:
+  en: "👤 Profile"
+  zh: "👤 个人资料"

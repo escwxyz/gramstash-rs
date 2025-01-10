@@ -7,7 +7,7 @@ use crate::utils::error::HandlerResult;
 use crate::utils::{extract_instagram_url, keyboard, parse_url};
 use teloxide::dispatching::dialogue::ErasedStorage;
 use teloxide::prelude::*;
-use teloxide::types::MessageId;
+use teloxide::types::{MessageId, ParseMode};
 
 pub async fn handle_message_asking_for_download_link(
     bot: Bot,
@@ -17,7 +17,8 @@ pub async fn handle_message_asking_for_download_link(
     info!("handle_message_asking_for_download_link");
 
     bot.send_message(msg.chat.id, "🔍 Please send me a message containing an Instagram content URL (post, story, reel, highlight) you want to download.")
-    .await?;
+        .parse_mode(ParseMode::Html)
+        .await?;
 
     dialogue.update(DialogueState::AwaitingDownloadLink(msg.id)).await?;
 
@@ -38,6 +39,7 @@ pub(super) async fn handle_message_awaiting_download_link(
         None => {
             let msg = bot
                 .send_message(msg.chat.id, "❌ Please provide a valid Instagram URL.")
+                .parse_mode(ParseMode::Html)
                 .await?;
 
             dialogue.update(DialogueState::AwaitingDownloadLink(msg.id)).await?;
@@ -46,7 +48,10 @@ pub(super) async fn handle_message_awaiting_download_link(
         }
     };
 
-    let processing_msg = bot.send_message(msg.chat.id, "⏳ Processing your request...").await?;
+    let processing_msg = bot
+        .send_message(msg.chat.id, "⏳ Processing your request...")
+        .parse_mode(ParseMode::Html)
+        .await?;
 
     let instagram_service = AppState::get()?.instagram.lock().await;
     let parsed_url = parse_url(&url)?;
@@ -73,6 +78,7 @@ pub(super) async fn handle_message_awaiting_download_link(
             processing_msg.id,
             "⚠️ Daily download limit reached. Try again tomorrow!",
         )
+        .parse_mode(ParseMode::Html)
         .reply_markup(keyboard::MainMenu::get_inline_keyboard())
         .await?;
         dialogue.update(DialogueState::Start).await?;
@@ -140,6 +146,7 @@ async fn show_media_preview(
     };
 
     bot.edit_message_text(msg.chat.id, processing_msg.id, preview_text)
+        .parse_mode(ParseMode::Html)
         .reply_markup(keyboard::DownloadMenu::get_confirm_download_keyboard())
         .await?;
 
