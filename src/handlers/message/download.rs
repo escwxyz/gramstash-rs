@@ -9,11 +9,13 @@ use teloxide::dispatching::dialogue::ErasedStorage;
 use teloxide::prelude::*;
 use teloxide::types::MessageId;
 
-pub(super) async fn handle_message_asking_for_download_link(
-    bot: &Bot,
-    dialogue: &Dialogue<DialogueState, ErasedStorage<DialogueState>>,
+pub async fn handle_message_asking_for_download_link(
+    bot: Bot,
+    dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
 ) -> HandlerResult<()> {
+    info!("handle_message_asking_for_download_link");
+
     bot.send_message(msg.chat.id, "🔍 Please send me a message containing an Instagram content URL (post, story, reel, highlight) you want to download.")
     .await?;
 
@@ -28,7 +30,8 @@ pub(super) async fn handle_message_awaiting_download_link(
     msg: Message,
     message_id: MessageId,
 ) -> HandlerResult<()> {
-    bot.delete_message(msg.chat.id, message_id).await?;
+    info!("handle_message_awaiting_download_link");
+    bot.delete_message(msg.chat.id, message_id).await?; // TODO
 
     let url = match validate_message(&msg) {
         Some(url) => url,

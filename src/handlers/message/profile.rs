@@ -15,6 +15,14 @@ use crate::{
     },
 };
 
+pub async fn handle_message_profile_menu(bot: Bot, msg: Message) -> HandlerResult<()> {
+    bot.send_message(msg.chat.id, "Hey, what would you like to do?")
+        .reply_markup(keyboard::ProfileMenu::get_profile_menu_inline_keyboard())
+        .await?;
+
+    Ok(())
+}
+
 pub(super) async fn handle_message_username(
     bot: Bot,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,

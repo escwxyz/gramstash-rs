@@ -1,32 +1,36 @@
-mod download;
-mod profile;
+pub mod download;
+pub mod profile;
 
 use teloxide::{
-    dispatching::{UpdateFilterExt, UpdateHandler},
+    dispatching::{dialogue::ErasedStorage, UpdateFilterExt, UpdateHandler},
     dptree::{self, filter},
+    payloads::SendMessageSetters,
+    prelude::{Dialogue, Requester},
     types::{Message, Update},
+    Bot,
 };
 
-use crate::{services::dialogue::DialogueState, utils::keyboard::DOWNLOAD_BUTTON, utils::keyboard::PROFILE_BUTTON};
+use crate::{
+    services::dialogue::DialogueState,
+    utils::{
+        error::HandlerResult,
+        keyboard::{self, DOWNLOAD_BUTTON, PROFILE_BUTTON},
+    },
+};
 
-use super::callback::handle_callback_profile_menu;
-
-// Only handle message based on dialogue state
 pub fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
     Update::filter_message()
-        // handle two persistent buttons
+        // IMPORTANT:first handle two persistent buttons
         .branch(
-            dptree::case![DialogueState::Start].branch(
-                // why shall we in start state?
-                Update::filter_message().branch(
+            Update::filter_message()
+                .branch(
                     filter(|msg: Message| msg.text() == Some(DOWNLOAD_BUTTON))
                         .endpoint(download::handle_message_asking_for_download_link),
+                )
+                .branch(
+                    filter(|msg: Message| msg.text() == Some(PROFILE_BUTTON))
+                        .endpoint(profile::handle_message_profile_menu),
                 ),
-            ),
-        )
-        .branch(
-            dptree::filter(|msg: Message| msg.text().map(|text| text == PROFILE_BUTTON).unwrap_or(false))
-                .endpoint(handle_callback_profile_menu),
         )
         // handle dialogue state
         .branch(
@@ -41,4 +45,21 @@ pub fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send +
             }]
             .endpoint(profile::handle_message_password),
         )
+}
+
+pub async fn handle_message_unknown(
+    bot: Bot,
+    message: Message,
+    dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
+) -> HandlerResult<()> {
+    bot.delete_message(message.chat.id, message.id).await?;
+    bot.send_message(
+        message.chat.id,
+        "🤷‍♂️ Unknown message.\n\nPlease click the following keyboard buttons to continue.\n\n",
+    )
+    .reply_markup(keyboard::MainMenu::get_inline_keyboard())
+    .await?;
+
+    dialogue.update(DialogueState::Start).await?;
+    Ok(())
 }

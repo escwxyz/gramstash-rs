@@ -18,22 +18,26 @@ use crate::{
 
 pub(super) async fn handle_callback_asking_for_download_link(
     bot: &Bot,
-    dialogue: &Dialogue<DialogueState, ErasedStorage<DialogueState>>,
-    msg: &MaybeInaccessibleMessage,
+    dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
+    message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {
-    bot.edit_message_text(msg.chat().id, msg.id(), "🔍 Please send me a message containing an Instagram content URL (post, story, reel, highlight) you want to download.")
+    info!("handle_callback_asking_for_download_link");
+    bot.edit_message_text(message.chat().id, message.id(), "🔍 Please send me a message containing an Instagram content URL (post, story, reel, highlight) you want to download.")
     .await?;
 
-    dialogue.update(DialogueState::AwaitingDownloadLink(msg.id())).await?;
+    dialogue
+        .update(DialogueState::AwaitingDownloadLink(message.id()))
+        .await?;
 
     Ok(())
 }
 
 pub(super) async fn handle_callback_confirm_download(
     bot: &Bot,
-    dialogue: &Dialogue<DialogueState, ErasedStorage<DialogueState>>,
-    message: &MaybeInaccessibleMessage,
+    dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
+    message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {
+    info!("handle_callback_confirm_download");
     if let Some(DialogueState::ConfirmDownload { content }) = dialogue.get().await? {
         bot.delete_message(message.chat().id, message.id()).await?;
         let download_msg = bot.send_message(message.chat().id, "⬇️ Downloading...").await?;
@@ -72,10 +76,8 @@ pub(super) async fn handle_callback_confirm_download(
     Ok(())
 }
 
-pub(super) async fn handle_callback_cancel_download(
-    bot: &Bot,
-    message: &MaybeInaccessibleMessage,
-) -> HandlerResult<()> {
+pub(super) async fn handle_callback_cancel_download(bot: &Bot, message: MaybeInaccessibleMessage) -> HandlerResult<()> {
+    info!("handle_callback_cancel_download");
     bot.edit_message_text(
         message.chat().id,
         message.id(),

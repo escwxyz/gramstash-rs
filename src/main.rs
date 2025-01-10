@@ -7,6 +7,7 @@ extern crate pretty_env_logger;
 extern crate log;
 
 mod bot;
+mod command;
 mod config;
 mod handlers;
 mod services;

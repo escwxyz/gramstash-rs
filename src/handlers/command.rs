@@ -1,51 +1,18 @@
-use teloxide::dispatching::UpdateHandler;
+use teloxide::dispatching::dialogue::ErasedStorage;
+use teloxide::dispatching::{HandlerExt, UpdateHandler};
 use teloxide::prelude::*;
-use teloxide::types::BotCommand;
-use teloxide::{macros::BotCommands, types::Message, Bot};
+use teloxide::{types::Message, Bot};
 
+use crate::command::Command;
+use crate::services::dialogue::DialogueState;
 use crate::state::AppState;
 use crate::utils::error::{BotError, HandlerResult};
 use crate::utils::{is_admin, keyboard};
 
-#[derive(BotCommands, Clone)]
-#[command(rename_rule = "lowercase", description = "Available commands:")]
-pub enum Command {
-    #[command(description = "Start the bot and show main menu")]
-    Start,
-    #[command(description = "Change language")]
-    Language,
-    #[command(description = "Show help message")]
-    Help,
-    #[command(description = "Admin only - show statistics")]
-    Stats,
-    #[command(description = "Admin only - show system status")]
-    Status,
-}
-
-impl Command {
-    pub fn user_commands() -> Vec<BotCommand> {
-        vec![
-            BotCommand::new("start", "Start the bot and show main menu"),
-            BotCommand::new("help", "Show help message"),
-            BotCommand::new("language", "Change language"),
-        ]
-    }
-
-    #[allow(dead_code)]
-    pub fn admin_commands() -> Vec<BotCommand> {
-        vec![
-            BotCommand::new("start", "Start the bot and show main menu"),
-            BotCommand::new("help", "Show help message"),
-            BotCommand::new("stats", "Show statistics"),
-            BotCommand::new("status", "Show system status"),
-        ]
-    }
-}
-
 async fn handle_language(bot: Bot, msg: Message) -> HandlerResult<()> {
     let _msg = bot
         .send_message(msg.chat.id, "🌐 Please select a language below 👇")
-        .reply_markup(keyboard::LanguageMenu::get_inline_keyboard())
+        .reply_markup(keyboard::LanguageMenu::get_language_menu_inline_keyboard())
         .await?;
 
     // TODO: update session with language
@@ -55,7 +22,11 @@ async fn handle_language(bot: Bot, msg: Message) -> HandlerResult<()> {
     Ok(())
 }
 
-async fn handle_start(bot: Bot, msg: Message) -> HandlerResult<()> {
+async fn handle_start(
+    bot: Bot,
+    dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
+    msg: Message,
+) -> HandlerResult<()> {
     let (telegram_user_id, user_name) = match msg.from {
         Some(user) => (user.id.to_string(), user.first_name.clone()),
         None => return Err(anyhow::anyhow!("User not found").into()),
@@ -93,9 +64,11 @@ async fn handle_start(bot: Bot, msg: Message) -> HandlerResult<()> {
     );
 
     bot.send_message(msg.chat.id, welcome_text)
-        .reply_markup(keyboard::MainMenu::get_inline_keyboard())
         .reply_markup(keyboard::MainKeyboard::get_keyboard())
+        .reply_markup(keyboard::MainMenu::get_inline_keyboard())
         .await?;
+
+    dialogue.update(DialogueState::Start).await?;
 
     Ok(())
 }
@@ -125,25 +98,30 @@ async fn handle_unknown_command(bot: Bot, msg: Message) -> HandlerResult<()> {
     Ok(())
 }
 
-async fn command_handler(bot: Bot, msg: Message, cmd: Command) -> HandlerResult<()> {
+async fn handle_command(
+    bot: Bot,
+    msg: Message,
+    cmd: Command,
+    dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
+) -> HandlerResult<()> {
     let user_id = msg
         .clone()
         .from
         .ok_or_else(|| BotError::Other(anyhow::anyhow!("User not found")))?
         .id;
-
     match cmd {
-        Command::Start => handle_start(bot, msg).await,
-        Command::Help => handle_help(bot, msg).await,
-        Command::Language => handle_language(bot, msg).await,
-        Command::Stats | Command::Status if !is_admin(user_id)? => handle_unknown_command(bot, msg).await,
-        // TODO: add admin commands
-        _ => handle_unknown_command(bot, msg).await,
+        Command::Start => handle_start(bot, dialogue, msg).await?,
+        Command::Help => handle_help(bot, msg).await?,
+        Command::Language => handle_language(bot, msg).await?,
+        Command::Stats | Command::Status if is_admin(user_id)? => handle_unknown_command(bot, msg).await?,
+        _ => handle_unknown_command(bot, msg).await?,
     }
+
+    Ok(())
 }
 
 pub fn get_command_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
     Update::filter_message()
         .filter_command::<Command>()
-        .endpoint(command_handler)
+        .endpoint(handle_command)
 }

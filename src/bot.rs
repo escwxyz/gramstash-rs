@@ -5,7 +5,8 @@ use teloxide::dispatching::dialogue::{serializer::Json, ErasedStorage, InMemStor
 use teloxide::prelude::*;
 use teloxide::Bot;
 
-use crate::handlers::{get_handler, Command};
+use crate::command::Command;
+use crate::handlers::get_handler;
 use crate::services::dialogue::DialogueState;
 use crate::state::AppState;
 use crate::utils::error::{BotResult, HandlerResult};

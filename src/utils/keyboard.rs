@@ -68,7 +68,7 @@ impl ProfileMenu {
 pub struct LanguageMenu;
 
 impl LanguageMenu {
-    pub fn get_inline_keyboard() -> InlineKeyboardMarkup {
+    pub fn get_language_menu_inline_keyboard() -> InlineKeyboardMarkup {
         InlineKeyboardMarkup::new([
             [InlineKeyboardButton::callback("🇺🇸 English", "language_en")],
             [InlineKeyboardButton::callback("🇨🇳 Chinese", "language_cn")],

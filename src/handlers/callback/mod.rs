@@ -1,8 +1,5 @@
 mod download;
-mod language;
 mod profile;
-
-pub use profile::handle_callback_profile_menu;
 
 use crate::{
     services::dialogue::DialogueState,
@@ -14,7 +11,6 @@ use teloxide::{
     prelude::*,
     types::CallbackQuery,
 };
-
 async fn handle_callback(
     bot: Bot,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
@@ -29,18 +25,14 @@ async fn handle_callback(
 
     match data.as_str() {
         // download
-        "ask_for_download_link" => {
-            download::handle_callback_asking_for_download_link(&bot, &dialogue, &message).await?
-        }
-        "confirm_download" => download::handle_callback_confirm_download(&bot, &dialogue, &message).await?,
-        "cancel_download" => download::handle_callback_cancel_download(&bot, &message).await?,
+        "ask_for_download_link" => download::handle_callback_asking_for_download_link(&bot, dialogue, message).await?,
+        "confirm_download" => download::handle_callback_confirm_download(&bot, dialogue, message).await?,
+        "cancel_download" => download::handle_callback_cancel_download(&bot, message).await?,
 
         // profile
-        "profile_menu" => profile::handle_callback_profile_menu(&bot, &message).await?,
-        "auth_login" => profile::handle_callback_auth_login(&bot, &dialogue, &message).await?,
-        "auth_logout" => todo!(),
+        "profile_menu" => profile::handle_callback_profile_menu(&bot, message).await?,
+        "auth_login" => profile::handle_callback_auth_login(&bot, dialogue, message).await?,
 
-        // language
         _ => todo!(),
     }
 
