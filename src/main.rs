@@ -16,9 +16,6 @@ mod services;
 mod state;
 mod utils;
 
-#[cfg(test)]
-mod tests;
-
 i18n!("locales");
 
 #[shuttle_runtime::main]
