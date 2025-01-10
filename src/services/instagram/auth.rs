@@ -164,66 +164,8 @@ impl InstagramService {
     }
 
     // Helper to check auth state (for UI)
-    pub fn is_authenticated(&self) -> bool {
-        self.is_authenticated
-    }
-
-    // async fn handle_login_response(&mut self, login_response: LoginResponse, username: &str) -> Result<()> {
-    //     // Handle two-factor auth first
-    //     // TODO
-    //     // if login_response.two_factor_required.unwrap_or(false) {
-    //     //     if let Some(two_factor_info) = login_response.two_factor_info {
-    //     //         self.two_factor_auth_pending = Some(TwoFactorAuthPending {
-    //     //             user: username.to_string(),
-    //     //             two_factor_identifier: two_factor_info.two_factor_identifier,
-    //     //         });
-    //     //         return Err(anyhow!("Two factor authentication required"));
-    //     //     }
-    //     // }
-    //     // TODO:
-    //     // if let Some(checkpoint_url) = login_response.checkpoint_url {
-    //     //     return Err(anyhow!("Checkpoint required: {}", checkpoint_url));
-    //     // }
-
-    //     // if !login_response.authenticated.unwrap_or(false) {
-    //     //     if login_response.user.unwrap_or(false) {
-    //     //         return Err(anyhow!("Bad credentials"));
-    //     //     } else {
-    //     //         return Err(anyhow!("User {} does not exist", username));
-    //     //     }
-    //     // }
-
-    //     let mut session_service = AppState::get()?.session.lock().await;
-    //     let session_data = session_service.session.session_data.as_mut().unwrap();
-
-    //     let cookie_store = self.cookie_jar.cookies(&"https://www.instagram.com".parse().unwrap());
-    //     if let Some(cookies) = cookie_store {
-    //         let cookie_str = cookies.to_str().unwrap();
-    //         for cookie in cookie_str.split(';').map(|s| s.trim()) {
-    //             let parts: Vec<&str> = cookie.split('=').collect();
-    //             if parts.len() == 2 {
-    //                 match parts[0] {
-    //                     "sessionid" => session_data.session_id = Some(parts[1].to_string()),
-    //                     "csrftoken" => session_data.csrf_token = Some(parts[1].to_string()),
-    //                     "ig_did" => session_data.device_id = Some(parts[1].to_string()),
-    //                     "mid" => session_data.machine_id = Some(parts[1].to_string()),
-    //                     "rur" => session_data.rur = Some(parts[1].to_string()),
-    //                     _ => {}
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     session_data.username = Some(username.to_string());
-    //     session_data.user_id = login_response.user_id;
-
-    //     let date = Utc::now();
-    //     session_service.session.last_accessed = date;
-
-    //     // Update session in Redis
-    //     session_service.upsert_session(&session_service.session).await?;
-
-    //     Ok(())
+    // pub fn is_authenticated(&self) -> bool {
+    //     self.is_authenticated
     // }
 
     // pub async fn two_factor_login(&mut self, code: &str) -> Result<()> {

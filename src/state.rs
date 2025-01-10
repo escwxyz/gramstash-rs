@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use chrono::Duration;
 use once_cell::sync::OnceCell;
 
 use shuttle_runtime::SecretStore;
@@ -9,9 +10,9 @@ use tokio::sync::Mutex;
 use crate::{
     config::{
         AdminConfig, AppConfig, CacheConfig, DialogueConfig, InstagramConfig, RateLimitConfig, RedisConfig,
-        TelegramConfig,
+        SessionConfig, TelegramConfig,
     },
-    services::{instagram::InstagramService, session::SessionService},
+    services::{instagram::InstagramService, language::Language, session::SessionService},
     utils::{
         error::{BotError, BotResult},
         redis::RedisClient,
@@ -24,6 +25,7 @@ pub struct AppState {
     pub redis: RedisClient,
     pub instagram: Arc<Mutex<InstagramService>>,
     pub session: Arc<Mutex<SessionService>>,
+    pub language: Arc<Mutex<Language>>,
 }
 
 pub static APP_STATE: OnceCell<AppState> = OnceCell::new();
@@ -38,7 +40,11 @@ impl AppState {
 
         let instagram = Arc::new(Mutex::new(InstagramService::new()?));
 
-        let session = Arc::new(Mutex::new(SessionService::new()));
+        let session = Arc::new(Mutex::new(SessionService::with_refresh_interval(Duration::seconds(
+            config.session.refresh_interval_secs,
+        ))));
+
+        let language = Arc::new(Mutex::new(Language::English));
 
         APP_STATE
             .set(AppState {
@@ -46,6 +52,7 @@ impl AppState {
                 redis,
                 instagram,
                 session,
+                language,
             })
             .map_err(|_| anyhow::anyhow!("App state already initialized"))?;
 
@@ -119,6 +126,13 @@ impl AppState {
                         .parse::<u64>()
                         .map_err(|_| anyhow::anyhow!("Invalid ADMIN_TELEGRAM_USER_ID"))?,
                 ),
+            },
+            session: SessionConfig {
+                refresh_interval_secs: secret_store
+                    .get("SESSION_REFRESH_INTERVAL_SECS")
+                    .ok_or_else(|| anyhow::anyhow!("Missing SESSION_REFRESH_INTERVAL_SECS"))?
+                    .parse::<i64>()
+                    .map_err(|_| anyhow::anyhow!("Invalid SESSION_REFRESH_INTERVAL_SECS"))?,
             },
         })
     }

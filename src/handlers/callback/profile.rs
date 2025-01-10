@@ -13,7 +13,8 @@ use crate::{
 
 pub async fn handle_callback_profile_menu(bot: &Bot, message: MaybeInaccessibleMessage) -> HandlerResult<()> {
     info!("handle_callback_profile_menu");
-    bot.edit_message_text(message.chat().id, message.id(), "Hey, what would you like to do?")
+    bot.edit_message_text(message.chat().id, message.id(), "👋 Hey, what would you like to do?")
+        .parse_mode(ParseMode::Html)
         .reply_markup(keyboard::ProfileMenu::get_profile_menu_inline_keyboard())
         .await?;
 
@@ -33,6 +34,7 @@ pub(super) async fn handle_callback_auth_login(
             "🔑 Please input your Instagram username",
         )
         .parse_mode(ParseMode::Html)
+        .reply_markup(keyboard::LoginDialogue::get_cancel_auth_keyboard()) // TODO not working?
         .await?;
 
     dialogue

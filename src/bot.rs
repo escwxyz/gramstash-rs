@@ -5,7 +5,6 @@ use teloxide::dispatching::dialogue::{serializer::Json, ErasedStorage, InMemStor
 use teloxide::prelude::*;
 use teloxide::Bot;
 
-use crate::command::Command;
 use crate::handlers::get_handler;
 use crate::services::dialogue::DialogueState;
 use crate::state::AppState;
@@ -46,14 +45,14 @@ impl BotService {
             InMemStorage::new().erase()
         };
 
-        let admin_config = config.admin.clone();
+        // let admin_config = config.admin.clone();
 
-        setup_commands(&bot).await?;
+        crate::command::setup_commands(&bot).await?;
 
         let handler = get_handler();
 
         Dispatcher::builder(bot, handler)
-            .dependencies(dptree::deps![storage, admin_config])
+            .dependencies(dptree::deps![storage]) // add deps for all below handlers?
             .error_handler(LoggingErrorHandler::with_custom_text(
                 "An error has occurred in the dispatcher",
             ))
@@ -64,32 +63,4 @@ impl BotService {
 
         Ok(())
     }
-}
-
-pub async fn setup_commands(bot: &Bot) -> HandlerResult<()> {
-    info!("Setting up bot commands...");
-    match bot.set_my_commands(Command::user_commands()).await {
-        Ok(_) => info!("Successfully set up bot commands"),
-        Err(e) => {
-            error!("Failed to set bot commands: {:?}", e);
-            return Err(e.into());
-        }
-    }
-
-    // TODO
-    // Admin commands - set specifically for admin users
-    // let admin_config = AppState::get()?.config.admin.clone();
-
-    // // Try to set admin commands, but don't fail if we can't
-    // if let Err(e) = bot
-    //     .set_my_commands(Command::admin_commands())
-    //     .scope(BotCommandScope::Chat {
-    //         chat_id: Recipient::Id(ChatId(admin_config.telegram_user_id.0 as i64)),
-    //     })
-    //     .await
-    // {
-    //     warn!("Failed to set admin commands: {}", e);
-    // }
-
-    Ok(())
 }

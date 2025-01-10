@@ -1,4 +1,12 @@
-use teloxide::{macros::BotCommands, types::BotCommand};
+use teloxide::{
+    macros::BotCommands,
+    payloads::SetMyCommandsSetters,
+    prelude::Requester,
+    types::{BotCommand, BotCommandScope, ChatId, Recipient},
+    Bot,
+};
+
+use crate::{state::AppState, utils::error::HandlerResult};
 
 #[derive(BotCommands, Clone)]
 #[command(rename_rule = "lowercase", description = "Available commands:")]
@@ -33,4 +41,33 @@ impl Command {
             BotCommand::new("status", "Show system status"),
         ]
     }
+}
+
+pub async fn setup_commands(bot: &Bot) -> HandlerResult<()> {
+    info!("Setting up bot commands...");
+
+    bot.delete_my_commands().await?;
+
+    let admin_config = AppState::get()?.config.admin.clone();
+
+    if let Err(_) = bot
+        .set_my_commands(Command::admin_commands())
+        .scope(BotCommandScope::Chat {
+            chat_id: Recipient::Id(ChatId(admin_config.telegram_user_id.0 as i64)),
+        })
+        .await
+    {
+        // If we can't set admin commands, set user commands
+        match bot.set_my_commands(Command::user_commands()).await {
+            Ok(_) => info!("Successfully set up user bot commands"),
+            Err(e) => {
+                error!("Failed to set bot commands: {:?}", e);
+                return Err(e.into());
+            }
+        }
+    } else {
+        info!("Successfully set up admin bot commands");
+    }
+
+    Ok(())
 }

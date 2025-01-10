@@ -9,6 +9,7 @@ pub struct AppConfig {
     pub cache: CacheConfig,
     pub dialogue: DialogueConfig,
     pub admin: AdminConfig,
+    pub session: SessionConfig,
 }
 
 #[derive(Clone, Debug)]
@@ -46,4 +47,9 @@ pub struct DialogueConfig {
 #[derive(Clone, Debug)]
 pub struct AdminConfig {
     pub telegram_user_id: UserId,
+}
+
+#[derive(Clone, Debug)]
+pub struct SessionConfig {
+    pub refresh_interval_secs: i64,
 }
