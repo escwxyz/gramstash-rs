@@ -40,10 +40,6 @@ async fn handle_start(
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
 ) -> HandlerResult<()> {
-    // Just check what is the user's language
-
-    info!("Checking user ... {:?}", msg.from);
-
     let (telegram_user_id, first_name) = match msg.from {
         Some(user) => (user.id.to_string(), user.first_name.clone()),
         None => return Err(anyhow::anyhow!("User not found").into()),
@@ -60,7 +56,7 @@ async fn handle_start(
     );
 
     bot.send_message(msg.chat.id, welcome_text)
-        .reply_markup(keyboard::MainMenu::get_inline_keyboard())
+        .reply_markup(keyboard::MainMenu::get_inline_keyboard()) // TODO: not showing the inline keyboard
         .reply_markup(keyboard::MainKeyboard::get_keyboard())
         .parse_mode(ParseMode::Html)
         .await?;

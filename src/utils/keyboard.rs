@@ -39,11 +39,11 @@ impl DownloadMenu {
     pub fn get_download_menu_inline_keyboard() -> InlineKeyboardMarkup {
         InlineKeyboardMarkup::new([
             [InlineKeyboardButton::callback(
-                t!("buttons.download_menu"),
+                t!("buttons.download_menu.continue"),
                 "ask_for_download_link",
             )],
             [InlineKeyboardButton::callback(
-                t!("buttons.download_menu"),
+                t!("buttons.download_menu.cancel"),
                 "cancel_download",
             )],
         ])
@@ -70,8 +70,8 @@ impl ProfileMenu {
         let mut keyboard = Vec::new();
         // todo user status
         keyboard.push(vec![
-            InlineKeyboardButton::callback("🔑 Login", "auth_login"),
-            InlineKeyboardButton::callback("📊 Usage", "show_usage"),
+            InlineKeyboardButton::callback(t!("buttons.profile_menu.login"), "auth_login"),
+            InlineKeyboardButton::callback(t!("buttons.profile_menu.usage"), "show_usage"),
         ]);
 
         keyboard.push(vec![InlineKeyboardButton::callback("❌ Cancel", "cancel")]);
@@ -84,7 +84,10 @@ pub struct LoginDialogue;
 
 impl LoginDialogue {
     pub fn get_cancel_auth_keyboard() -> InlineKeyboardMarkup {
-        InlineKeyboardMarkup::new([[InlineKeyboardButton::callback("🔙 Back", "cancel_auth")]])
+        InlineKeyboardMarkup::new([[InlineKeyboardButton::callback(
+            t!("buttons.login_dialogue.cancel"),
+            "cancel_auth",
+        )]])
     }
 }
 

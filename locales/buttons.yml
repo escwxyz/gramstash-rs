@@ -5,10 +5,10 @@ buttons.language_menu.en:
 buttons.language_menu.zh:
   en: "🇨🇳 Chinese"
   zh: "🇨🇳 中文"
-buttons.download_menu:
+buttons.download_menu.continue:
   en: "🔍 Continue Download"
   zh: "🔍 继续下载"
-buttons.download_menu:
+buttons.download_menu.cancel:
   en: "❌ Cancel Download"
   zh: "❌ 取消下载"
 buttons.confirm_download.confirm:
@@ -23,3 +23,12 @@ buttons.main_menu.download:
 buttons.main_menu.profile:
   en: "👤 Profile"
   zh: "👤 个人资料"
+buttons.profile_menu.login:
+  en: "🔑 Login"
+  zh: "🔑 登录"
+buttons.profile_menu.usage:
+  en: "📊 Usage"
+  zh: "📊 使用情况"
+buttons.login_dialogue.cancel:
+  en: "🔙 Back"
+  zh: "🔙 返回"
