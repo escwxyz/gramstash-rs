@@ -1,8 +1,8 @@
 use teloxide::types::Update;
 
-use crate::utils::{
-    error::{BotError, BotResult},
-    validate_instagram_username,
+use crate::{
+    error::{BotError, BotResult, MiddlewareError},
+    utils::validate_instagram_username,
 };
 
 pub fn extract_user_id(update: &Update) -> Option<String> {
@@ -40,11 +40,15 @@ pub fn process_instagram_username(input: &str) -> BotResult<String> {
 
     // Validate the cleaned username
     if username.is_empty() {
-        return Err(BotError::InvalidState("Username cannot be empty".into()));
+        return Err(BotError::ServiceError(crate::error::ServiceError::Middleware(
+            MiddlewareError::ValidationError("Username cannot be empty".into()),
+        )));
     }
 
     if !validate_instagram_username(username) {
-        return Err(BotError::InvalidState("Invalid Instagram username format".into()));
+        return Err(BotError::ServiceError(crate::error::ServiceError::Middleware(
+            MiddlewareError::ValidationError("Invalid Instagram username format".into()),
+        )));
     }
 
     Ok(username.to_string())

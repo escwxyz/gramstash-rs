@@ -11,6 +11,7 @@ extern crate rust_i18n;
 mod bot;
 mod command;
 mod config;
+mod error;
 mod handlers;
 mod services;
 mod state;
@@ -73,7 +74,9 @@ impl shuttle_runtime::Service for BotService {
         shared_self
             .start()
             .await
-            .map_err(|e| shuttle_runtime::Error::Custom(anyhow::anyhow!(e)))?;
+            .map_err(|e: Box<dyn std::error::Error + Send + Sync>| {
+                shuttle_runtime::Error::Custom(anyhow::anyhow!(e))
+            })?;
 
         Ok(())
     }

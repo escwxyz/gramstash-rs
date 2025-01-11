@@ -6,10 +6,7 @@ use teloxide::{
     Bot,
 };
 
-use crate::{
-    services::dialogue::DialogueState,
-    utils::{error::HandlerResult, keyboard},
-};
+use crate::{error::HandlerResult, services::dialogue::DialogueState, utils::keyboard};
 
 pub async fn handle_callback_profile_menu(bot: &Bot, message: MaybeInaccessibleMessage) -> HandlerResult<()> {
     info!("handle_callback_profile_menu");

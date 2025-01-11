@@ -1,7 +1,7 @@
 use redis::AsyncCommands;
 use teloxide::types::ChatId;
 
-use crate::{state::AppState, utils::error::BotResult};
+use crate::{error::BotResult, state::AppState};
 
 pub struct RateLimiter {
     max_requests: u32,

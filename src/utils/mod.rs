@@ -1,15 +1,16 @@
-use error::{BotError, BotResult};
+pub mod http;
+pub mod keyboard;
+pub mod redis;
+
 use once_cell::sync::Lazy;
 use regex::Regex;
 use teloxide::types::UserId;
 use url::Url;
 
-use crate::state::AppState;
-
-pub mod error;
-pub mod http;
-pub mod keyboard;
-pub mod redis;
+use crate::{
+    error::{BotError, BotResult},
+    state::AppState,
+};
 
 static INSTAGRAM_URL_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"https?://(?:www\.)?instagram\.com/[^\s]+").unwrap());

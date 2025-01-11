@@ -2,7 +2,7 @@ use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use teloxide::types::MessageId;
 
-use crate::{state::AppState, utils::error::BotResult};
+use crate::{error::BotResult, state::AppState};
 
 use super::instagram::types::MediaContent;
 

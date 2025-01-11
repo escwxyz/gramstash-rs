@@ -1,5 +1,5 @@
-pub mod download;
-pub mod profile;
+mod download;
+mod profile;
 
 use teloxide::{
     dispatching::{dialogue::ErasedStorage, UpdateFilterExt, UpdateHandler},
@@ -11,11 +11,9 @@ use teloxide::{
 };
 
 use crate::{
+    error::{BotError, HandlerResult},
     services::dialogue::DialogueState,
-    utils::{
-        error::HandlerResult,
-        keyboard::{self, DOWNLOAD_BUTTON, PROFILE_BUTTON},
-    },
+    utils::keyboard::{self, DOWNLOAD_BUTTON, PROFILE_BUTTON},
 };
 
 pub fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
@@ -58,6 +56,9 @@ pub async fn handle_message_unknown(
         .reply_markup(keyboard::MainMenu::get_inline_keyboard())
         .await?;
 
-    dialogue.update(DialogueState::Start).await?;
+    dialogue
+        .update(DialogueState::Start)
+        .await
+        .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
     Ok(())
 }

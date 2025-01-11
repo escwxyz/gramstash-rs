@@ -5,9 +5,9 @@ use teloxide::types::ParseMode;
 use teloxide::{types::Message, Bot};
 
 use crate::command::Command;
+use crate::error::{BotError, HandlerResult};
 use crate::services::dialogue::DialogueState;
 use crate::state::AppState;
-use crate::utils::error::{BotError, HandlerResult};
 use crate::utils::{is_admin, keyboard};
 
 async fn handle_language(
@@ -61,7 +61,10 @@ async fn handle_start(
         .parse_mode(ParseMode::Html)
         .await?;
 
-    dialogue.update(DialogueState::Start).await?;
+    dialogue
+        .update(DialogueState::Start)
+        .await
+        .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
 
     Ok(())
 }

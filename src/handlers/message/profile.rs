@@ -7,15 +7,13 @@ use teloxide::{
 };
 
 use crate::{
+    error::{BotError, HandlerResult, MiddlewareError, ServiceError},
     services::{dialogue::DialogueState, middleware::process_instagram_username},
     state::AppState,
-    utils::{
-        error::{BotError, HandlerResult},
-        keyboard, validate_instagram_password,
-    },
+    utils::{keyboard, validate_instagram_password},
 };
 
-pub async fn handle_message_profile_menu(bot: Bot, msg: Message) -> HandlerResult<()> {
+pub(super) async fn handle_message_profile_menu(bot: Bot, msg: Message) -> HandlerResult<()> {
     bot.send_message(msg.chat.id, t!("messages.profile_menu"))
         .reply_markup(keyboard::ProfileMenu::get_profile_menu_inline_keyboard())
         .await?;
@@ -31,9 +29,11 @@ pub(super) async fn handle_message_username(
 ) -> HandlerResult<()> {
     bot.delete_message(msg.chat.id, prompt_msg_id).await?;
 
-    let username_input = msg
-        .text()
-        .ok_or_else(|| BotError::InvalidState("No username provided".into()))?;
+    let username_input = msg.text().ok_or_else(|| {
+        BotError::ServiceError(ServiceError::Middleware(MiddlewareError::Other(
+            "No username provided".into(),
+        )))
+    })?;
 
     info!("username_input: {:?}", username_input);
 
@@ -55,7 +55,10 @@ pub(super) async fn handle_message_username(
             )
             .parse_mode(ParseMode::Html)
             .await?;
-            dialogue.update(DialogueState::AwaitingUsername(msg.id)).await?;
+            dialogue
+                .update(DialogueState::AwaitingUsername(msg.id))
+                .await
+                .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
             return Ok(());
         }
     };
@@ -126,9 +129,11 @@ pub(super) async fn handle_message_password(
 ) -> HandlerResult<()> {
     bot.delete_message(msg.chat.id, prompt_msg_id).await?;
 
-    let password = msg
-        .text()
-        .ok_or_else(|| BotError::InvalidState("No password provided".into()))?;
+    let password = msg.text().ok_or_else(|| {
+        BotError::ServiceError(ServiceError::Middleware(MiddlewareError::Other(
+            "No password provided".into(),
+        )))
+    })?;
 
     if !validate_instagram_password(&password) {
         bot.delete_message(msg.chat.id, msg.id).await?;
@@ -183,7 +188,10 @@ pub(super) async fn handle_message_password(
                 .parse_mode(ParseMode::Html)
                 .await?;
 
-            dialogue.update(DialogueState::AwaitingUsername(msg.id)).await?;
+            dialogue
+                .update(DialogueState::AwaitingUsername(msg.id))
+                .await
+                .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
 
             return Ok(());
         }

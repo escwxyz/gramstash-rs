@@ -5,7 +5,7 @@ use reqwest::{
 };
 use std::{sync::Arc, time::Duration};
 
-use super::error::BotResult;
+use crate::error::BotResult;
 
 pub fn create_telegram_client() -> BotResult<Client> {
     let builder = Client::builder()
@@ -68,6 +68,7 @@ pub fn create_instagram_public_client() -> BotResult<Client> {
     build_client(builder)
 }
 
+// TODO error handling
 fn build_client(builder: reqwest::ClientBuilder) -> BotResult<Client> {
     info!("Building client ...");
 
@@ -75,7 +76,7 @@ fn build_client(builder: reqwest::ClientBuilder) -> BotResult<Client> {
         info!("Debug mode: configuring client with proxy");
         let proxy_url = "socks5://127.0.0.1:1080";
         builder
-            .proxy(reqwest::Proxy::all(proxy_url).map_err(|_| anyhow::anyhow!("Failed to create proxy"))?)
+            .proxy(reqwest::Proxy::all(proxy_url).map_err(|_| anyhow::anyhow!("Failed to create proxy"))?) // TODO
             .build()
             .map_err(|_| anyhow::anyhow!("Failed to build client with proxy"))?
     } else {

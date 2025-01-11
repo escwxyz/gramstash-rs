@@ -6,7 +6,7 @@ use teloxide::{
     Bot,
 };
 
-use crate::{state::AppState, utils::error::HandlerResult};
+use crate::{error::HandlerResult, state::AppState};
 
 #[derive(BotCommands, Clone)]
 #[command(rename_rule = "lowercase", description = "Available commands:")]

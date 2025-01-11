@@ -1,6 +1,6 @@
 use crate::{
+    error::{BotError, BotResult, InstagramError, ServiceError},
     state::AppState,
-    utils::error::{BotError, BotResult},
 };
 
 use super::{
@@ -33,9 +33,8 @@ impl InstagramService {
             .context("Failed to fetch from instagram API")?;
 
         if !response.status().is_success() {
-            return Err(BotError::InstagramApi(format!(
-                "Instagram API returned status: {}",
-                response.status()
+            return Err(BotError::ServiceError(ServiceError::InstagramError(
+                InstagramError::ApiError(format!("Instagram API returned status: {}", response.status())),
             )));
         }
 
@@ -48,12 +47,12 @@ impl InstagramService {
         let media = data
             .get("data")
             .and_then(|d| d.get("xdt_shortcode_media"))
-            .ok_or_else(|| anyhow!("Invalid response structure"))?;
+            .ok_or_else(|| anyhow!("Invalid response structure"))?; // TODO
 
         let typename = media
             .get("__typename")
             .and_then(|t| t.as_str())
-            .ok_or_else(|| anyhow!("Missing typename"))?;
+            .ok_or_else(|| anyhow!("Missing typename"))?; // TODO
 
         match typename {
             "XDTGraphImage" => self.parse_image(media),

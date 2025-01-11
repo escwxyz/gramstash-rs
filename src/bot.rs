@@ -5,10 +5,10 @@ use teloxide::dispatching::dialogue::{serializer::Json, ErasedStorage, InMemStor
 use teloxide::prelude::*;
 use teloxide::Bot;
 
+use crate::error::{BotResult, HandlerResult};
 use crate::handlers::get_handler;
 use crate::services::dialogue::DialogueState;
 use crate::state::AppState;
-use crate::utils::error::{BotResult, HandlerResult};
 use crate::utils::http;
 
 pub struct BotService {
@@ -44,8 +44,6 @@ impl BotService {
             info!("Using In-Memory Storage");
             InMemStorage::new().erase()
         };
-
-        // let admin_config = config.admin.clone();
 
         crate::command::setup_commands(&bot).await?;
 

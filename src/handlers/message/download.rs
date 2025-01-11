@@ -1,9 +1,9 @@
+use crate::error::{BotError, HandlerResult};
 use crate::services::cache::CacheService;
 use crate::services::dialogue::DialogueState;
 use crate::services::instagram::types::{InstagramIdentifier, MediaContent, PostContent};
 use crate::services::ratelimiter::RateLimiter;
 use crate::state::AppState;
-use crate::utils::error::HandlerResult;
 use crate::utils::{extract_instagram_url, keyboard, parse_url};
 use teloxide::dispatching::dialogue::ErasedStorage;
 use teloxide::prelude::*;
@@ -20,7 +20,10 @@ pub async fn handle_message_asking_for_download_link(
         .parse_mode(ParseMode::Html)
         .await?;
 
-    dialogue.update(DialogueState::AwaitingDownloadLink(msg.id)).await?;
+    dialogue
+        .update(DialogueState::AwaitingDownloadLink(msg.id))
+        .await
+        .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
 
     Ok(())
 }
@@ -42,7 +45,10 @@ pub(super) async fn handle_message_awaiting_download_link(
                 .parse_mode(ParseMode::Html)
                 .await?;
 
-            dialogue.update(DialogueState::AwaitingDownloadLink(msg.id)).await?;
+            dialogue
+                .update(DialogueState::AwaitingDownloadLink(msg.id))
+                .await
+                .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
 
             return Ok(());
         }
@@ -58,7 +64,7 @@ pub(super) async fn handle_message_awaiting_download_link(
     let identifier = instagram_service.parse_instagram_url(&parsed_url)?;
 
     let (shortcode, content_type) = match identifier {
-        InstagramIdentifier::Story { username, shortcode } => (shortcode, "story"),
+        InstagramIdentifier::Story { username: _, shortcode } => (shortcode, "story"),
         InstagramIdentifier::Post { shortcode } => (shortcode, "post"),
         InstagramIdentifier::Reel { shortcode } => (shortcode, "reel"),
     };
@@ -81,7 +87,10 @@ pub(super) async fn handle_message_awaiting_download_link(
         .parse_mode(ParseMode::Html)
         .reply_markup(keyboard::MainMenu::get_inline_keyboard())
         .await?;
-        dialogue.update(DialogueState::Start).await?;
+        dialogue
+            .update(DialogueState::Start)
+            .await
+            .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
         return Ok(());
     }
 
@@ -114,7 +123,10 @@ pub(super) async fn handle_message_awaiting_download_link(
                 )
                 .await?;
 
-            dialogue.update(DialogueState::AwaitingDownloadLink(msg.id)).await?;
+            dialogue
+                .update(DialogueState::AwaitingDownloadLink(msg.id))
+                .await
+                .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
         }
     }
 

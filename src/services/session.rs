@@ -3,8 +3,8 @@ use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    error::{BotError, BotResult, ServiceError},
     state::AppState,
-    utils::error::{BotError, BotResult},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -153,9 +153,12 @@ impl SessionService {
         let session: Option<String> = conn.get(&key).await?;
 
         match session {
-            Some(data) => Ok(Some(
-                serde_json::from_str(&data).map_err(|e| BotError::CacheError(e.to_string()))?,
-            )),
+            Some(data) => {
+                Ok(Some(serde_json::from_str(&data).map_err(|e| {
+                    // TODO
+                    BotError::ServiceError(ServiceError::Cache(e.to_string()))
+                })?))
+            }
             None => Ok(None),
         }
     }
@@ -170,7 +173,8 @@ impl SessionService {
         session.update_refresh();
 
         let serialized = serde_json::to_string(&session)
-            .map_err(|e| BotError::CacheError(format!("Failed to serialize session: {}", e)))?;
+            // TODO
+            .map_err(|e| BotError::ServiceError(ServiceError::Cache(format!("Failed to serialize session: {}", e))))?;
         conn.set::<_, _, String>(&key, serialized).await?;
 
         // Update local session

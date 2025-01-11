@@ -1,26 +1,18 @@
-use anyhow::Context;
 use redis::{aio::MultiplexedConnection, Client};
 use std::sync::Arc;
 
-use super::error::BotResult;
-use crate::utils::error::BotError;
+use crate::error::{BotError, BotResult};
 
 #[derive(Clone)]
 pub struct RedisClient(pub Arc<Client>);
 
 impl RedisClient {
     pub async fn new(url: &str) -> BotResult<Self> {
-        let redis = Arc::new(Client::open(url).context("Failed to open Redis connection")?);
+        let redis = Arc::new(Client::open(url)?);
 
         // Test Redis connection
-        let mut conn = redis
-            .get_multiplexed_async_connection()
-            .await
-            .context("Failed to get Redis connection")?;
-        let pong: String = redis::cmd("PING")
-            .query_async(&mut conn)
-            .await
-            .context("Failed to ping Redis")?;
+        let mut conn = redis.get_multiplexed_async_connection().await?;
+        let pong: String = redis::cmd("PING").query_async(&mut conn).await?;
         if pong != "PONG" {
             return Err(BotError::RedisError("Redis connection test failed".to_string()));
         }
@@ -30,11 +22,7 @@ impl RedisClient {
     }
 
     pub async fn get_connection(&self) -> BotResult<MultiplexedConnection> {
-        let conn = self
-            .0
-            .get_multiplexed_async_connection()
-            .await
-            .context("Failed to get Redis connection")?;
+        let conn = self.0.get_multiplexed_async_connection().await?;
         Ok(conn)
     }
 }

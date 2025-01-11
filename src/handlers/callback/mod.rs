@@ -3,8 +3,8 @@ mod language;
 mod profile;
 
 use crate::{
+    error::{BotError, HandlerResult},
     services::dialogue::DialogueState,
-    utils::error::{BotError, HandlerResult},
 };
 
 use teloxide::{
@@ -19,10 +19,11 @@ async fn handle_callback(
 ) -> HandlerResult<()> {
     let data = q
         .data
-        .ok_or_else(|| BotError::InvalidState("No callback data".into()))?;
+        .ok_or_else(|| BotError::DialogueStateError("No callback data".into()))?;
 
-    let message: teloxide::types::MaybeInaccessibleMessage =
-        q.message.ok_or_else(|| BotError::InvalidState("No message".into()))?;
+    let message: teloxide::types::MaybeInaccessibleMessage = q
+        .message
+        .ok_or_else(|| BotError::DialogueStateError("No message".into()))?;
 
     match data.as_str() {
         // download

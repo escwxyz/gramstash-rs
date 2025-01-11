@@ -1,6 +1,6 @@
 use crate::{
+    error::{BotError, BotResult, InstagramError, ServiceError},
     services::session::SessionData,
-    utils::error::{BotError, BotResult},
 };
 
 use super::InstagramService;
@@ -41,7 +41,7 @@ impl InstagramService {
             .get("https://www.instagram.com/")
             .send()
             .await
-            .map_err(|e| BotError::InstagramApi(format!("Failed to visit homepage: {}", e)))?;
+            .map_err(|e| BotError::ServiceError(ServiceError::InstagramError(InstagramError::NetworkError(e))))?;
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
         // Get CSRF token
@@ -98,10 +98,9 @@ impl InstagramService {
 
         info!("Login response status: {}", response.status());
 
-        let login_response = response
-            .json::<LoginResponse>()
-            .await
-            .map_err(|e| BotError::InstagramApi(format!("Failed to parse login response: {}", e)))?;
+        let login_response = response.json::<LoginResponse>().await.map_err(|e| {
+            BotError::ServiceError(ServiceError::InstagramError(InstagramError::ParseError(e.to_string())))
+        })?;
 
         info!("Login response: {:?}", login_response);
 
@@ -158,7 +157,8 @@ impl InstagramService {
             .get("https://www.instagram.com/accounts/edit/")
             .send()
             .await
-            .map_err(|e| BotError::InstagramApi(format!("Failed to verify session: {}", e)))?;
+            // TODO: session error
+            .map_err(|e| BotError::ServiceError(ServiceError::InstagramError(InstagramError::NetworkError(e))))?;
 
         Ok(response.status().is_success())
     }

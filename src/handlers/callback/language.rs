@@ -7,9 +7,9 @@ use teloxide::{
 };
 
 use crate::{
+    error::{BotError, HandlerResult},
     services::{dialogue::DialogueState, language::Language},
     state::AppState,
-    utils::error::HandlerResult,
 };
 
 pub(super) async fn handle_callback_language_en(
@@ -30,7 +30,10 @@ pub(super) async fn handle_callback_language_en(
     bot.edit_message_text(message.chat().id, message.id(), new_text).await?;
 
     // Restore the same state
-    dialogue.update(current_state).await?;
+    dialogue
+        .update(current_state)
+        .await
+        .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
 
     Ok(())
 }
@@ -56,7 +59,10 @@ pub(super) async fn handle_callback_language_zh(
         .await?;
 
     // Restore the same state
-    dialogue.update(current_state).await?;
+    dialogue
+        .update(current_state)
+        .await
+        .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
 
     Ok(())
 }

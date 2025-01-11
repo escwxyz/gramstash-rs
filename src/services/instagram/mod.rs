@@ -1,24 +1,20 @@
 mod auth;
 mod post;
 mod story;
-
 pub(crate) mod types;
 
-use types::InstagramIdentifier;
-pub use types::{CarouselItem, MediaInfo};
-
-use std::sync::Arc;
-
+use crate::{
+    error::{BotError, BotResult},
+    utils::http,
+};
 use reqwest::{
     cookie::{CookieStore, Jar},
     Client,
 };
+use std::sync::Arc;
+use types::InstagramIdentifier;
+pub use types::{CarouselItem, MediaInfo};
 use url::Url;
-
-use crate::utils::{
-    error::{BotError, BotResult},
-    http,
-};
 
 use super::session::{SerializableCookie, SessionData};
 

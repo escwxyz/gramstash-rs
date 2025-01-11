@@ -1,7 +1,7 @@
 use crate::{
+    error::{BotError, BotResult, ServiceError},
     services::instagram::MediaInfo,
     state::AppState,
-    utils::error::{BotError, BotResult},
 };
 
 use redis::AsyncCommands;
@@ -14,12 +14,17 @@ impl CacheService {
         let mut conn = AppState::get()?.redis.get_connection().await?;
         let key = Self::generate_key(shortcode);
 
-        let data: Option<String> = conn.get(&key).await.map_err(|e| BotError::CacheError(e.to_string()))?;
+        let data: Option<String> = conn
+            .get(&key)
+            .await
+            .map_err(|e| BotError::ServiceError(ServiceError::Cache(e.to_string())))?;
 
         match data {
-            Some(json) => Ok(Some(
-                serde_json::from_str(&json).map_err(|e| BotError::CacheError(e.to_string()))?,
-            )),
+            Some(json) => {
+                Ok(Some(serde_json::from_str(&json).map_err(|e| {
+                    BotError::ServiceError(ServiceError::Cache(e.to_string()))
+                })?))
+            }
             None => Ok(None),
         }
     }
@@ -29,10 +34,11 @@ impl CacheService {
         let mut conn = AppState::get()?.redis.get_connection().await?;
         let key = Self::generate_key(shortcode);
 
-        let json = serde_json::to_string(media_info).map_err(|e| BotError::CacheError(e.to_string()))?;
+        let json = serde_json::to_string(media_info)
+            .map_err(|e| BotError::ServiceError(ServiceError::Cache(e.to_string())))?;
         conn.set_ex::<_, _, String>(&key, json, expiry_secs)
             .await
-            .map_err(|e| BotError::CacheError(e.to_string()))?;
+            .map_err(|e| BotError::ServiceError(ServiceError::Cache(e.to_string())))?;
 
         Ok(())
     }

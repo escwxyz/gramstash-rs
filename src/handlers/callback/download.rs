@@ -9,11 +9,12 @@ use teloxide::{
 use teloxide::types::MaybeInaccessibleMessage;
 
 use crate::{
+    error::HandlerResult,
     services::{
         dialogue::DialogueState,
         instagram::types::{ContentType, MediaContent, PostContent},
     },
-    utils::{error::HandlerResult, keyboard},
+    utils::keyboard,
 };
 
 pub(super) async fn handle_callback_asking_for_download_link(
