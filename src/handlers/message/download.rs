@@ -16,7 +16,7 @@ pub async fn handle_message_asking_for_download_link(
 ) -> HandlerResult<()> {
     info!("handle_message_asking_for_download_link");
 
-    bot.send_message(msg.chat.id, "🔍 Please send me a message containing an Instagram content URL (post, story, reel, highlight) you want to download.")
+    bot.send_message(msg.chat.id, t!("messages.download.ask_for_download_link"))
         .parse_mode(ParseMode::Html)
         .await?;
 
@@ -38,7 +38,7 @@ pub(super) async fn handle_message_awaiting_download_link(
         Some(url) => url,
         None => {
             let msg = bot
-                .send_message(msg.chat.id, "❌ Please provide a valid Instagram URL.")
+                .send_message(msg.chat.id, t!("messages.download.invalid_url"))
                 .parse_mode(ParseMode::Html)
                 .await?;
 
@@ -49,7 +49,7 @@ pub(super) async fn handle_message_awaiting_download_link(
     };
 
     let processing_msg = bot
-        .send_message(msg.chat.id, "⏳ Processing your request...")
+        .send_message(msg.chat.id, t!("messages.download.processing_request"))
         .parse_mode(ParseMode::Html)
         .await?;
 
@@ -76,7 +76,7 @@ pub(super) async fn handle_message_awaiting_download_link(
         bot.edit_message_text(
             msg.chat.id,
             processing_msg.id,
-            "⚠️ Daily download limit reached. Try again tomorrow!",
+            t!("messages.download.download_limit_reached"),
         )
         .parse_mode(ParseMode::Html)
         .reply_markup(keyboard::MainMenu::get_inline_keyboard())
@@ -110,7 +110,7 @@ pub(super) async fn handle_message_awaiting_download_link(
                 .edit_message_text(
                     msg.chat.id,
                     processing_msg.id,
-                    &format!("❌ Error: {}\n\nPlease try again.", e),
+                    &format!("❌ Error: {}\n\nPlease try again.", e), // TODO: translate & reply_markup
                 )
                 .await?;
 

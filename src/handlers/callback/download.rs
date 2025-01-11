@@ -25,7 +25,7 @@ pub(super) async fn handle_callback_asking_for_download_link(
     bot.edit_message_text(
         message.chat().id,
         message.id(),
-        "🔍 Please send me a message containing an Instagram content URL (post, story, reel, highlight) you want to download.",
+        t!("callbacks.download.ask_for_download_link"),
     )
     .parse_mode(ParseMode::Html)
     .await?;
@@ -46,7 +46,7 @@ pub(super) async fn handle_callback_confirm_download(
     if let Some(DialogueState::ConfirmDownload { content }) = dialogue.get().await? {
         bot.delete_message(message.chat().id, message.id()).await?;
         let download_msg = bot
-            .send_message(message.chat().id, "⬇️ Downloading...")
+            .send_message(message.chat().id, t!("callbacks.download.downloading"))
             .parse_mode(ParseMode::Html)
             .await?;
 
@@ -75,13 +75,10 @@ pub(super) async fn handle_callback_confirm_download(
         }
     }
 
-    bot.send_message(
-        message.chat().id,
-        "✅ Download completed! What would you like to do next?",
-    )
-    .parse_mode(ParseMode::Html)
-    .reply_markup(keyboard::DownloadMenu::get_download_menu_inline_keyboard())
-    .await?;
+    bot.send_message(message.chat().id, t!("callbacks.download.download_completed"))
+        .parse_mode(ParseMode::Html)
+        .reply_markup(keyboard::DownloadMenu::get_download_menu_inline_keyboard())
+        .await?;
 
     Ok(())
 }
@@ -91,7 +88,7 @@ pub(super) async fn handle_callback_cancel_download(bot: &Bot, message: MaybeIna
     bot.edit_message_text(
         message.chat().id,
         message.id(),
-        "Download cancelled. What would you like to do?",
+        t!("callbacks.download.cancel_download"),
     )
     .reply_markup(keyboard::MainMenu::get_inline_keyboard())
     .parse_mode(ParseMode::Html)

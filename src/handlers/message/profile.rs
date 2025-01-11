@@ -16,8 +16,7 @@ use crate::{
 };
 
 pub async fn handle_message_profile_menu(bot: Bot, msg: Message) -> HandlerResult<()> {
-    let text = t!("messages.profile_menu").to_string();
-    bot.send_message(msg.chat.id, text)
+    bot.send_message(msg.chat.id, t!("messages.profile_menu"))
         .reply_markup(keyboard::ProfileMenu::get_profile_menu_inline_keyboard())
         .await?;
 
@@ -39,7 +38,7 @@ pub(super) async fn handle_message_username(
     info!("username_input: {:?}", username_input);
 
     let validating_msg = bot
-        .send_message(msg.chat.id, "🔑 Validating username ...")
+        .send_message(msg.chat.id, t!("messages.profile.username.validating"))
         .parse_mode(ParseMode::Html)
         .await?;
 
@@ -49,9 +48,9 @@ pub(super) async fn handle_message_username(
             bot.edit_message_text(
                 msg.chat.id,
                 validating_msg.id,
-                format!(
-                    "❌ Invalid username {}. \n\nPlease input a valid username again.",
-                    &username_input
+                t!(
+                    "messages.profile.username.invalid",
+                    username = username_input.to_string()
                 ),
             )
             .parse_mode(ParseMode::Html)
@@ -67,7 +66,11 @@ pub(super) async fn handle_message_username(
 
     // Check if there's a valid session for this user
     let session_msg = bot
-        .edit_message_text(msg.chat.id, validating_msg.id, "🔑 Validating session ...")
+        .edit_message_text(
+            msg.chat.id,
+            validating_msg.id,
+            t!("messages.profile.username.validating_session"),
+        )
         .parse_mode(ParseMode::Html)
         .await?;
 
@@ -79,8 +82,7 @@ pub(super) async fn handle_message_username(
                     bot.edit_message_text(
                         msg.chat.id,
                         session_msg.id,
-                        "✅ Successfully logged in with existing session!\n\
-                        What would you like to do?",
+                        t!("messages.profile.username.validating_session_success"),
                     )
                     .parse_mode(ParseMode::Html)
                     .reply_markup(keyboard::MainMenu::get_inline_keyboard())
@@ -95,9 +97,9 @@ pub(super) async fn handle_message_username(
         .edit_message_text(
             msg.chat.id,
             session_msg.id,
-            format!(
-                "🔑 Session is invalid, {}.\n\nPlease login again and input your Instagram password.\n\nNote: Your password will never be stored or used for anything else.",
-                username
+            t!(
+                "messages.profile.username.invalid_session",
+                username = username.to_string()
             ),
         )
         .parse_mode(ParseMode::Html)
@@ -130,7 +132,7 @@ pub(super) async fn handle_message_password(
 
     if !validate_instagram_password(&password) {
         bot.delete_message(msg.chat.id, msg.id).await?;
-        bot.send_message(msg.chat.id, "❌ Invalid password. Please try again.")
+        bot.send_message(msg.chat.id, t!("messages.profile.password.invalid"))
             .parse_mode(ParseMode::Html)
             .await?;
 
@@ -147,7 +149,7 @@ pub(super) async fn handle_message_password(
     bot.delete_message(msg.chat.id, msg.id).await?;
 
     let status_msg = bot
-        .send_message(msg.chat.id, "🔄 Logging in to Instagram ...")
+        .send_message(msg.chat.id, t!("messages.profile.password.logging_in"))
         .parse_mode(ParseMode::Html)
         .await?;
 
@@ -165,8 +167,7 @@ pub(super) async fn handle_message_password(
             bot.edit_message_text(
                 msg.chat.id,
                 status_msg.id,
-                "✅ Login successful! You can now download stories.\n\n\
-                 Note: This session won't expire until you logout manually.",
+                t!("messages.profile.password.login_success"),
             )
             .parse_mode(ParseMode::Html)
             .reply_markup(keyboard::MainMenu::get_inline_keyboard())
@@ -177,7 +178,7 @@ pub(super) async fn handle_message_password(
                 .edit_message_text(
                     msg.chat.id,
                     status_msg.id,
-                    format!("❌ Login failed: {}\n\nPlease try again by inputing your username.", e),
+                    t!("messages.profile.password.login_failed", error = e.to_string()),
                 )
                 .parse_mode(ParseMode::Html)
                 .await?;

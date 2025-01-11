@@ -20,3 +20,6 @@ commands.help:
 commands.language:
   en: "🌐 Please select a language below 👇"
   zh: "🌐 请选择以下语言 👇"
+commands.unknown_command:
+  en: "⚠️ Unknown command\n\nPlease use /help to see available commands."
+  zh: "⚠️ 未知命令\n\n请使用 /help 查看可用命令。"

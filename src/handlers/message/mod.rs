@@ -53,13 +53,10 @@ pub async fn handle_message_unknown(
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
 ) -> HandlerResult<()> {
     bot.delete_message(message.chat.id, message.id).await?;
-    bot.send_message(
-        message.chat.id,
-        "🤷‍♂️ Unknown message.\n\nPlease click the following keyboard buttons to continue.\n\n",
-    )
-    .parse_mode(ParseMode::Html)
-    .reply_markup(keyboard::MainMenu::get_inline_keyboard())
-    .await?;
+    bot.send_message(message.chat.id, t!("messages.unknown_message"))
+        .parse_mode(ParseMode::Html)
+        .reply_markup(keyboard::MainMenu::get_inline_keyboard())
+        .await?;
 
     dialogue.update(DialogueState::Start).await?;
     Ok(())

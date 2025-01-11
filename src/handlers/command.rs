@@ -15,10 +15,8 @@ async fn handle_language(
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
 ) -> HandlerResult<()> {
-    let language_text = t!("commands.language").to_string();
-
     let msg = bot
-        .send_message(msg.chat.id, language_text)
+        .send_message(msg.chat.id, t!("commands.language"))
         .reply_markup(keyboard::LanguageMenu::get_language_menu_inline_keyboard())
         .parse_mode(ParseMode::Html)
         .await?;
@@ -59,8 +57,7 @@ async fn handle_start(
         "commands.start",
         first_name = first_name,
         telegram_user_id = telegram_user_id
-    )
-    .to_string();
+    );
 
     bot.send_message(msg.chat.id, welcome_text)
         .reply_markup(keyboard::MainMenu::get_inline_keyboard())
@@ -74,9 +71,7 @@ async fn handle_start(
 }
 
 async fn handle_help(bot: Bot, msg: Message) -> HandlerResult<()> {
-    let help_text = t!("commands.help").to_string();
-
-    bot.send_message(msg.chat.id, help_text)
+    bot.send_message(msg.chat.id, t!("commands.help"))
         .reply_markup(keyboard::MainMenu::get_inline_keyboard())
         .parse_mode(ParseMode::Html)
         .await?;
@@ -85,12 +80,9 @@ async fn handle_help(bot: Bot, msg: Message) -> HandlerResult<()> {
 }
 
 async fn handle_unknown_command(bot: Bot, msg: Message) -> HandlerResult<()> {
-    bot.send_message(
-        msg.chat.id,
-        "⚠️ Unknown command\n\nPlease use /help to see available commands.",
-    )
-    .parse_mode(ParseMode::Html)
-    .await?;
+    bot.send_message(msg.chat.id, t!("commands.unknown_command"))
+        .parse_mode(ParseMode::Html)
+        .await?;
     Ok(())
 }
 
