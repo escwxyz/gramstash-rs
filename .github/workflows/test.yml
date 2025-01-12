@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  # MIN_COVERAGE: 80 # TODO: Add fail-under
+  # MIN_COVERAGE: 80 # TODO: Add --fail-under
   REDIS_HOST: redis
   SRH_HOST: srh
 
@@ -61,33 +61,11 @@ jobs:
       - name: Run tests with coverage
         id: coverage
         run: |
-          cargo +nightly tarpaulin --timeout 120
-        #cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml --out html --fail-under $MIN_COVERAGE # TODO
+          cargo +nightly tarpaulin --out xml
+        # --fail-under $MIN_COVERAGE # TODO
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: code-coverage-report
-          path: |
-            coverage_output/tarpaulin-report.html
-            coverage_output/cobertura.xml
-
-      - name: Create test summary
-        if: always()
-        uses: test-summary/action@v2
-        with:
-          paths: "target/debug/deps/*.xml"
-
-      - name: Check coverage threshold
-        if: success()
-        run: |
-          COVERAGE=$(grep -oP 'line-rate="\K[^"]+' cobertura.xml | awk '{print $1 * 100}')
-          if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
-            echo "::warning::Coverage ($COVERAGE%) is below threshold ($MIN_COVERAGE%)"
-          fi
