@@ -90,6 +90,7 @@ async fn handle_command(
     msg: Message,
     cmd: Command,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
+    state: &AppState,
 ) -> HandlerResult<()> {
     let user_id = msg
         .clone()
@@ -101,7 +102,9 @@ async fn handle_command(
         Command::Start => handle_start(bot, dialogue, msg).await?,
         Command::Help => handle_help(bot, msg).await?,
         Command::Language => handle_language(bot, dialogue, msg).await?,
-        Command::Stats | Command::Status if !is_admin(user_id)? => handle_unknown_command(bot, msg).await?,
+        Command::Stats | Command::Status if !is_admin(user_id, &state.config.admin)? => {
+            handle_unknown_command(bot, msg).await?
+        }
         _ => handle_unknown_command(bot, msg).await?,
     }
 
@@ -112,4 +115,53 @@ pub fn get_command_handler() -> UpdateHandler<Box<dyn std::error::Error + Send +
     Update::filter_message()
         .filter_command::<Command>()
         .endpoint(handle_command)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{handlers::get_handler, services::dialogue::DialogueState, utils::test::setup_test_state};
+    use teloxide::dptree;
+    use teloxide_tests::{MockBot, MockMessageText};
+
+    #[tokio::test]
+    async fn test_handle_help() {
+        let (test_app_state, storage) = setup_test_state().await.expect("Failed to setup test state");
+
+        let bot = MockBot::new(MockMessageText::new().text("/help"), get_handler());
+
+        bot.dependencies(dptree::deps![storage, test_app_state]);
+        bot.set_state(DialogueState::Start).await;
+
+        bot.dispatch().await;
+
+        let responses = bot.get_responses();
+        let last_message = responses.sent_messages.last().expect("No messages were sent");
+
+        assert_eq!(last_message.text().expect("Message had no text"), t!("commands.help"));
+
+        assert!(
+            last_message.reply_markup().is_some(),
+            "Expected reply markup to be present"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_unknown_command() {
+        let (test_app_state, storage) = setup_test_state().await.expect("Failed to setup test state");
+
+        let bot = MockBot::new(MockMessageText::new().text("/stats"), get_handler());
+
+        bot.dependencies(dptree::deps![storage, test_app_state]);
+        bot.set_state(DialogueState::Start).await;
+
+        bot.dispatch().await;
+
+        let responses = bot.get_responses();
+        let last_message = responses.sent_messages.last().expect("No messages were sent");
+
+        assert_eq!(
+            last_message.text().expect("Message had no text"),
+            t!("commands.unknown_command")
+        );
+    }
 }

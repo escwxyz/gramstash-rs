@@ -1,8 +1,17 @@
+use std::sync::Arc;
+
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
-use teloxide::types::MessageId;
+use teloxide::{
+    dispatching::dialogue::{serializer::Json, ErasedStorage, InMemStorage, RedisStorage, Storage},
+    types::MessageId,
+};
 
-use crate::{error::BotResult, state::AppState};
+use crate::{
+    config::DialogueConfig,
+    error::{BotError, BotResult},
+    state::AppState,
+};
 
 use super::instagram::types::MediaContent;
 
@@ -34,13 +43,8 @@ pub enum DialogueState {
 pub struct DialogueService;
 
 impl DialogueService {
-    /// Clear all dialogue states for all users
     #[allow(dead_code)]
-    pub async fn clear_dialogue_storage() -> BotResult<()> {
-        let state = AppState::get()?;
-
-        let use_redis = state.config.dialogue.use_redis;
-
+    pub async fn clear_dialogue_storage(use_redis: bool) -> BotResult<()> {
         if !use_redis {
             info!("Dialogue storage is not using Redis, skipping clear");
             return Ok(());
@@ -48,7 +52,7 @@ impl DialogueService {
 
         info!("Clearing dialogue storage...");
 
-        let mut conn = state.redis.get_connection().await?;
+        let mut conn = AppState::get()?.redis.get_connection().await?;
         let keys: Vec<String> = conn.keys("[0-9]*").await?;
 
         for key in keys {
@@ -59,5 +63,23 @@ impl DialogueService {
         info!("Dialogue storage cleared");
 
         Ok(())
+    }
+
+    pub async fn get_dialogue_storage(config: &DialogueConfig) -> BotResult<Arc<ErasedStorage<DialogueState>>> {
+        let storage = if config.use_redis {
+            info!("Using Redis Storage");
+            let storage = {
+                RedisStorage::open(config.redis_url.as_str(), Json)
+                    .await
+                    .map_err(|e| BotError::RedisError(e.to_string()))?
+                    .erase()
+            };
+            storage
+        } else {
+            info!("Using In-Memory Storage");
+            InMemStorage::new().erase()
+        };
+
+        Ok(storage)
     }
 }

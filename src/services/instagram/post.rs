@@ -10,6 +10,7 @@ use super::{
 use url::Url;
 
 impl InstagramService {
+    // TODO: test this
     pub async fn fetch_post_info(&self, shortcode: &str) -> BotResult<MediaInfo> {
         let state = AppState::get()?;
 
@@ -96,7 +97,6 @@ impl InstagramService {
                 url: Url::parse(&url).map_err(|e| BotError::InvalidUrl(e.to_string()))?,
                 content_type: ContentType::Image,
                 // caption: None,
-                // timestamp: None,
             }),
             author: self.get_author(media)?,
         })
@@ -138,7 +138,6 @@ impl InstagramService {
         Ok(url)
     }
 
-    // For reels
     fn parse_reel(&self, media: &serde_json::Value) -> BotResult<MediaInfo> {
         let url = media
             .get("video_url")

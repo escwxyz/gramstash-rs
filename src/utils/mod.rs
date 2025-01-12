@@ -2,14 +2,17 @@ pub mod http;
 pub mod keyboard;
 pub mod redis;
 
+#[cfg(test)]
+pub mod test;
+
 use once_cell::sync::Lazy;
 use regex::Regex;
 use teloxide::types::UserId;
 use url::Url;
 
 use crate::{
+    config::AdminConfig,
     error::{BotError, BotResult},
-    state::AppState,
 };
 
 static INSTAGRAM_URL_REGEX: Lazy<Regex> =
@@ -42,8 +45,7 @@ pub fn validate_instagram_password(password: &str) -> bool {
     INSTAGRAM_PASSWORD_REGEX.is_match(password)
 }
 
-pub fn is_admin(user_id: UserId) -> BotResult<bool> {
-    let admin_config = AppState::get()?.config.admin.clone();
+pub fn is_admin(user_id: UserId, admin_config: &AdminConfig) -> BotResult<bool> {
     Ok(admin_config.telegram_user_id == user_id)
 }
 

@@ -1,0 +1,17 @@
+version: "3"
+services:
+  redis:
+    image: redis/redis-stack-server:6.2.6-v6
+    ports:
+      - "6379:6379"
+
+  srh:
+    image: hiett/serverless-redis-http:latest
+    ports:
+      - "8079:80"
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: ${UPSTASH_REDIS_TOKEN}
+      SRH_CONNECTION_STRING: "redis://redis:6379"
+    depends_on:
+      - redis

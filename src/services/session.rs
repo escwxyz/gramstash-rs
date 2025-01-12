@@ -196,11 +196,13 @@ impl SessionService {
 
         Ok(())
     }
+
     #[allow(dead_code)]
     pub async fn clear_session(&mut self, telegram_user_id: &str) -> BotResult<()> {
         self.session.session_data = None;
         self.delete_session(telegram_user_id).await
     }
+
     #[allow(dead_code)]
     pub async fn delete_session(&self, telegram_user_id: &str) -> BotResult<()> {
         let key = Self::create_session_key(telegram_user_id);

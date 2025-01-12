@@ -15,18 +15,60 @@ pub struct AppConfig {
     pub session: SessionConfig,
 }
 
+impl AppConfig {
+    #[cfg(test)]
+    pub fn new_test_config() -> Self {
+        Self {
+            redis: RedisConfig::new_test_config(),
+            telegram: TelegramConfig::new_test_config(),
+            instagram: InstagramConfig::new_test_config(),
+            rate_limit: RateLimitConfig::new_test_config(),
+            cache: CacheConfig::new_test_config(),
+            dialogue: DialogueConfig::new_test_config(),
+            admin: AdminConfig::new_test_config(),
+            session: SessionConfig::new_test_config(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct RedisConfig {
     pub url: String,
 }
 
+impl RedisConfig {
+    #[cfg(test)]
+    pub fn new_test_config() -> Self {
+        Self {
+            url: "redis://127.0.0.1:6379".to_string(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct TelegramConfig(pub String);
+
+impl TelegramConfig {
+    #[cfg(test)]
+    pub fn new_test_config() -> Self {
+        Self("test_token".to_string())
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct InstagramConfig {
     pub api_endpoint: String,
     pub doc_id: String,
+}
+
+impl InstagramConfig {
+    #[cfg(test)]
+    pub fn new_test_config() -> Self {
+        Self {
+            api_endpoint: "https://www.instagram.com/graphql/query/".to_string(),
+            doc_id: "8845758582119845".to_string(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -35,16 +77,45 @@ pub struct RateLimitConfig {
     pub window_secs: u64,
 }
 
+impl RateLimitConfig {
+    #[cfg(test)]
+    pub fn new_test_config() -> Self {
+        Self {
+            daily_limit: 100,
+            window_secs: 86400,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct CacheConfig {
     pub expiry_secs: u64,
 }
 
+impl CacheConfig {
+    #[cfg(test)]
+    pub fn new_test_config() -> Self {
+        Self { expiry_secs: 300 }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct DialogueConfig {
     pub use_redis: bool,
-    #[allow(unused)]
+    pub redis_url: String,
+    #[allow(dead_code)]
     pub clear_interval_secs: u64,
+}
+
+impl DialogueConfig {
+    #[cfg(test)]
+    pub fn new_test_config() -> Self {
+        Self {
+            use_redis: true,
+            redis_url: "redis://127.0.0.1:6379".to_string(),
+            clear_interval_secs: 60,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -52,9 +123,27 @@ pub struct AdminConfig {
     pub telegram_user_id: UserId,
 }
 
+impl AdminConfig {
+    #[cfg(test)]
+    pub fn new_test_config() -> Self {
+        Self {
+            telegram_user_id: UserId(1234567890),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct SessionConfig {
     pub refresh_interval_secs: i64,
+}
+
+impl SessionConfig {
+    #[cfg(test)]
+    pub fn new_test_config() -> Self {
+        Self {
+            refresh_interval_secs: 300,
+        }
+    }
 }
 
 pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
@@ -71,7 +160,7 @@ pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
     let redis_url = format!("rediss://default:{}@{}:{}", redis_password, redis_host, redis_port);
 
     Ok(AppConfig {
-        redis: RedisConfig { url: redis_url },
+        redis: RedisConfig { url: redis_url.clone() },
         telegram: TelegramConfig(
             secret_store
                 .get("TELEGRAM_BOT_TOKEN")
@@ -110,6 +199,7 @@ pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
                 .ok_or_else(|| BotError::SecretKeyError("Missing DIALOGUE_USE_REDIS".to_string()))?
                 .parse::<bool>()
                 .map_err(|_| BotError::SecretKeyError("Invalid DIALOGUE_USE_REDIS".to_string()))?,
+            redis_url,
             clear_interval_secs: secret_store
                 .get("DIALOGUE_CLEAR_INTERVAL_SECS")
                 .ok_or_else(|| BotError::SecretKeyError("Missing DIALOGUE_CLEAR_INTERVAL_SECS".to_string()))?

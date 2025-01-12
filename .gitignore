@@ -1,4 +1,5 @@
 /target
 .shuttle*
 Secrets*.toml
+.env
 /coverage_output
