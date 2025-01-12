@@ -1,6 +1,6 @@
 # GramStash (An Instagram Media Downloader) 🤖
 
-[![CI](https://github.com/escwxyz/gramstash/actions/workflows/unit_tests.yml/badge.svg)](https://github.com/escwxyz/gramstash/actions/workflows/unit_tests.yml)
+[![CI](https://github.com/escwxyz/gramstash/actions/workflows/test.yml/badge.svg)](https://github.com/escwxyz/gramstash/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/escwxyz/gramstash/graph/badge.svg?token=UEAL5KGTVW)](https://codecov.io/gh/escwxyz/gramstash)
 
 A Telegram bot that allows users to download media content from Instagram, including posts, reels, and stories. Built with Rust for performance.

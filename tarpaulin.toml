@@ -60,7 +60,7 @@ workspace = false
 
 # Timeout duration for tests to finish.
 # (in a format that human-time library can parse, e.g., "5m" for 5 minutes)
-test-timeout = "10m"
+test-timeout = "5m"
 
 # Build in release mode for optimized builds.
 release = false
@@ -115,7 +115,7 @@ args = []
 unstable-features = []
 
 # Output files to generate as part of the test execution.
-generate = []
+generate = ["xml", "html"]
 
 # List of test names to run (corresponding to `cargo --test <NAME>`).
 test-names = []
@@ -151,7 +151,7 @@ color = "Auto"
 follow-exec = true
 
 # Number of jobs (threads) to use for building the tests.
-# jobs = null
+jobs = 2
 
 # Allow the test suite to use implicit test threads if needed.
 implicit-test-threads = true

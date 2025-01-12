@@ -30,8 +30,7 @@ impl AppState {
     }
 
     #[cfg(test)]
-    pub async fn init_test() -> BotResult<()> {
-        let config = AppConfig::new_test_config();
+    pub async fn init_test_with_config(config: AppConfig) -> BotResult<()> {
         Self::init_common(config).await
     }
 

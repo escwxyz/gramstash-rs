@@ -1,0 +1,93 @@
+name: Test & Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  # MIN_COVERAGE: 80 # TODO: Add fail-under
+  REDIS_HOST: redis
+  SRH_HOST: srh
+
+jobs:
+  test:
+    timeout-minutes: 30
+    name: Test & Coverage
+    runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin:develop-nightly
+      options: --security-opt seccomp=unconfined
+      env:
+        REDIS_HOST: redis
+        SRH_HOST: srh
+
+    services:
+      redis:
+        image: redis/redis-stack-server:6.2.6-v6
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      srh:
+        image: hiett/serverless-redis-http:latest
+        env:
+          SRH_MODE: standalone
+          SRH_REDIS_URL: redis://redis:6379
+        ports:
+          - 8079:80
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ~/.rustup/toolchains/ 
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run tests with coverage
+        id: coverage
+        run: |
+          cargo +nightly tarpaulin --timeout 120
+        #cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml --out html --fail-under $MIN_COVERAGE # TODO
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: |
+            coverage_output/tarpaulin-report.html
+            coverage_output/cobertura.xml
+
+      - name: Create test summary
+        if: always()
+        uses: test-summary/action@v2
+        with:
+          paths: "target/debug/deps/*.xml"
+
+      - name: Check coverage threshold
+        if: success()
+        run: |
+          COVERAGE=$(grep -oP 'line-rate="\K[^"]+' cobertura.xml | awk '{print $1 * 100}')
+          if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
+            echo "::warning::Coverage ($COVERAGE%) is below threshold ($MIN_COVERAGE%)"
+          fi

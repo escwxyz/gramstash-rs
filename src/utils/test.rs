@@ -9,19 +9,25 @@ use crate::{
 };
 use teloxide::dispatching::dialogue::ErasedStorage;
 
-// Mutex for synchronizing test initialization
 pub static TEST_MUTEX: Mutex<()> = Mutex::const_new(());
+
+fn get_redis_host() -> String {
+    std::env::var("REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".to_string())
+}
 
 /// Common test setup function that can be used across all test files
 pub async fn setup_test_state() -> BotResult<(&'static AppState, Arc<ErasedStorage<DialogueState>>)> {
-    // Lock the mutex during setup
     let _lock = TEST_MUTEX.lock().await;
 
-    let test_config = AppConfig::new_test_config();
+    let mut test_config = AppConfig::new_test_config();
+
+    let redis_host = get_redis_host();
+    test_config.redis.url = format!("redis://{}:6379", redis_host);
+    test_config.dialogue.redis_url = format!("redis://{}:6379", redis_host);
 
     // Only initialize if not already initialized
     if AppState::get().is_err() {
-        AppState::init_test()
+        AppState::init_test_with_config(test_config.clone())
             .await
             .expect("Failed to initialize test app state");
     }
