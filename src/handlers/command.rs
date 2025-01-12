@@ -12,11 +12,10 @@ use crate::utils::{is_admin, keyboard};
 
 async fn handle_language(
     bot: Bot,
-    dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
+    _dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
 ) -> HandlerResult<()> {
-    let msg = bot
-        .send_message(msg.chat.id, t!("commands.language"))
+    bot.send_message(msg.chat.id, t!("commands.language"))
         .reply_markup(keyboard::LanguageMenu::get_language_menu_inline_keyboard())
         .parse_mode(ParseMode::Html)
         .await?;
@@ -42,6 +41,7 @@ async fn handle_start(
 ) -> HandlerResult<()> {
     let (telegram_user_id, first_name) = match msg.from {
         Some(user) => (user.id.to_string(), user.first_name.clone()),
+        // TODO: handle this error
         None => return Err(anyhow::anyhow!("User not found").into()),
     };
 
@@ -56,7 +56,7 @@ async fn handle_start(
     );
 
     bot.send_message(msg.chat.id, welcome_text)
-        .reply_markup(keyboard::MainMenu::get_inline_keyboard()) // TODO: not showing the inline keyboard
+        .reply_markup(keyboard::MainMenu::get_inline_keyboard()) // TODO!: not showing the inline keyboard
         .reply_markup(keyboard::MainKeyboard::get_keyboard())
         .parse_mode(ParseMode::Html)
         .await?;
@@ -94,6 +94,7 @@ async fn handle_command(
     let user_id = msg
         .clone()
         .from
+        // TODO: handle this error
         .ok_or_else(|| BotError::Other(anyhow::anyhow!("User not found")))?
         .id;
     match cmd {

@@ -1,23 +1,6 @@
-// TODO: Add more comprehensive error handling
-
 use redis::RedisError;
 use shuttle_runtime::Error as ShuttleError;
 use teloxide::{ApiError, RequestError};
-use thiserror::Error;
-
-// #[derive(Debug, Error)]
-// pub enum TelegramError {
-//     #[error("API error: {0}")]
-//     ApiError(String),
-//     #[error("Network error: {0}")]
-//     NetworkError(#[from] reqwest::Error),
-//     // #[error("Rate limit exceeded. Try again in {0:?}")]
-//     // RateLimited(Duration),
-//     #[error("Invalid bot token")]
-//     InvalidToken,
-//     #[error("Message not found: {0}")]
-//     MessageNotFound(String),
-// }
 
 #[derive(Debug, thiserror::Error)]
 pub enum MiddlewareError {
@@ -39,23 +22,25 @@ pub enum AuthenticationError {
     LoginFailed(String),
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum InstagramError {
     #[error("Network error: {0}")]
     NetworkError(#[from] reqwest::Error),
-    #[error("Parse error: {0}")]
-    ParseError(String),
+    #[error("Deserialization error: {0}")]
+    DeserializationError(String),
+    #[error("Invalid response structure: {0}")]
+    InvalidResponseStructure(String),
     #[error("Auth error: {0}")]
     AuthenticationError(#[from] AuthenticationError),
     #[error("API error: {0}")]
     ApiError(String),
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum ServiceError {
     #[error("Cache: {0}")] // check
     Cache(String),
-    #[error("Instagram: {0}")]
+    #[error("Instagram: {0}")] // check
     InstagramError(#[from] InstagramError),
     #[error("Session: {0}")]
     Session(String),
@@ -65,7 +50,7 @@ pub enum ServiceError {
     Language(String),
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum BotError {
     #[error("Error loading secret key: {0}")] // check
     SecretKeyError(String),
@@ -87,7 +72,6 @@ pub enum BotError {
 
     #[error(transparent)]
     Other(anyhow::Error),
-    // TODO: implement more comprehensive errors
 }
 
 impl From<BotError> for ShuttleError {

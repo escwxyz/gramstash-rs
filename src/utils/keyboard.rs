@@ -1,15 +1,17 @@
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, KeyboardMarkup};
 
-pub const DOWNLOAD_BUTTON: &str = "📥 Download";
-pub const PROFILE_BUTTON: &str = "👤 Profile";
+pub const DOWNLOAD_BUTTON_EN: &str = "📥 Download";
+pub const DOWNLOAD_BUTTON_ZH: &str = "📥 下载";
+pub const PROFILE_BUTTON_EN: &str = "👤 Profile";
+pub const PROFILE_BUTTON_ZH: &str = "👤 个人资料";
 
 pub struct MainKeyboard;
 
 impl MainKeyboard {
     pub fn get_keyboard() -> KeyboardMarkup {
         KeyboardMarkup::new(vec![
-            vec![KeyboardButton::new(DOWNLOAD_BUTTON)],
-            vec![KeyboardButton::new(PROFILE_BUTTON)],
+            vec![KeyboardButton::new(t!("buttons.main_menu.download"))],
+            vec![KeyboardButton::new(t!("buttons.main_menu.profile"))],
         ])
         .persistent()
         .resize_keyboard()
@@ -68,7 +70,12 @@ pub struct ProfileMenu;
 impl ProfileMenu {
     pub fn get_profile_menu_inline_keyboard() -> InlineKeyboardMarkup {
         let mut keyboard = Vec::new();
-        // todo user status
+        // TODO! user status
+
+        // let state = AppState::get()?;
+
+        // let instagram_service = state.instagram.lock().await?;
+
         keyboard.push(vec![
             InlineKeyboardButton::callback(t!("buttons.profile_menu.login"), "auth_login"),
             InlineKeyboardButton::callback(t!("buttons.profile_menu.usage"), "show_usage"),

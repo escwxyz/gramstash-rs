@@ -13,7 +13,7 @@ use teloxide::{
 use crate::{
     error::{BotError, HandlerResult},
     services::dialogue::DialogueState,
-    utils::keyboard::{self, DOWNLOAD_BUTTON, PROFILE_BUTTON},
+    utils::keyboard::{self, DOWNLOAD_BUTTON_EN, DOWNLOAD_BUTTON_ZH, PROFILE_BUTTON_EN, PROFILE_BUTTON_ZH},
 };
 
 pub fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
@@ -22,12 +22,16 @@ pub fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send +
         .branch(
             Update::filter_message()
                 .branch(
-                    filter(|msg: Message| msg.text() == Some(DOWNLOAD_BUTTON))
-                        .endpoint(download::handle_message_asking_for_download_link),
+                    filter(|msg: Message| {
+                        msg.text() == Some(DOWNLOAD_BUTTON_EN) || msg.text() == Some(DOWNLOAD_BUTTON_ZH)
+                    })
+                    .endpoint(download::handle_message_asking_for_download_link),
                 )
                 .branch(
-                    filter(|msg: Message| msg.text() == Some(PROFILE_BUTTON))
-                        .endpoint(profile::handle_message_profile_menu),
+                    filter(|msg: Message| {
+                        msg.text() == Some(PROFILE_BUTTON_EN) || msg.text() == Some(PROFILE_BUTTON_ZH)
+                    })
+                    .endpoint(profile::handle_message_profile_menu),
                 ),
         )
         // handle dialogue state

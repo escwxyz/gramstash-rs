@@ -54,43 +54,6 @@ pub fn process_instagram_username(input: &str) -> BotResult<String> {
     Ok(username.to_string())
 }
 
-// fn requires_auth(dialogue_state: &DialogueState) -> bool {
-//     match dialogue_state {
-//         DialogueState::AwaitingDownloadLink(_)
-//         | DialogueState::AwaitingLogoutConfirmation(_)
-//         | DialogueState::ConfirmLogout => true,
-
-//         DialogueState::ConfirmDownload { content } => match content {
-//             MediaContent::Post(_) => false,
-//             MediaContent::Story(_) => true,
-//         },
-
-//         _ => false,
-//     }
-// }
-
-// pub async fn handle_user_session(telegram_user_id: &str, dialogue_state: &DialogueState) -> BotResult<()> {
-//     let state = AppState::get()?;
-//     let session_service = state.session.lock().await;
-
-//     // Only validate session for states that require authentication
-//     if requires_auth(dialogue_state) {
-//         if !session_service.validate_session(telegram_user_id).await? {
-//             return Err(BotError::Other(anyhow::anyhow!("Invalid or expired session")));
-//         }
-
-//         // Restore Instagram client cookies if needed
-//         if let Some(stored_session) = session_service.get_session(telegram_user_id).await? {
-//             if let Some(session_data) = stored_session.session_data {
-//                 let mut instagram_service = state.instagram.lock().await;
-//                 instagram_service.restore_cookies(session_data)?;
-//             }
-//         }
-//     }
-
-//     Ok(())
-// }
-
 #[cfg(test)]
 mod tests {
     use super::*;

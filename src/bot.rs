@@ -17,7 +17,7 @@ pub struct BotService {
 
 impl BotService {
     pub fn new_from_state(state: &AppState) -> BotResult<Self> {
-        let client = http::create_telegram_client().map_err(|_| anyhow::anyhow!("Failed to create Telegram client"))?;
+        let client = http::create_telegram_client()?;
         Ok(Self {
             bot: Bot::with_client(state.config.telegram.0.clone(), client),
         })

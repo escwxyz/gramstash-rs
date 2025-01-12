@@ -1,10 +1,9 @@
 use crate::{
-    error::{BotError, BotResult, InstagramError, ServiceError},
+    error::{AuthenticationError, BotError, BotResult, InstagramError, ServiceError},
     services::session::SessionData,
 };
 
 use super::InstagramService;
-use anyhow::anyhow;
 use chrono::Utc;
 use reqwest::cookie::CookieStore;
 use serde::Deserialize;
@@ -12,8 +11,8 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct LoginResponse {
     pub status: String,
-    pub authenticated: Option<bool>,
-    pub user: Option<bool>,
+    pub _authenticated: Option<bool>,
+    pub _user: Option<bool>,
     #[serde(rename = "userId")]
     pub user_id: Option<String>,
     pub message: Option<String>,
@@ -63,9 +62,8 @@ impl InstagramService {
             rur: self.extract_cookie_value("rur"),
         };
 
-        if !self.verify_session().await? {
-            return Err(BotError::Other(anyhow!("Failed to create valid session")));
-        }
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        self.verify_session().await?;
 
         Ok(session_data)
     }
@@ -94,20 +92,24 @@ impl InstagramService {
             .form(&form_data)
             .send()
             .await
-            .map_err(|e| BotError::Other(anyhow::anyhow!("Failed to send login request: {}", e)))?;
+            .map_err(|e| BotError::ServiceError(ServiceError::InstagramError(InstagramError::NetworkError(e))))?;
 
         info!("Login response status: {}", response.status());
 
         let login_response = response.json::<LoginResponse>().await.map_err(|e| {
-            BotError::ServiceError(ServiceError::InstagramError(InstagramError::ParseError(e.to_string())))
+            BotError::ServiceError(ServiceError::InstagramError(InstagramError::DeserializationError(
+                e.to_string(),
+            )))
         })?;
 
         info!("Login response: {:?}", login_response);
 
         if login_response.status != "ok" {
-            return Err(BotError::Other(anyhow::anyhow!(login_response
-                .message
-                .unwrap_or_else(|| "Authentication failed".into()))));
+            return Err(BotError::ServiceError(ServiceError::InstagramError(
+                InstagramError::AuthenticationError(AuthenticationError::LoginFailed(
+                    login_response.message.unwrap_or_else(|| "Authentication failed".into()),
+                )),
+            )));
         }
 
         Ok(login_response)
@@ -125,8 +127,9 @@ impl InstagramService {
                 }
             }
         }
-        // TODO: handle this error
-        Err(BotError::Other(anyhow::anyhow!("Failed to get CSRF token")))
+        Err(BotError::ServiceError(ServiceError::InstagramError(
+            InstagramError::AuthenticationError(AuthenticationError::LoginFailed("Failed to get CSRF token".into())),
+        )))
     }
 
     fn extract_cookie_value(&self, name: &str) -> Option<String> {
@@ -157,7 +160,6 @@ impl InstagramService {
             .get("https://www.instagram.com/accounts/edit/")
             .send()
             .await
-            // TODO: session error
             .map_err(|e| BotError::ServiceError(ServiceError::InstagramError(InstagramError::NetworkError(e))))?;
 
         Ok(response.status().is_success())
