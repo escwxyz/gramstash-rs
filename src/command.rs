@@ -1,4 +1,5 @@
 use teloxide::{
+    adaptors::DefaultParseMode,
     macros::BotCommands,
     payloads::SetMyCommandsSetters,
     prelude::Requester,
@@ -6,20 +7,23 @@ use teloxide::{
     Bot,
 };
 
-use crate::{error::HandlerResult, state::AppState};
+use crate::{config::AdminConfig, error::HandlerResult};
 
 #[derive(BotCommands, Clone)]
-#[command(rename_rule = "lowercase", description = "Available commands:")]
-pub enum Command {
-    #[command(description = "Start the bot and show main menu")]
+#[command(rename_rule = "lowercase")]
+pub enum UserCommand {
     Start,
-    #[command(description = "Change language")]
     Language,
-    #[command(description = "Show help message")]
     Help,
-    #[command(description = "Admin only - show statistics")]
+}
+
+#[derive(BotCommands, Clone)]
+#[command(rename_rule = "lowercase")]
+pub enum Command {
+    Start,
+    Language,
+    Help,
     Stats,
-    #[command(description = "Admin only - show system status")]
     Status,
 }
 
@@ -43,12 +47,10 @@ impl Command {
     }
 }
 
-pub async fn setup_commands(bot: &Bot) -> HandlerResult<()> {
+pub async fn setup_commands(bot: &DefaultParseMode<Bot>, admin_config: &AdminConfig) -> HandlerResult<()> {
     info!("Setting up bot commands...");
 
     bot.delete_my_commands().await?;
-
-    let admin_config = AppState::get()?.config.admin.clone();
 
     if let Err(_) = bot
         .set_my_commands(Command::admin_commands())

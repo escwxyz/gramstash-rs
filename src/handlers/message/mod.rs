@@ -2,38 +2,23 @@ mod download;
 mod profile;
 
 use teloxide::{
+    adaptors::DefaultParseMode,
     dispatching::{dialogue::ErasedStorage, UpdateFilterExt, UpdateHandler},
-    dptree::{self, filter},
+    dptree::{self},
     payloads::SendMessageSetters,
     prelude::{Dialogue, Requester},
-    types::{Message, ParseMode, Update},
+    types::{Message, Update},
     Bot,
 };
 
 use crate::{
     error::{BotError, HandlerResult},
     services::dialogue::DialogueState,
-    utils::keyboard::{self, DOWNLOAD_BUTTON_EN, DOWNLOAD_BUTTON_ZH, PROFILE_BUTTON_EN, PROFILE_BUTTON_ZH},
+    utils::keyboard::{self},
 };
 
 pub fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
     Update::filter_message()
-        // IMPORTANT:first handle two persistent buttons
-        .branch(
-            Update::filter_message()
-                .branch(
-                    filter(|msg: Message| {
-                        msg.text() == Some(DOWNLOAD_BUTTON_EN) || msg.text() == Some(DOWNLOAD_BUTTON_ZH)
-                    })
-                    .endpoint(download::handle_message_asking_for_download_link),
-                )
-                .branch(
-                    filter(|msg: Message| {
-                        msg.text() == Some(PROFILE_BUTTON_EN) || msg.text() == Some(PROFILE_BUTTON_ZH)
-                    })
-                    .endpoint(profile::handle_message_profile_menu),
-                ),
-        )
         // handle dialogue state
         .branch(
             dptree::case![DialogueState::AwaitingDownloadLink(message_id)]
@@ -50,13 +35,12 @@ pub fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send +
 }
 
 pub async fn handle_message_unknown(
-    bot: Bot,
+    bot: DefaultParseMode<Bot>,
     message: Message,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
 ) -> HandlerResult<()> {
     bot.delete_message(message.chat.id, message.id).await?;
     bot.send_message(message.chat.id, t!("messages.unknown_message"))
-        .parse_mode(ParseMode::Html)
         .reply_markup(keyboard::MainMenu::get_inline_keyboard())
         .await?;
 

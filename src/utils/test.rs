@@ -9,12 +9,13 @@ use crate::{
 };
 use teloxide::dispatching::dialogue::ErasedStorage;
 
+#[allow(unused)]
 pub static TEST_MUTEX: Mutex<()> = Mutex::const_new(());
-
+#[allow(unused)]
 fn get_redis_host() -> String {
     std::env::var("REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".to_string())
 }
-
+#[allow(unused)]
 /// Common test setup function that can be used across all test files
 pub async fn setup_test_state() -> BotResult<(&'static AppState, Arc<ErasedStorage<DialogueState>>)> {
     let _lock = TEST_MUTEX.lock().await;

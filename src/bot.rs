@@ -1,6 +1,8 @@
 use dptree;
 
+use teloxide::adaptors::DefaultParseMode;
 use teloxide::prelude::*;
+use teloxide::types::ParseMode;
 use teloxide::Bot;
 
 use crate::error::{BotResult, HandlerResult};
@@ -10,14 +12,14 @@ use crate::state::AppState;
 use crate::utils::http;
 
 pub struct BotService {
-    pub bot: Bot,
+    pub bot: DefaultParseMode<Bot>,
 }
 
 impl BotService {
     pub fn new_from_state(state: &AppState) -> BotResult<Self> {
         let client = http::create_telegram_client()?;
         Ok(Self {
-            bot: Bot::with_client(state.config.telegram.0.clone(), client),
+            bot: Bot::with_client(state.config.telegram.0.clone(), client).parse_mode(ParseMode::Html),
         })
     }
 
@@ -36,7 +38,7 @@ impl BotService {
         let state = AppState::get()?;
         let storage = DialogueService::get_dialogue_storage(&state.config.dialogue).await?;
 
-        crate::command::setup_commands(&bot).await?;
+        crate::command::setup_commands(&bot, &state.config.admin).await?;
 
         let handler = get_handler();
 
@@ -47,6 +49,7 @@ impl BotService {
             ))
             .enable_ctrlc_handler()
             .build()
+            // .dispatch_with_listener(update_listener, update_listener_error_handler)
             .dispatch()
             .await;
 

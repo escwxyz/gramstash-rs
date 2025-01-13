@@ -62,6 +62,7 @@ SESSION_REFRESH_INTERVAL_SECS = "your-session-refresh-interval-secs"
 - [ ] Story downloading
 - [ ] Highlight downloading
 - [ ] Internationalization
+- [ ] Metrics
 - [ ] Monetization
 
 ...
@@ -82,6 +83,10 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 - Add tests for new features
 - Update documentation as needed
 - Keep commits clean and well-documented
+
+## Known Issues
+
+- Due to the current limitation of `teloxide_tests`, the tests requiring `Bot` are not working. See [here](https://github.com/LasterAlex/teloxide_tests/issues/25) for more details.
 
 ## Security 🔒
 

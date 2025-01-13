@@ -1,8 +1,8 @@
 use teloxide::{
+    adaptors::DefaultParseMode,
     dispatching::dialogue::ErasedStorage,
-    payloads::EditMessageTextSetters,
     prelude::{Dialogue, Requester},
-    types::{MaybeInaccessibleMessage, ParseMode},
+    types::MaybeInaccessibleMessage,
     Bot,
 };
 
@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub(super) async fn handle_callback_language_en(
-    bot: &Bot,
+    bot: &DefaultParseMode<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {
@@ -39,7 +39,7 @@ pub(super) async fn handle_callback_language_en(
 }
 
 pub(super) async fn handle_callback_language_zh(
-    bot: &Bot,
+    bot: &DefaultParseMode<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {
@@ -54,9 +54,7 @@ pub(super) async fn handle_callback_language_zh(
     // Get the appropriate text based on current state
     let new_text = get_text_for_state(&current_state)?;
 
-    bot.edit_message_text(message.chat().id, message.id(), new_text)
-        .parse_mode(ParseMode::Html)
-        .await?;
+    bot.edit_message_text(message.chat().id, message.id(), new_text).await?;
 
     // Restore the same state
     dialogue

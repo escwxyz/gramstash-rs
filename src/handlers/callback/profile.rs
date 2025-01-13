@@ -1,17 +1,20 @@
 use teloxide::{
+    adaptors::DefaultParseMode,
     dispatching::dialogue::ErasedStorage,
     payloads::EditMessageTextSetters,
     prelude::{Dialogue, Requester},
-    types::{MaybeInaccessibleMessage, ParseMode},
+    types::MaybeInaccessibleMessage,
     Bot,
 };
 
 use crate::{error::HandlerResult, services::dialogue::DialogueState, utils::keyboard};
 
-pub async fn handle_callback_profile_menu(bot: &Bot, message: MaybeInaccessibleMessage) -> HandlerResult<()> {
+pub async fn handle_callback_profile_menu(
+    bot: &DefaultParseMode<Bot>,
+    message: MaybeInaccessibleMessage,
+) -> HandlerResult<()> {
     info!("handle_callback_profile_menu");
     bot.edit_message_text(message.chat().id, message.id(), t!("callbacks.profile.profile_menu"))
-        .parse_mode(ParseMode::Html)
         .reply_markup(keyboard::ProfileMenu::get_profile_menu_inline_keyboard())
         .await?;
 
@@ -19,14 +22,13 @@ pub async fn handle_callback_profile_menu(bot: &Bot, message: MaybeInaccessibleM
 }
 
 pub(super) async fn handle_callback_auth_login(
-    bot: &Bot,
+    bot: &DefaultParseMode<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {
     info!("handle_callback_auth_login");
     let username_msg = bot
         .edit_message_text(message.chat().id, message.id(), t!("callbacks.profile.auth_login"))
-        .parse_mode(ParseMode::Html)
         .reply_markup(keyboard::LoginDialogue::get_cancel_auth_keyboard()) // TODO not working?
         .await?;
 

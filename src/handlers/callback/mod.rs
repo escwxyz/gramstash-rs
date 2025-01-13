@@ -8,12 +8,13 @@ use crate::{
 };
 
 use teloxide::{
+    adaptors::DefaultParseMode,
     dispatching::{dialogue::ErasedStorage, UpdateHandler},
     prelude::*,
     types::CallbackQuery,
 };
 async fn handle_callback(
-    bot: Bot,
+    bot: DefaultParseMode<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     q: CallbackQuery,
 ) -> HandlerResult<()> {

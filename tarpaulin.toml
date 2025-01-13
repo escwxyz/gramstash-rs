@@ -98,7 +98,10 @@ exclude = []
 exclude-files = [
     "src/main.rs",
     "src/error.rs",
+    "src/config.rs",
     "src/services/instagram/types.rs",
+    "src/command.rs",
+    "src/bot.rs",
 ]
 
 # List of file paths to include (and exclude all others) from testing.

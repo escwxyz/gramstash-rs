@@ -62,3 +62,21 @@ impl AppState {
             .ok_or_else(|| BotError::AppStateError("App state not initialized".to_string()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use teloxide::types::UserId;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_app_state_init() {
+        let config = AppConfig::new_test_config();
+
+        let result = AppState::init_test_with_config(config).await;
+        assert!(result.is_ok());
+        let state = AppState::get().expect("App state not initialized");
+        assert_eq!(state.config.admin.telegram_user_id, UserId(1234567890));
+        assert_eq!(state.config.redis.url, "redis://127.0.0.1:6379".to_string());
+    }
+}

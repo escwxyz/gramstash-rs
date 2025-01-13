@@ -1,22 +1,6 @@
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, KeyboardMarkup};
+// TODO: add navigation buttons
 
-pub const DOWNLOAD_BUTTON_EN: &str = "📥 Download";
-pub const DOWNLOAD_BUTTON_ZH: &str = "📥 下载";
-pub const PROFILE_BUTTON_EN: &str = "👤 Profile";
-pub const PROFILE_BUTTON_ZH: &str = "👤 个人资料";
-
-pub struct MainKeyboard;
-
-impl MainKeyboard {
-    pub fn get_keyboard() -> KeyboardMarkup {
-        KeyboardMarkup::new(vec![
-            vec![KeyboardButton::new(t!("buttons.main_menu.download"))],
-            vec![KeyboardButton::new(t!("buttons.main_menu.profile"))],
-        ])
-        .persistent()
-        .resize_keyboard()
-    }
-}
+use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
 pub struct MainMenu;
 

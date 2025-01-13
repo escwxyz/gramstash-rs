@@ -1,8 +1,9 @@
 use teloxide::{
+    adaptors::DefaultParseMode,
     dispatching::dialogue::ErasedStorage,
     payloads::{EditMessageTextSetters, SendMessageSetters},
     prelude::{Dialogue, Requester},
-    types::{Message, MessageId, ParseMode},
+    types::{Message, MessageId},
     Bot,
 };
 
@@ -22,7 +23,7 @@ pub(super) async fn handle_message_profile_menu(bot: Bot, msg: Message) -> Handl
 }
 
 pub(super) async fn handle_message_username(
-    bot: Bot,
+    bot: DefaultParseMode<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
     prompt_msg_id: MessageId,
@@ -39,7 +40,6 @@ pub(super) async fn handle_message_username(
 
     let validating_msg = bot
         .send_message(msg.chat.id, t!("messages.profile.username.validating"))
-        .parse_mode(ParseMode::Html)
         .await?;
 
     let username = match process_instagram_username(&username_input) {
@@ -53,7 +53,6 @@ pub(super) async fn handle_message_username(
                     username = username_input.to_string()
                 ),
             )
-            .parse_mode(ParseMode::Html)
             .await?;
             dialogue
                 .update(DialogueState::AwaitingUsername(msg.id))
@@ -74,7 +73,6 @@ pub(super) async fn handle_message_username(
             validating_msg.id,
             t!("messages.profile.username.validating_session"),
         )
-        .parse_mode(ParseMode::Html)
         .await?;
 
     if session_service.validate_session(&telegram_user_id).await? {
@@ -87,7 +85,6 @@ pub(super) async fn handle_message_username(
                         session_msg.id,
                         t!("messages.profile.username.validating_session_success"),
                     )
-                    .parse_mode(ParseMode::Html)
                     .reply_markup(keyboard::MainMenu::get_inline_keyboard())
                     .await?;
                     return Ok(());
@@ -105,7 +102,6 @@ pub(super) async fn handle_message_username(
                 username = username.to_string()
             ),
         )
-        .parse_mode(ParseMode::Html)
         .reply_markup(keyboard::LoginDialogue::get_cancel_auth_keyboard())
         .await?;
 
@@ -122,7 +118,7 @@ pub(super) async fn handle_message_username(
 }
 
 pub(super) async fn handle_message_password(
-    bot: Bot,
+    bot: DefaultParseMode<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
     (username, prompt_msg_id): (String, MessageId),
@@ -138,7 +134,6 @@ pub(super) async fn handle_message_password(
     if !validate_instagram_password(&password) {
         bot.delete_message(msg.chat.id, msg.id).await?;
         bot.send_message(msg.chat.id, t!("messages.profile.password.invalid"))
-            .parse_mode(ParseMode::Html)
             .await?;
 
         dialogue
@@ -155,7 +150,6 @@ pub(super) async fn handle_message_password(
 
     let status_msg = bot
         .send_message(msg.chat.id, t!("messages.profile.password.logging_in"))
-        .parse_mode(ParseMode::Html)
         .await?;
 
     let state = AppState::get()?;
@@ -174,7 +168,6 @@ pub(super) async fn handle_message_password(
                 status_msg.id,
                 t!("messages.profile.password.login_success"),
             )
-            .parse_mode(ParseMode::Html)
             .reply_markup(keyboard::MainMenu::get_inline_keyboard())
             .await?;
         }
@@ -185,7 +178,6 @@ pub(super) async fn handle_message_password(
                     status_msg.id,
                     t!("messages.profile.password.login_failed", error = e.to_string()),
                 )
-                .parse_mode(ParseMode::Html)
                 .await?;
 
             dialogue

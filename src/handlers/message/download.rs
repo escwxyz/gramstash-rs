@@ -5,19 +5,19 @@ use crate::services::instagram::types::{InstagramIdentifier, MediaContent, PostC
 use crate::services::ratelimiter::RateLimiter;
 use crate::state::AppState;
 use crate::utils::{extract_instagram_url, keyboard, parse_url};
+use teloxide::adaptors::DefaultParseMode;
 use teloxide::dispatching::dialogue::ErasedStorage;
 use teloxide::prelude::*;
-use teloxide::types::{MessageId, ParseMode};
+use teloxide::types::MessageId;
 
 pub async fn handle_message_asking_for_download_link(
-    bot: Bot,
+    bot: DefaultParseMode<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
 ) -> HandlerResult<()> {
     info!("handle_message_asking_for_download_link");
 
     bot.send_message(msg.chat.id, t!("messages.download.ask_for_download_link"))
-        .parse_mode(ParseMode::Html)
         .await?;
 
     dialogue
@@ -29,7 +29,7 @@ pub async fn handle_message_asking_for_download_link(
 }
 
 pub(super) async fn handle_message_awaiting_download_link(
-    bot: Bot,
+    bot: DefaultParseMode<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
     message_id: MessageId,
@@ -42,7 +42,6 @@ pub(super) async fn handle_message_awaiting_download_link(
         None => {
             let msg = bot
                 .send_message(msg.chat.id, t!("messages.download.invalid_url"))
-                .parse_mode(ParseMode::Html)
                 .await?;
 
             dialogue
@@ -56,7 +55,6 @@ pub(super) async fn handle_message_awaiting_download_link(
 
     let processing_msg = bot
         .send_message(msg.chat.id, t!("messages.download.processing_request"))
-        .parse_mode(ParseMode::Html)
         .await?;
 
     let instagram_service = AppState::get()?.instagram.lock().await;
@@ -84,7 +82,6 @@ pub(super) async fn handle_message_awaiting_download_link(
             processing_msg.id,
             t!("messages.download.download_limit_reached"),
         )
-        .parse_mode(ParseMode::Html)
         .reply_markup(keyboard::MainMenu::get_inline_keyboard())
         .await?;
         dialogue
@@ -135,7 +132,7 @@ pub(super) async fn handle_message_awaiting_download_link(
 
 // TODO: implement media preview with better UI and more information
 async fn show_media_preview(
-    bot: &Bot,
+    bot: &DefaultParseMode<Bot>,
     msg: &Message,
     processing_msg: &Message,
     content: &MediaContent,
@@ -158,7 +155,6 @@ async fn show_media_preview(
     };
 
     bot.edit_message_text(msg.chat.id, processing_msg.id, preview_text)
-        .parse_mode(ParseMode::Html)
         .reply_markup(keyboard::DownloadMenu::get_confirm_download_keyboard())
         .await?;
 
@@ -166,7 +162,7 @@ async fn show_media_preview(
 }
 
 async fn process_media_content(
-    bot: &Bot,
+    bot: &DefaultParseMode<Bot>,
     dialogue: &Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: &Message,
     processing_msg: &Message,

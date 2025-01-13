@@ -21,26 +21,16 @@ use crate::{
 
 pub fn get_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync + 'static>> {
     dialogue::enter::<Update, ErasedStorage<DialogueState>, DialogueState, _>()
-        .map_async(|update: Update| async move {
+        .filter_map_async(|update: Update, state: &'static AppState| async move {
             if let Some(telegram_user_id) = extract_user_id(&update) {
-                let state = match AppState::get() {
-                    Ok(state) => Some(state),
-                    Err(e) => {
-                        error!("Failed to get app state: {:?}", e);
-                        None
-                    }
-                };
-
-                if let Some(state) = state {
+                {
                     let mut session_service = state.session.lock().await;
-                    match session_service.init_telegram_user_context(&telegram_user_id).await {
-                        Ok(_) => (),
-                        Err(e) => {
-                            error!("Failed to initialize telegram user context: {:?}", e);
-                        }
+                    if let Err(e) = session_service.init_telegram_user_context(&telegram_user_id).await {
+                        error!("Failed to initialize telegram user context: {:?}", e);
                     }
                 }
             }
+            Some(update)
         })
         // all handlers need the dialogue state
         .branch(get_command_handler())
