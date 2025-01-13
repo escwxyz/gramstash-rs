@@ -17,6 +17,12 @@ impl MainMenu {
             )],
         ])
     }
+    pub fn get_back_to_main_menu_keyboard() -> InlineKeyboardMarkup {
+        InlineKeyboardMarkup::new([[InlineKeyboardButton::callback(
+            t!("buttons.back_to_main_menu"),
+            "back_to_main_menu",
+        )]])
+    }
 }
 
 pub struct DownloadMenu;
@@ -65,7 +71,10 @@ impl ProfileMenu {
             InlineKeyboardButton::callback(t!("buttons.profile_menu.usage"), "show_usage"),
         ]);
 
-        keyboard.push(vec![InlineKeyboardButton::callback("❌ Cancel", "cancel")]);
+        keyboard.push(vec![InlineKeyboardButton::callback(
+            t!("buttons.back_to_main_menu"),
+            "back_to_main_menu",
+        )]);
 
         InlineKeyboardMarkup::new(keyboard)
     }

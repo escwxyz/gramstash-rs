@@ -23,3 +23,12 @@ commands.language:
 commands.unknown_command:
   en: "⚠️ Unknown command\n\nPlease use /help to see available commands."
   zh: "⚠️ 未知命令\n\n请使用 /help 查看可用命令。"
+commands.description.start:
+  en: "Start the bot and show main menu"
+  zh: "启动机器人并显示主菜单"
+commands.description.help:
+  en: "Show help message"
+  zh: "显示帮助消息"
+commands.description.language:
+  en: "Change language"
+  zh: "更改语言"

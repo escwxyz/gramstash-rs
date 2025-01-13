@@ -10,24 +10,6 @@ use teloxide::dispatching::dialogue::ErasedStorage;
 use teloxide::prelude::*;
 use teloxide::types::MessageId;
 
-pub async fn handle_message_asking_for_download_link(
-    bot: DefaultParseMode<Bot>,
-    dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
-    msg: Message,
-) -> HandlerResult<()> {
-    info!("handle_message_asking_for_download_link");
-
-    bot.send_message(msg.chat.id, t!("messages.download.ask_for_download_link"))
-        .await?;
-
-    dialogue
-        .update(DialogueState::AwaitingDownloadLink(msg.id))
-        .await
-        .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
-
-    Ok(())
-}
-
 pub(super) async fn handle_message_awaiting_download_link(
     bot: DefaultParseMode<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,

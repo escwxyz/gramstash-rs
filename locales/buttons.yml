@@ -32,3 +32,6 @@ buttons.profile_menu.usage:
 buttons.login_dialogue.cancel:
   en: "🔙 Back"
   zh: "🔙 返回"
+buttons.back_to_main_menu:
+  en: "🔙 Back to Main Menu"
+  zh: "🔙 返回主菜单"

@@ -64,3 +64,6 @@ callbacks.download.download_completed:
 callbacks.download.cancel_download:
   en: "Download cancelled. What would you like to do?"
   zh: "下载已取消。你想做什么？"
+callbacks.navigation.back_to_main_menu:
+  en: "🔙 Back to Main Menu, what would you like to do?"
+  zh: "🔙 已返回主菜单，你想做什么？"

@@ -5,6 +5,7 @@ use teloxide::prelude::*;
 use teloxide::types::ParseMode;
 use teloxide::Bot;
 
+use crate::command::setup_user_commands;
 use crate::error::{BotResult, HandlerResult};
 use crate::handlers::get_handler;
 use crate::services::dialogue::DialogueService;
@@ -26,8 +27,9 @@ impl BotService {
     pub async fn start(&self) -> HandlerResult<()> {
         // Test connection before proceeding
         info!("Testing connection to Telegram API...");
+        // TODO: remove this in production, use cache_me
         match self.bot.get_me().await {
-            Ok(_) => info!("Successfully connected to Telegram API"),
+            Ok(me) => info!("Successfully connected to Telegram API: {:?}", me),
             Err(e) => {
                 error!("Failed to connect to Telegram API: {:?}", e);
                 return Err(anyhow::anyhow!("Failed to connect to Telegram API: {}", e).into());
@@ -38,7 +40,7 @@ impl BotService {
         let state = AppState::get()?;
         let storage = DialogueService::get_dialogue_storage(&state.config.dialogue).await?;
 
-        crate::command::setup_commands(&bot, &state.config.admin).await?;
+        setup_user_commands(&bot).await?;
 
         let handler = get_handler();
 

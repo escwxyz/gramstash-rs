@@ -29,6 +29,7 @@ pub(super) async fn handle_callback_asking_for_download_link(
         message.id(),
         t!("callbacks.download.ask_for_download_link"),
     )
+    .reply_markup(keyboard::MainMenu::get_back_to_main_menu_keyboard())
     .await?;
 
     dialogue

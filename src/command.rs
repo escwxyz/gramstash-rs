@@ -7,7 +7,7 @@ use teloxide::{
     Bot,
 };
 
-use crate::{config::AdminConfig, error::HandlerResult};
+use crate::error::HandlerResult;
 
 #[derive(BotCommands, Clone)]
 #[command(rename_rule = "lowercase")]
@@ -30,46 +30,36 @@ pub enum Command {
 impl Command {
     pub fn user_commands() -> Vec<BotCommand> {
         vec![
-            BotCommand::new("start", "Start the bot and show main menu"),
-            BotCommand::new("help", "Show help message"),
-            BotCommand::new("language", "Change language"),
+            BotCommand::new("start", t!("commands.description.start")),
+            BotCommand::new("help", t!("commands.description.help")),
+            BotCommand::new("language", t!("commands.description.language")),
         ]
     }
 
     #[allow(unused)]
     pub fn admin_commands() -> Vec<BotCommand> {
         vec![
-            BotCommand::new("start", "Start the bot and show main menu"),
-            BotCommand::new("help", "Show help message"),
-            BotCommand::new("stats", "Show statistics"),
-            BotCommand::new("status", "Show system status"),
+            BotCommand::new("start", t!("commands.description.start")),
+            BotCommand::new("help", t!("commands.description.help")),
+            BotCommand::new("language", t!("commands.description.language")),
+            BotCommand::new("stats", "some stats"),
+            BotCommand::new("status", "some status"),
         ]
     }
 }
 
-pub async fn setup_commands(bot: &DefaultParseMode<Bot>, admin_config: &AdminConfig) -> HandlerResult<()> {
-    info!("Setting up bot commands...");
-
+pub async fn setup_user_commands(bot: &DefaultParseMode<Bot>) -> HandlerResult<()> {
     bot.delete_my_commands().await?;
+    bot.set_my_commands(Command::user_commands()).await?;
+    Ok(())
+}
 
-    if let Err(_) = bot
-        .set_my_commands(Command::admin_commands())
+pub async fn setup_admin_commands(bot: &DefaultParseMode<Bot>, chat_id: ChatId) -> HandlerResult<()> {
+    bot.delete_my_commands().await?;
+    bot.set_my_commands(Command::admin_commands())
         .scope(BotCommandScope::Chat {
-            chat_id: Recipient::Id(ChatId(admin_config.telegram_user_id.0 as i64)),
+            chat_id: Recipient::Id(chat_id),
         })
-        .await
-    {
-        // If we can't set admin commands, set user commands
-        match bot.set_my_commands(Command::user_commands()).await {
-            Ok(_) => info!("Successfully set up user bot commands"),
-            Err(e) => {
-                error!("Failed to set bot commands: {:?}", e);
-                return Err(e.into());
-            }
-        }
-    } else {
-        info!("Successfully set up admin bot commands");
-    }
-
+        .await?;
     Ok(())
 }

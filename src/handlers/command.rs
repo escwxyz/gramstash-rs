@@ -4,7 +4,7 @@ use teloxide::dispatching::{HandlerExt, UpdateHandler};
 use teloxide::prelude::*;
 use teloxide::{types::Message, Bot};
 
-use crate::command::Command;
+use crate::command::{setup_admin_commands, Command};
 use crate::error::{BotError, HandlerResult};
 use crate::services::dialogue::DialogueState;
 use crate::state::AppState;
@@ -35,22 +35,25 @@ async fn handle_language(
 
 async fn handle_start(
     bot: DefaultParseMode<Bot>,
+    state: &AppState,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
 ) -> HandlerResult<()> {
     let (telegram_user_id, first_name) = match msg.from {
-        Some(user) => (user.id.to_string(), user.first_name.clone()),
+        Some(user) => (user.id, user.first_name.clone()),
         None => return Err(anyhow::anyhow!("User not found").into()),
     };
 
     let mut session_service = AppState::get()?.session.lock().await;
 
-    session_service.init_telegram_user_context(&telegram_user_id).await?;
+    session_service
+        .init_telegram_user_context(&telegram_user_id.to_string())
+        .await?;
 
     let welcome_text = t!(
         "commands.start",
         first_name = first_name,
-        telegram_user_id = telegram_user_id
+        telegram_user_id = telegram_user_id.to_string()
     );
 
     bot.send_message(msg.chat.id, welcome_text)
@@ -61,6 +64,10 @@ async fn handle_start(
         .update(DialogueState::Start)
         .await
         .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
+
+    if is_admin(telegram_user_id, &state.config.admin)? {
+        setup_admin_commands(&bot, msg.chat.id).await?;
+    }
 
     Ok(())
 }
@@ -92,7 +99,7 @@ async fn handle_command(
         .ok_or_else(|| BotError::Other(anyhow::anyhow!("User not found")))?
         .id;
     match cmd {
-        Command::Start => handle_start(bot, dialogue, msg).await?,
+        Command::Start => handle_start(bot, state, dialogue, msg).await?,
         Command::Help => handle_help(bot, msg).await?,
         Command::Language => handle_language(bot, dialogue, msg).await?,
         Command::Stats | Command::Status if !is_admin(user_id, &state.config.admin)? => {

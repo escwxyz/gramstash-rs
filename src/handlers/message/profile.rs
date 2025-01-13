@@ -1,7 +1,7 @@
 use teloxide::{
     adaptors::DefaultParseMode,
     dispatching::dialogue::ErasedStorage,
-    payloads::{EditMessageTextSetters, SendMessageSetters},
+    payloads::EditMessageTextSetters,
     prelude::{Dialogue, Requester},
     types::{Message, MessageId},
     Bot,
@@ -13,14 +13,6 @@ use crate::{
     state::AppState,
     utils::{keyboard, validate_instagram_password},
 };
-
-pub(super) async fn handle_message_profile_menu(bot: Bot, msg: Message) -> HandlerResult<()> {
-    bot.send_message(msg.chat.id, t!("messages.profile_menu"))
-        .reply_markup(keyboard::ProfileMenu::get_profile_menu_inline_keyboard())
-        .await?;
-
-    Ok(())
-}
 
 pub(super) async fn handle_message_username(
     bot: DefaultParseMode<Bot>,
