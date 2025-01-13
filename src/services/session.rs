@@ -184,13 +184,20 @@ impl SessionService {
         Ok(())
     }
 
-    pub async fn sync_session(&mut self, telegram_user_id: &str, session_data: SessionData) -> BotResult<()> {
+    pub async fn sync_session(
+        &mut self,
+        telegram_user_id: &str,
+        session_data: SessionData,
+        bypass_refresh: bool,
+    ) -> BotResult<()> {
         self.session.session_data = Some(session_data);
         self.session.update_access();
 
-        // Only sync to Redis if enough time has passed
         let session = self.session.clone();
-        if self.needs_refresh() {
+
+        if bypass_refresh {
+            self.upsert_session(telegram_user_id, &session).await?;
+        } else if self.needs_refresh() {
             self.upsert_session(telegram_user_id, &session).await?;
         }
 

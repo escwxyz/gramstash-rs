@@ -87,6 +87,7 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 ## Known Issues 🐛
 
 - Due to the current limitation of `teloxide_tests`, the tests requiring `Bot` are not working. See [here](https://github.com/LasterAlex/teloxide_tests/issues/25) for more details.
+- User input is automatically processed by Telegram, currently we restore the display text back to the raw text, which is most likely not the perfect solution.
 
 ## Security 🔒
 

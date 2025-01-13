@@ -9,7 +9,10 @@ use teloxide::{
 
 use crate::{
     error::{BotError, HandlerResult, MiddlewareError, ServiceError},
-    services::{dialogue::DialogueState, middleware::process_instagram_username},
+    services::{
+        dialogue::DialogueState,
+        middleware::{process_instagram_username, reconstruct_raw_text},
+    },
     state::AppState,
     utils::{keyboard, validate_instagram_password},
 };
@@ -20,7 +23,25 @@ pub(super) async fn handle_message_username(
     msg: Message,
     prompt_msg_id: MessageId,
 ) -> HandlerResult<()> {
+    info!("handle_message_username");
+
     bot.delete_message(msg.chat.id, prompt_msg_id).await?;
+
+    let entities = msg.parse_entities();
+
+    let text = msg.text().ok_or_else(|| {
+        BotError::ServiceError(ServiceError::Middleware(MiddlewareError::Other(
+            "No username provided".into(),
+        )))
+    })?;
+
+    let raw_text = if let Some(entities) = entities {
+        reconstruct_raw_text(text, &entities)
+    } else {
+        text.to_string()
+    };
+
+    info!("raw_text: {:?}", raw_text);
 
     let username_input = msg.text().ok_or_else(|| {
         BotError::ServiceError(ServiceError::Middleware(MiddlewareError::Other(
@@ -34,7 +55,7 @@ pub(super) async fn handle_message_username(
         .send_message(msg.chat.id, t!("messages.profile.username.validating"))
         .await?;
 
-    let username = match process_instagram_username(&username_input) {
+    let username = match process_instagram_username(&raw_text) {
         Ok(username) => username,
         Err(_) => {
             bot.edit_message_text(
@@ -117,13 +138,23 @@ pub(super) async fn handle_message_password(
 ) -> HandlerResult<()> {
     bot.delete_message(msg.chat.id, prompt_msg_id).await?;
 
-    let password = msg.text().ok_or_else(|| {
+    let text = msg.text().ok_or_else(|| {
         BotError::ServiceError(ServiceError::Middleware(MiddlewareError::Other(
             "No password provided".into(),
         )))
     })?;
 
-    if !validate_instagram_password(&password) {
+    let entities = msg.parse_entities();
+
+    let raw_text = if let Some(entities) = entities {
+        reconstruct_raw_text(text, &entities)
+    } else {
+        text.to_string()
+    };
+
+    info!("raw_text: {:?}", raw_text);
+
+    if !validate_instagram_password(&raw_text) {
         bot.delete_message(msg.chat.id, msg.id).await?;
         bot.send_message(msg.chat.id, t!("messages.profile.password.invalid"))
             .await?;
@@ -149,11 +180,13 @@ pub(super) async fn handle_message_password(
     let mut instagram_service = state.instagram.lock().await;
     let mut session_service = state.session.lock().await;
 
-    match instagram_service.login(&username, &password).await {
+    match instagram_service.login(&username, &raw_text).await {
         Ok(session_data) => {
             let telegram_user_id = msg.from.unwrap().id.to_string();
 
-            session_service.sync_session(&telegram_user_id, session_data).await?;
+            session_service
+                .sync_session(&telegram_user_id, session_data, true)
+                .await?;
 
             bot.edit_message_text(
                 msg.chat.id,

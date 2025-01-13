@@ -29,7 +29,7 @@ impl BotService {
         info!("Testing connection to Telegram API...");
         // TODO: remove this in production, use cache_me
         match self.bot.get_me().await {
-            Ok(me) => info!("Successfully connected to Telegram API: {:?}", me),
+            Ok(_) => info!("Successfully connected to Telegram API"),
             Err(e) => {
                 error!("Failed to connect to Telegram API: {:?}", e);
                 return Err(anyhow::anyhow!("Failed to connect to Telegram API: {}", e).into());

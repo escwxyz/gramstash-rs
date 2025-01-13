@@ -1,4 +1,4 @@
-use teloxide::types::Update;
+use teloxide::types::{MessageEntityKind, MessageEntityRef, Update};
 
 use crate::{
     error::{BotError, BotResult, MiddlewareError},
@@ -52,6 +52,37 @@ pub fn process_instagram_username(input: &str) -> BotResult<String> {
     }
 
     Ok(username.to_string())
+}
+
+/// Reconstructs the original raw text from a message by analyzing its entities.
+/// Handles nested formatting by applying inner wrappers first.
+/// For example: text with both italic and spoiler will be reconstructed as `||__kon__||`
+pub fn reconstruct_raw_text(text: &str, entities: &[MessageEntityRef]) -> String {
+    let mut raw_text = String::from(text);
+
+    // Sort entities by range.start in descending order to process inner wrappers first
+    let mut sorted_entities: Vec<_> = entities.to_vec();
+
+    sorted_entities.sort_by(|a, b| b.range().start.cmp(&a.range().start));
+
+    for entity in sorted_entities.iter() {
+        let (prefix, suffix) = match entity.kind() {
+            MessageEntityKind::Italic => ("__", "__"),
+            MessageEntityKind::Spoiler => ("||", "||"),
+            MessageEntityKind::Bold => ("**", "**"),
+            MessageEntityKind::Code => ("`", "`"),
+            MessageEntityKind::Pre { language: _ } => ("```", "```"),
+            MessageEntityKind::Strikethrough => ("~~", "~~"),
+            MessageEntityKind::Underline => ("__", "__"),
+            _ => continue,
+        };
+
+        // Insert suffix first (at end) then prefix (at start) to maintain correct positions
+        raw_text.insert_str(entity.range().end, suffix);
+        raw_text.insert_str(entity.range().start, prefix);
+    }
+
+    raw_text
 }
 
 #[cfg(test)]

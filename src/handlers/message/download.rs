@@ -24,6 +24,7 @@ pub(super) async fn handle_message_awaiting_download_link(
         None => {
             let msg = bot
                 .send_message(msg.chat.id, t!("messages.download.invalid_url"))
+                .reply_markup(keyboard::MainMenu::get_back_to_main_menu_keyboard())
                 .await?;
 
             dialogue
