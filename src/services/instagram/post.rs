@@ -4,13 +4,12 @@ use crate::{
 };
 
 use super::{
-    types::{ContentType, MediaAuthor, MediaContent, PostContent},
+    types::{ContentType, MediaContent, PostContent},
     CarouselItem, InstagramService, MediaInfo,
 };
 use url::Url;
 
 impl InstagramService {
-    // TODO: test this
     pub async fn fetch_post_info(&self, shortcode: &str) -> BotResult<MediaInfo> {
         let state = AppState::get()?;
 
@@ -99,18 +98,6 @@ impl InstagramService {
                 // caption: None,
             }),
             author: self.get_author(media)?,
-        })
-    }
-
-    fn get_author(&self, media: &serde_json::Value) -> BotResult<MediaAuthor> {
-        let username = media
-            .get("owner")
-            .and_then(|o| o.get("username"))
-            .and_then(|u| u.as_str())
-            .unwrap_or("unknown");
-
-        Ok(MediaAuthor {
-            username: username.to_string(),
         })
     }
 

@@ -137,7 +137,6 @@ impl SessionService {
             let session = self.session.clone();
             self.upsert_session(telegram_user_id, &session).await?;
         }
-
         Ok(())
     }
 
@@ -222,7 +221,9 @@ impl SessionService {
     }
 
     pub async fn validate_session(&self, telegram_user_id: &str) -> BotResult<bool> {
+        info!("Validating session for Telegram user ID {}", telegram_user_id);
         if self.session.belongs_to(telegram_user_id) && !self.needs_refresh() {
+            info!("Session is not stale, skipping ...");
             if let Some(session_data) = &self.session.session_data {
                 let state = AppState::get()?;
                 let mut instagram_service = state.instagram.lock().await;
@@ -240,5 +241,14 @@ impl SessionService {
             }
         }
         Ok(false)
+    }
+
+    pub async fn is_authenticated(&self, telegram_user_id: &str) -> BotResult<bool> {
+        if self.session.belongs_to(telegram_user_id) && !self.needs_refresh() && self.session.session_data.is_some() {
+            return Ok(true);
+        }
+
+        // If not, validate against stored session
+        self.validate_session(telegram_user_id).await
     }
 }

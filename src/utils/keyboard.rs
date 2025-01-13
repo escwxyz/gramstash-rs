@@ -58,18 +58,25 @@ impl DownloadMenu {
 pub struct ProfileMenu;
 
 impl ProfileMenu {
-    pub fn get_profile_menu_inline_keyboard() -> InlineKeyboardMarkup {
+    pub fn get_profile_menu_inline_keyboard(is_authenticated: bool) -> InlineKeyboardMarkup {
         let mut keyboard = Vec::new();
-        // TODO! user status
 
-        // let state = AppState::get()?;
+        if is_authenticated {
+            keyboard.push(vec![InlineKeyboardButton::callback(
+                t!("buttons.profile_menu.logout"),
+                "auth_logout",
+            )])
+        } else {
+            keyboard.push(vec![InlineKeyboardButton::callback(
+                t!("buttons.profile_menu.login"),
+                "auth_login",
+            )])
+        }
 
-        // let instagram_service = state.instagram.lock().await?;
-
-        keyboard.push(vec![
-            InlineKeyboardButton::callback(t!("buttons.profile_menu.login"), "auth_login"),
-            InlineKeyboardButton::callback(t!("buttons.profile_menu.usage"), "show_usage"),
-        ]);
+        keyboard.push(vec![InlineKeyboardButton::callback(
+            t!("buttons.profile_menu.usage"),
+            "show_usage",
+        )]);
 
         keyboard.push(vec![InlineKeyboardButton::callback(
             t!("buttons.back_to_main_menu"),

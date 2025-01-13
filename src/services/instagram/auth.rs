@@ -164,12 +164,6 @@ impl InstagramService {
 
         Ok(response.status().is_success())
     }
-
-    // Helper to check auth state (for UI)
-    // pub fn is_authenticated(&self) -> bool {
-    //     self.is_authenticated
-    // }
-
     // pub async fn two_factor_login(&mut self, code: &str) -> Result<()> {
     //     let pending = self
     //         .two_factor_auth_pending

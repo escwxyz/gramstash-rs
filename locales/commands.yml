@@ -1,9 +1,16 @@
 _version: 2
-commands.start:
+commands.start.unauthenticated:
   en: "👋 Hi %{first_name}! Your ID is %{telegram_user_id}.\n\n\
     Welcome to GramStash! I can help you download content from Instagram.\n\n\
     Please select an option below:"
   zh: "👋 你好 %{first_name}! 你的 ID 是 %{telegram_user_id}.\n\n\
+    欢迎使用 GramStash! 我可以帮助你从 Instagram 下载内容。\n\n\
+    请选择一个选项："
+commands.start.authenticated:
+  en: "👋 Hi %{first_name}, welcome back! Your ID is %{telegram_user_id}.\n\n\
+    Welcome to GramStash! I can help you download content from Instagram.\n\n\
+    Please select an option below:"
+  zh: "👋 你好 %{first_name}, 欢迎回来! 你的 ID 是 %{telegram_user_id}.\n\n\
     欢迎使用 GramStash! 我可以帮助你从 Instagram 下载内容。\n\n\
     请选择一个选项："
 commands.help:

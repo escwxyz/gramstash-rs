@@ -50,11 +50,23 @@ async fn handle_start(
         .init_telegram_user_context(&telegram_user_id.to_string())
         .await?;
 
-    let welcome_text = t!(
-        "commands.start",
-        first_name = first_name,
-        telegram_user_id = telegram_user_id.to_string()
-    );
+    let is_authenticated = session_service.is_authenticated(&telegram_user_id.to_string()).await?;
+
+    info!("is_authenticated: {:?}", is_authenticated);
+
+    let welcome_text = if is_authenticated {
+        t!(
+            "commands.start.authenticated",
+            first_name = first_name,
+            telegram_user_id = telegram_user_id.to_string()
+        )
+    } else {
+        t!(
+            "commands.start.unauthenticated",
+            first_name = first_name,
+            telegram_user_id = telegram_user_id.to_string()
+        )
+    };
 
     bot.send_message(msg.chat.id, welcome_text)
         .reply_markup(keyboard::MainMenu::get_inline_keyboard())

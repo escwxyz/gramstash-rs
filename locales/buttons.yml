@@ -29,6 +29,9 @@ buttons.profile_menu.login:
 buttons.profile_menu.usage:
   en: "📊 Usage"
   zh: "📊 使用情况"
+buttons.profile_menu.logout:
+  en: "🔓 Logout"
+  zh: "🔓 登出"
 buttons.login_dialogue.cancel:
   en: "🔙 Back"
   zh: "🔙 返回"

@@ -36,6 +36,7 @@ async fn handle_callback(
         // profile
         "profile_menu" | "cancel_auth" => profile::handle_callback_profile_menu(&bot, message).await?,
         "auth_login" => profile::handle_callback_auth_login(&bot, dialogue, message).await?,
+        "auth_logout" => todo!(),
 
         // language
         "language_en" => language::handle_callback_language_en(&bot, dialogue, message).await?,

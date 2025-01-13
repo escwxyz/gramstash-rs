@@ -12,8 +12,8 @@ use reqwest::{
     Client,
 };
 use std::sync::Arc;
-use types::InstagramIdentifier;
 pub use types::{CarouselItem, MediaInfo};
+use types::{InstagramIdentifier, MediaAuthor};
 use url::Url;
 
 use super::session::{SerializableCookie, SessionData};
@@ -23,7 +23,6 @@ pub struct InstagramService {
     pub public_client: Client,
     pub auth_client: Client,
     pub cookie_jar: Arc<Jar>,
-    pub is_authenticated: bool,
 }
 
 impl InstagramService {
@@ -35,7 +34,6 @@ impl InstagramService {
             public_client,
             auth_client,
             cookie_jar,
-            is_authenticated: false,
         })
     }
 
@@ -50,7 +48,6 @@ impl InstagramService {
                 &"https://www.instagram.com".parse().unwrap(),
             );
         }
-        self.is_authenticated = true;
         Ok(())
     }
 
@@ -97,5 +94,17 @@ impl InstagramService {
             }),
             _ => Err(BotError::InvalidUrl("Invalid Instagram URL format".into())),
         }
+    }
+
+    fn get_author(&self, media: &serde_json::Value) -> BotResult<MediaAuthor> {
+        let username = media
+            .get("owner")
+            .and_then(|o| o.get("username"))
+            .and_then(|u| u.as_str())
+            .unwrap_or("unknown");
+
+        Ok(MediaAuthor {
+            username: username.to_string(),
+        })
     }
 }
