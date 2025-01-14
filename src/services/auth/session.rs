@@ -1,90 +1,12 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Duration, Utc};
 use redis::AsyncCommands;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{BotError, BotResult, ServiceError},
     state::AppState,
 };
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SessionData {
-    pub cookies: Vec<SerializableCookie>,
-    pub user_id: Option<String>,    // ds_user_id
-    pub username: Option<String>,   // we keep this for convenience
-    pub csrf_token: Option<String>, // csrftoken
-    pub session_id: Option<String>, // sessionid
-    pub device_id: Option<String>,  // ig_did
-    pub machine_id: Option<String>, // mid
-    pub rur: Option<String>,        // rur
-}
-
-impl Default for SessionData {
-    fn default() -> Self {
-        Self {
-            cookies: Vec::new(),
-            user_id: None,
-            username: None,
-            csrf_token: None,
-            session_id: None,
-            device_id: None,
-            machine_id: None,
-            rur: None,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SerializableCookie {
-    pub name: String,
-    pub value: String,
-    pub domain: String,
-    pub path: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Session {
-    pub telegram_user_id: Option<String>,
-    pub session_data: Option<SessionData>,
-    pub last_accessed: DateTime<Utc>,
-    pub last_refresh: DateTime<Utc>,
-}
-
-impl Default for Session {
-    fn default() -> Self {
-        let now = Utc::now();
-        Self {
-            telegram_user_id: None,
-            session_data: None,
-            last_accessed: now,
-            last_refresh: now,
-        }
-    }
-}
-
-impl Session {
-    #[allow(dead_code)]
-    pub fn is_fresh(&self, max_age: Duration) -> bool {
-        Utc::now() - self.last_refresh < max_age
-    }
-
-    #[allow(dead_code)]
-    pub fn is_authenticated(&self) -> bool {
-        self.session_data.is_some()
-    }
-
-    pub fn update_access(&mut self) {
-        self.last_accessed = Utc::now();
-    }
-
-    pub fn update_refresh(&mut self) {
-        self.last_refresh = Utc::now();
-    }
-
-    pub fn belongs_to(&self, telegram_user_id: &str) -> bool {
-        self.telegram_user_id.as_deref() == Some(telegram_user_id)
-    }
-}
+use super::types::{Session, SessionData};
 
 #[derive(Clone)]
 pub struct SessionService {
@@ -182,7 +104,7 @@ impl SessionService {
         info!("Session saved to Redis");
         Ok(())
     }
-
+    #[allow(dead_code)]
     pub async fn sync_session(
         &mut self,
         telegram_user_id: &str,
@@ -202,13 +124,11 @@ impl SessionService {
 
         Ok(())
     }
-
     #[allow(dead_code)]
     pub async fn clear_session(&mut self, telegram_user_id: &str) -> BotResult<()> {
         self.session.session_data = None;
         self.delete_session(telegram_user_id).await
     }
-
     #[allow(dead_code)]
     pub async fn delete_session(&self, telegram_user_id: &str) -> BotResult<()> {
         let key = Self::create_session_key(telegram_user_id);
@@ -219,36 +139,60 @@ impl SessionService {
 
         Ok(())
     }
+    // TODO
+    // pub async fn validate_session(&self, telegram_user_id: &str) -> BotResult<bool> {
+    //     info!("Validating session for Telegram user ID {}", telegram_user_id);
+    //     if self.session.belongs_to(telegram_user_id) && !self.needs_refresh() {
+    //         info!("Session is not stale, skipping ...");
+    //         if let Some(session_data) = &self.session.session_data {
+    //             let state = AppState::get()?;
+    //             let mut instagram_service = state.instagram.lock().await;
+    //             instagram_service.restore_cookies(session_data.clone())?;
+    //             return instagram_service.verify_session().await;
+    //         }
+    //     }
 
-    pub async fn validate_session(&self, telegram_user_id: &str) -> BotResult<bool> {
-        info!("Validating session for Telegram user ID {}", telegram_user_id);
-        if self.session.belongs_to(telegram_user_id) && !self.needs_refresh() {
-            info!("Session is not stale, skipping ...");
-            if let Some(session_data) = &self.session.session_data {
-                let state = AppState::get()?;
-                let mut instagram_service = state.instagram.lock().await;
-                instagram_service.restore_cookies(session_data.clone())?;
-                return instagram_service.verify_session().await;
-            }
-        }
+    //     if let Some(stored_session) = self.get_session(telegram_user_id).await? {
+    //         if let Some(session_data) = stored_session.session_data {
+    //             let state = AppState::get()?;
+    //             let mut instagram_service = state.instagram.lock().await;
+    //             instagram_service.restore_cookies(session_data)?;
+    //             return instagram_service.verify_session().await;
+    //         }
+    //     }
+    //     Ok(false)
+    // }
 
-        if let Some(stored_session) = self.get_session(telegram_user_id).await? {
-            if let Some(session_data) = stored_session.session_data {
-                let state = AppState::get()?;
-                let mut instagram_service = state.instagram.lock().await;
-                instagram_service.restore_cookies(session_data)?;
-                return instagram_service.verify_session().await;
-            }
-        }
-        Ok(false)
-    }
+    //     // If not, validate against stored session
+    //     self.validate_session(telegram_user_id).await
+    // }
 
-    pub async fn is_authenticated(&self, telegram_user_id: &str) -> BotResult<bool> {
-        if self.session.belongs_to(telegram_user_id) && !self.needs_refresh() && self.session.session_data.is_some() {
-            return Ok(true);
-        }
+    // pub async fn ensure_authenticated_client(&self, telegram_user_id: &str) -> BotResult<()> {
+    //     let session_data = if let Some(stored_session) = self.get_session(telegram_user_id).await? {
+    //         if let Some(session_data) = stored_session.session_data {
+    //             session_data
+    //         } else {
+    //             return Err(BotError::ServiceError(ServiceError::Session(
+    //                 SessionError::InvalidSession,
+    //             )));
+    //         }
+    //     } else {
+    //         return Err(BotError::ServiceError(ServiceError::Session(
+    //             SessionError::InvalidSession,
+    //         )));
+    //     };
 
-        // If not, validate against stored session
-        self.validate_session(telegram_user_id).await
-    }
+    //     // Always verify session before using it
+    //     let state = AppState::get()?;
+    //     let mut instagram_service = state.instagram.lock().await;
+    //     instagram_service.restore_cookies(session_data.clone())?;
+
+    //     if !instagram_service.verify_session().await? {
+    //         return Err(BotError::ServiceError(ServiceError::Session(
+    //             SessionError::SessionExpired,
+    //         )));
+    //     }
+
+    //     Ok(())
+    // }
 }

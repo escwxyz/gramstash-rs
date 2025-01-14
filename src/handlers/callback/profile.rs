@@ -7,7 +7,7 @@ use teloxide::{
     Bot,
 };
 
-use crate::{error::HandlerResult, services::dialogue::DialogueState, state::AppState, utils::keyboard};
+use crate::{error::HandlerResult, services::dialogue::DialogueState, utils::keyboard};
 
 pub async fn handle_callback_profile_menu(
     bot: &DefaultParseMode<Bot>,
@@ -15,15 +15,17 @@ pub async fn handle_callback_profile_menu(
 ) -> HandlerResult<()> {
     info!("handle_callback_profile_menu");
 
-    let session_service = AppState::get()?.session.lock().await;
+    // let state = AppState::get()?;
 
-    let telegram_user_id = session_service.session.telegram_user_id.clone().unwrap();
+    // let auth_service = state.auth.lock().await;
 
-    let is_authenticated = session_service.is_authenticated(&telegram_user_id).await?;
+    // let session_service = auth_service.session_service;
+
+    // let telegram_user_id = session_service.session.telegram_user_id.clone().unwrap(); // TODO we don't need to obtain this from the session service
 
     bot.edit_message_text(message.chat().id, message.id(), t!("callbacks.profile.profile_menu"))
         .reply_markup(keyboard::ProfileMenu::get_profile_menu_inline_keyboard(
-            is_authenticated,
+            true, // TODO: temporary
         ))
         .await?;
 

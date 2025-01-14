@@ -39,8 +39,8 @@ async fn handle_callback(
         "auth_logout" => todo!(),
 
         // language
-        "language_en" => language::handle_callback_language_en(&bot, dialogue, message).await?,
-        "language_zh" => language::handle_callback_language_zh(&bot, dialogue, message).await?,
+        // "language_en" => language::handle_callback_language_en(&bot, dialogue, message).await?,
+        // "language_zh" => language::handle_callback_language_zh(&bot, dialogue, message).await?,
 
         // navigation
         "back_to_main_menu" => navigation::handle_callback_back_to_main_menu(&bot, dialogue, message).await?,

@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::utils::redis::RedisClient;
+use crate::{
+    services::auth::{service::AuthService, SessionService},
+    utils::redis::RedisClient,
+};
 use chrono::Duration;
 use once_cell::sync::OnceCell;
 use shuttle_runtime::SecretStore;
@@ -9,16 +12,15 @@ use tokio::sync::Mutex;
 use crate::{
     config::AppConfig,
     error::{BotError, BotResult},
-    services::{instagram::InstagramService, language::Language, session::SessionService},
+    services::instagram::InstagramService,
 };
 
 #[derive(Clone)]
 pub struct AppState {
     pub config: AppConfig,
     pub redis: RedisClient,
-    pub instagram: Arc<Mutex<InstagramService>>,
-    pub session: Arc<Mutex<SessionService>>,
-    pub language: Arc<Mutex<Language>>,
+    pub instagram: InstagramService,
+    pub auth: Arc<Mutex<AuthService>>,
 }
 
 pub static APP_STATE: OnceCell<AppState> = OnceCell::new();
@@ -37,19 +39,19 @@ impl AppState {
     async fn init_common(config: AppConfig) -> BotResult<()> {
         let redis = RedisClient::new(config.redis.url.as_str()).await?;
 
-        let instagram = Arc::new(Mutex::new(InstagramService::new()?));
-        let session = Arc::new(Mutex::new(SessionService::with_refresh_interval(Duration::seconds(
-            config.session.refresh_interval_secs,
-        ))));
-        let language = Arc::new(Mutex::new(Language::English));
+        let instagram = InstagramService::new()?;
+
+        let session_service =
+            SessionService::with_refresh_interval(Duration::seconds(config.session.refresh_interval_secs));
+
+        let auth_service = Arc::new(Mutex::new(AuthService::new(session_service)?));
 
         APP_STATE
             .set(AppState {
                 config,
                 redis,
                 instagram,
-                session,
-                language,
+                auth: auth_service,
             })
             .map_err(|_| BotError::AppStateError("App state already initialized".to_string()))?;
 

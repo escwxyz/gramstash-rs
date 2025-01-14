@@ -35,12 +35,6 @@ async fn shuttle_main(
 
     let state = AppState::get()?;
 
-    let language = state.language.lock().await;
-    let locale = language.get_locale();
-    info!("Setting locale to {}", locale);
-    rust_i18n::set_locale(locale);
-    info!("Locale set to {}", locale);
-
     let bot_service = BotService::new_from_state(&state).map_err(|_| anyhow::anyhow!("Failed to create BotService"))?;
 
     info!("Bot instance created");

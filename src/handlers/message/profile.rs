@@ -10,8 +10,9 @@ use teloxide::{
 use crate::{
     error::{BotError, HandlerResult, MiddlewareError, ServiceError},
     services::{
+        auth::{reconstruct_raw_text, Credentials},
         dialogue::DialogueState,
-        middleware::{process_instagram_username, reconstruct_raw_text},
+        middleware::process_instagram_username,
     },
     state::AppState,
     utils::{keyboard, validate_instagram_password},
@@ -75,11 +76,13 @@ pub(super) async fn handle_message_username(
         }
     };
 
-    let session_service = AppState::get()?.session.lock().await;
+    // TODO
 
-    let telegram_user_id = msg.clone().from.unwrap().id.to_string();
+    // let session_service = AppState::get()?.session.lock().await;
 
-    // Check if there's a valid session for this user
+    // let telegram_user_id = msg.clone().from.unwrap().id.to_string();
+
+    // // Check if there's a valid session for this user
     let session_msg = bot
         .edit_message_text(
             msg.chat.id,
@@ -88,23 +91,23 @@ pub(super) async fn handle_message_username(
         )
         .await?;
 
-    if session_service.validate_session(&telegram_user_id).await? {
-        // If session exists and is valid, check if it matches the provided username
-        if let Some(stored_session) = session_service.get_session(&telegram_user_id).await? {
-            if let Some(session_data) = &stored_session.session_data {
-                if session_data.username == Some(username.clone()) {
-                    bot.edit_message_text(
-                        msg.chat.id,
-                        session_msg.id,
-                        t!("messages.profile.username.validating_session_success"),
-                    )
-                    .reply_markup(keyboard::MainMenu::get_inline_keyboard())
-                    .await?;
-                    return Ok(());
-                }
-            }
-        }
-    }
+    // if session_service.validate_session(&telegram_user_id).await? {
+    //     // If session exists and is valid, check if it matches the provided username
+    //     if let Some(stored_session) = session_service.get_session(&telegram_user_id).await? {
+    //         if let Some(session_data) = &stored_session.session_data {
+    //             if session_data.username == Some(username.clone()) {
+    //                 bot.edit_message_text(
+    //                     msg.chat.id,
+    //                     session_msg.id,
+    //                     t!("messages.profile.username.validating_session_success"),
+    //                 )
+    //                 .reply_markup(keyboard::MainMenu::get_inline_keyboard())
+    //                 .await?;
+    //                 return Ok(());
+    //             }
+    //         }
+    //     }
+    // }
 
     let password_msg = bot
         .edit_message_text(
@@ -177,16 +180,21 @@ pub(super) async fn handle_message_password(
 
     let state = AppState::get()?;
 
-    let mut instagram_service = state.instagram.lock().await;
-    let mut session_service = state.session.lock().await;
+    let mut auth_service = state.auth.lock().await;
 
-    match instagram_service.login(&username, &raw_text).await {
-        Ok(session_data) => {
-            let telegram_user_id = msg.from.unwrap().id.to_string();
-
-            session_service
-                .sync_session(&telegram_user_id, session_data, true)
-                .await?;
+    match auth_service
+        .login(Credentials {
+            username,
+            password: raw_text,
+        })
+        .await
+    {
+        Ok(_session_data) => {
+            let _telegram_user_id = msg.from.unwrap().id.to_string();
+            // TODO
+            // session_service
+            //     .sync_session(&telegram_user_id, session_data, true)
+            //     .await?;
 
             bot.edit_message_text(
                 msg.chat.id,

@@ -13,7 +13,7 @@ use crate::{
     error::HandlerResult,
     services::{
         dialogue::DialogueState,
-        instagram::types::{ContentType, MediaContent, PostContent},
+        instagram::{ContentType, MediaContent, PostContent},
     },
     utils::keyboard,
 };

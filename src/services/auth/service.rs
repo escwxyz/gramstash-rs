@@ -1,42 +1,34 @@
-use crate::{
-    error::{AuthenticationError, BotError, BotResult, InstagramError, ServiceError},
-    services::session::SessionData,
-};
-
-use super::InstagramService;
 use chrono::Utc;
 use reqwest::cookie::CookieStore;
-use serde::Deserialize;
+use url::Url;
 
-#[derive(Debug, Deserialize)]
-pub struct LoginResponse {
-    pub status: String,
-    pub _authenticated: Option<bool>,
-    pub _user: Option<bool>,
-    #[serde(rename = "userId")]
-    pub user_id: Option<String>,
-    pub message: Option<String>,
-    // pub two_factor_required: Option<bool>,
-    // pub two_factor_info: Option<TwoFactorInfo>,
-    // pub checkpoint_url: Option<String>,
+use crate::error::{AuthenticationError, BotError, BotResult, InstagramError, ServiceError};
+
+use super::{
+    client::AuthClient,
+    session::SessionService,
+    types::{Credentials, LoginResponse, SessionData},
+};
+
+#[derive(Clone)]
+pub struct AuthService {
+    pub auth_client: AuthClient,
+    pub session_service: SessionService,
 }
 
-// #[derive(Deserialize, Debug)]
-// pub struct TwoFactorInfo {
-//     pub two_factor_identifier: String,
-// }
+impl AuthService {
+    pub fn new(session_service: SessionService) -> BotResult<Self> {
+        let auth_client = AuthClient::new()?;
+        Ok(Self {
+            auth_client,
+            session_service,
+        })
+    }
 
-// #[derive(Clone)]
-// pub struct TwoFactorAuthPending {
-//     pub user: String,
-//     pub two_factor_identifier: String,
-// }
-
-impl InstagramService {
-    pub async fn login(&mut self, username: &str, password: &str) -> BotResult<SessionData> {
-        // First visit the homepage to get initial cookies
+    pub async fn login(&mut self, credentials: Credentials) -> BotResult<SessionData> {
         info!("Visiting homepage to get initial cookies");
         self.auth_client
+            .client
             .get("https://www.instagram.com/")
             .send()
             .await
@@ -48,13 +40,15 @@ impl InstagramService {
 
         info!("Using CSRF token: {}", csrf_token);
 
-        let login_response = self.perform_login(username, password, &csrf_token).await?;
+        let login_response = self
+            .perform_login(&credentials.username, &credentials.password, &csrf_token)
+            .await?;
 
         // Create session data
         let session_data = SessionData {
-            cookies: self.extract_cookies(),
+            cookies: self.auth_client.extract_cookies(),
             user_id: login_response.user_id,
-            username: Some(username.to_string()),
+            username: Some(credentials.username.to_string()),
             csrf_token: Some(csrf_token),
             session_id: self.extract_session_id(),
             device_id: self.extract_cookie_value("ig_did"),
@@ -66,6 +60,20 @@ impl InstagramService {
         self.verify_session().await?;
 
         Ok(session_data)
+    }
+
+    pub async fn is_authenticated(&self, telegram_user_id: &str) -> BotResult<bool> {
+        if self.session_service.session.belongs_to(telegram_user_id)
+            && !self.session_service.needs_refresh()
+            && self.session_service.session.session_data.is_some()
+        {
+            return Ok(true);
+        }
+
+        // If not, validate against stored session
+        // TODO: implement this
+        // self.session_service.validate_session(telegram_user_id).await
+        Ok(false)
     }
 
     async fn perform_login(&mut self, username: &str, password: &str, csrf_token: &str) -> BotResult<LoginResponse> {
@@ -82,6 +90,7 @@ impl InstagramService {
 
         let response = self
             .auth_client
+            .client
             .post("https://www.instagram.com/api/v1/web/accounts/login/ajax/")
             .header("X-CSRFToken", csrf_token)
             .header("X-Requested-With", "XMLHttpRequest")
@@ -93,8 +102,6 @@ impl InstagramService {
             .send()
             .await
             .map_err(|e| BotError::ServiceError(ServiceError::InstagramError(InstagramError::NetworkError(e))))?;
-
-        info!("Login response status: {}", response.status());
 
         let login_response = response.json::<LoginResponse>().await.map_err(|e| {
             BotError::ServiceError(ServiceError::InstagramError(InstagramError::DeserializationError(
@@ -116,9 +123,13 @@ impl InstagramService {
     }
 
     /// Get CSRF token from cookie jar
-    async fn get_csrf_token(&self) -> BotResult<String> {
+    pub(super) async fn get_csrf_token(&self) -> BotResult<String> {
         info!("Getting CSRF token");
-        if let Some(cookies) = self.cookie_jar.cookies(&"https://www.instagram.com".parse().unwrap()) {
+        if let Some(cookies) = self
+            .auth_client
+            .cookie_jar
+            .cookies(&"https://www.instagram.com".parse().unwrap())
+        {
             let cookie_str = cookies.to_str().unwrap();
             for cookie in cookie_str.split(';').map(|s| s.trim()) {
                 let parts: Vec<&str> = cookie.split('=').collect();
@@ -133,8 +144,9 @@ impl InstagramService {
     }
 
     fn extract_cookie_value(&self, name: &str) -> Option<String> {
-        self.cookie_jar
-            .cookies(&"https://www.instagram.com".parse().unwrap())
+        self.auth_client
+            .cookie_jar
+            .cookies(&Url::parse("https://www.instagram.com").unwrap())
             .and_then(|cookies| {
                 cookies.to_str().ok().and_then(|cookie_str| {
                     cookie_str
@@ -147,6 +159,7 @@ impl InstagramService {
     }
 
     fn extract_session_id(&self) -> Option<String> {
+        // get sessionid from cookie jar
         self.extract_cookie_value("sessionid")
     }
 
@@ -157,6 +170,7 @@ impl InstagramService {
 
         let response = self
             .auth_client
+            .client
             .get("https://www.instagram.com/accounts/edit/")
             .send()
             .await
@@ -164,62 +178,4 @@ impl InstagramService {
 
         Ok(response.status().is_success())
     }
-    // pub async fn two_factor_login(&mut self, code: &str) -> Result<()> {
-    //     let pending = self
-    //         .two_factor_auth_pending
-    //         .as_ref()
-    //         .ok_or_else(|| anyhow!("No two-factor authentication pending"))?;
-
-    //     let two_factor_data = serde_json::json!({
-    //         "username": pending.user,
-    //         "verificationCode": code,
-    //         "identifier": pending.two_factor_identifier,
-    //         "csrf_token": self.session_data.csrf_token,
-    //     });
-
-    //     let response = self
-    //         .client
-    //         .post("https://www.instagram.com/accounts/login/ajax/two_factor/")
-    //         .header("X-CSRFToken", self.session_data.csrf_token.as_deref().unwrap_or(""))
-    //         .json(&two_factor_data)
-    //         .send()
-    //         .await?;
-
-    //     let username = pending.user.clone();
-    //     self.two_factor_auth_pending = None;
-
-    //     let login_response = response.json::<LoginResponse>().await?;
-
-    //     if login_response.authenticated.unwrap_or(false) {
-    //         return Err(anyhow!("Two-factor authentication failed"));
-    //     }
-    //     // TODO
-    //     // self.save_session(username, username, username).await?;
-    //     Ok(())
-    // }
-
-    // pub async fn logout(&mut self) -> Result<(), BotError> {
-    //     if let Some(username) = &self.session_data.username.clone() {
-    //         info!("Logging out user: {}", username);
-
-    //         // TODO
-    //         // self.clear_session(username).await?;
-
-    //         // Make logout request to Instagram
-    //         let result = self
-    //             .client
-    //             .post("https://www.instagram.com/accounts/logout/")
-    //             .send()
-    //             .await;
-
-    //         if let Err(e) = result {
-    //             warn!("Failed to send logout request to Instagram: {}", e);
-    //             // Continue with local cleanup even if Instagram request fails
-    //         }
-    //     } else {
-    //         warn!("Attempted to logout with no active session");
-    //     }
-
-    //     Ok(())
-    // }
 }

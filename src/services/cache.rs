@@ -3,7 +3,6 @@ use crate::{
     services::instagram::MediaInfo,
     state::AppState,
 };
-
 use redis::AsyncCommands;
 use serde_json;
 

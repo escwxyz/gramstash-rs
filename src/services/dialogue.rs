@@ -13,7 +13,7 @@ use crate::{
     state::AppState,
 };
 
-use super::instagram::types::MediaContent;
+use super::instagram::MediaContent;
 
 // TODO: reduce states
 #[derive(Clone, Default, Serialize, Deserialize, Debug)]
@@ -33,11 +33,6 @@ pub enum DialogueState {
     },
     AwaitingLogoutConfirmation(MessageId),
     ConfirmLogout,
-    // Language
-    // AwaitingLanguage {
-    //     prompt_msg_id: MessageId,
-    //     language: String,
-    // },
 }
 
 pub struct DialogueService;

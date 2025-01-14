@@ -10,6 +10,29 @@ pub enum MiddlewareError {
     Other(String),
 }
 
+#[allow(dead_code)]
+#[derive(Debug, thiserror::Error)]
+pub enum AuthError {
+    #[error("Validation error: {0}")]
+    ValidationError(String),
+    #[error("Login failed: Bad credentials")]
+    BadCredentials,
+    #[error("Two-factor authentication required")]
+    TwoFactorRequired,
+    #[error("Checkpoint verification required: {0}")]
+    CheckpointRequired(String),
+    #[error("Login failed: {0}")]
+    LoginFailed(String),
+    #[error("Other error: {0}")]
+    Other(String),
+}
+
+impl From<reqwest::Error> for AuthError {
+    fn from(error: reqwest::Error) -> Self {
+        AuthError::Other(error.to_string())
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum AuthenticationError {
     #[error("Login failed: Bad credentials")]
@@ -34,6 +57,20 @@ pub enum InstagramError {
     AuthenticationError(#[from] AuthenticationError),
     #[error("API error: {0}")]
     ApiError(String),
+    #[error("Content not found: {0}")]
+    ContentNotFound(String),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SessionError {
+    #[error("Invalid session")]
+    InvalidSession,
+    #[error("Session not found")]
+    SessionNotFound,
+    #[error("Session expired")]
+    SessionExpired,
+    #[error("Other error: {0}")]
+    Other(String),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -43,7 +80,7 @@ pub enum ServiceError {
     #[error("Instagram: {0}")] // check
     InstagramError(#[from] InstagramError),
     #[error("Session: {0}")]
-    Session(String),
+    Session(#[from] SessionError),
     #[error("Middleware: {0}")] // check
     Middleware(#[from] MiddlewareError),
     #[error("Language: {0}")]
@@ -71,7 +108,7 @@ pub enum BotError {
     AppStateError(String),
 
     #[error(transparent)]
-    Other(anyhow::Error),
+    Other(anyhow::Error), // check
 }
 
 impl From<BotError> for ShuttleError {

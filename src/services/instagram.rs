@@ -1,15 +1,120 @@
+use serde::{Deserialize, Serialize};
+use std::time::Duration;
+use url::Url;
+
+use super::auth::SessionData;
 use crate::{
     error::{BotError, BotResult, InstagramError, ServiceError},
     state::AppState,
+    utils::http,
 };
 
-use super::{
-    types::{ContentType, MediaContent, PostContent},
-    CarouselItem, InstagramService, MediaInfo,
-};
-use url::Url;
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ContentType {
+    Image,
+    Reel,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PostContent {
+    Single {
+        url: Url,
+        content_type: ContentType,
+        // caption: Option<String>,
+        // timestamp: Option<String>,
+    },
+    Carousel {
+        items: Vec<CarouselItem>,
+        // caption: Option<String>,
+        // timestamp: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoryContent {
+    pub url: Url,
+    pub content_type: ContentType,
+    // pub timestamp: Option<String>,
+    // pub expires_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MediaContent {
+    Post(PostContent),
+    Story(StoryContent),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MediaAuthor {
+    pub username: String,
+    // pub profile_pic_url: Option<Url>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MediaInfo {
+    pub content: MediaContent,
+    pub author: MediaAuthor,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CarouselItem {
+    pub url: Url,
+    pub content_type: ContentType,
+    // pub caption: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum InstagramIdentifier {
+    Story { username: String, shortcode: String },
+    Post { shortcode: String },
+    Reel { shortcode: String },
+}
+
+#[derive(Clone)]
+pub struct InstagramService {
+    pub public_client: reqwest::Client,
+}
 
 impl InstagramService {
+    pub fn new() -> BotResult<Self> {
+        let builder = reqwest::Client::builder()
+            .timeout(Duration::from_secs(30))
+            .connect_timeout(Duration::from_secs(30))
+            .default_headers(http::build_instagram_headers())
+            .user_agent(http::INSTAGRAM_USER_AGENT);
+
+        let public_client = http::build_client(builder)?;
+        Ok(Self { public_client })
+    }
+    #[allow(dead_code)]
+    pub fn with_session(_session_data: SessionData) -> BotResult<Self> {
+        // TODO: Create a new client with session cookies
+        todo!()
+    }
+
+    pub fn parse_instagram_url(&self, url: &Url) -> BotResult<InstagramIdentifier> {
+        let path_segments: Vec<_> = url
+            .path_segments()
+            .ok_or_else(|| BotError::InvalidUrl("No path segments found".into()))?
+            .collect();
+
+        info!("Parsing Instagram URL with path segments: {:?}", path_segments);
+
+        match path_segments.as_slice() {
+            ["stories", username, story_id] => Ok(InstagramIdentifier::Story {
+                username: username.to_string(),
+                shortcode: story_id.to_string(),
+            }),
+            ["p", shortcode, ..] => Ok(InstagramIdentifier::Post {
+                shortcode: shortcode.to_string(),
+            }),
+            ["reel", shortcode, ..] => Ok(InstagramIdentifier::Reel {
+                shortcode: shortcode.to_string(),
+            }),
+            _ => Err(BotError::InvalidUrl("Invalid Instagram URL format".into())),
+        }
+    }
+
     pub async fn fetch_post_info(&self, shortcode: &str) -> BotResult<MediaInfo> {
         let state = AppState::get()?;
 
@@ -72,59 +177,6 @@ impl InstagramService {
         }
     }
 
-    fn get_dimensions(&self, media: &serde_json::Value) -> BotResult<(u64, u64)> {
-        let width = media
-            .get("dimensions")
-            .and_then(|d| d.get("width"))
-            .and_then(|w| w.as_u64())
-            .unwrap_or(1080);
-
-        let height = media
-            .get("dimensions")
-            .and_then(|d| d.get("height"))
-            .and_then(|h| h.as_u64())
-            .unwrap_or(1080);
-
-        Ok((width, height))
-    }
-
-    fn parse_image(&self, media: &serde_json::Value) -> BotResult<MediaInfo> {
-        let url = self.find_display_url(media)?;
-
-        Ok(MediaInfo {
-            content: MediaContent::Post(PostContent::Single {
-                url: Url::parse(&url).map_err(|e| BotError::InvalidUrl(e.to_string()))?,
-                content_type: ContentType::Image,
-                // caption: None,
-            }),
-            author: self.get_author(media)?,
-        })
-    }
-
-    fn find_display_url(&self, media_or_node: &serde_json::Value) -> BotResult<String> {
-        let (width, height) = self.get_dimensions(media_or_node)?;
-
-        let url = media_or_node
-            .get("display_resources")
-            .and_then(|resources| resources.as_array())
-            .and_then(|resources| {
-                resources
-                    .iter()
-                    .find(|resource| {
-                        let res_width = resource.get("config_width").and_then(|w| w.as_u64()).unwrap_or(0);
-                        let res_height = resource.get("config_height").and_then(|h| h.as_u64()).unwrap_or(0);
-                        res_width == width && res_height == height
-                    })
-                    .or_else(|| resources.last())
-                    .and_then(|resource| resource.get("src"))
-                    .and_then(|u| u.as_str())
-            })
-            .unwrap_or_else(|| media_or_node.get("display_url").and_then(|u| u.as_str()).unwrap_or(""))
-            .to_string();
-
-        Ok(url)
-    }
-
     fn parse_reel(&self, media: &serde_json::Value) -> BotResult<MediaInfo> {
         let url = media
             .get("video_url")
@@ -140,6 +192,46 @@ impl InstagramService {
                 // timestamp: None,
             }),
             author: self.get_author(media)?,
+        })
+    }
+
+    fn parse_image(&self, media: &serde_json::Value) -> BotResult<MediaInfo> {
+        let url = self.find_display_url(media)?;
+
+        Ok(MediaInfo {
+            content: MediaContent::Post(PostContent::Single {
+                url: Url::parse(&url).map_err(|e| BotError::InvalidUrl(e.to_string()))?,
+                content_type: ContentType::Image,
+                // caption: None,
+            }),
+            author: self.get_author(media)?,
+        })
+    }
+
+    fn parse_carousel_video(&self, node: &serde_json::Value) -> BotResult<CarouselItem> {
+        let url = node
+            .get("video_url")
+            .and_then(|u| u.as_str())
+            .ok_or_else(|| {
+                BotError::ServiceError(ServiceError::InstagramError(InstagramError::InvalidResponseStructure(
+                    "Missing carousel video URL".to_string(),
+                )))
+            })?
+            .to_string();
+        Ok(CarouselItem {
+            url: Url::parse(&url).map_err(|e| BotError::InvalidUrl(e.to_string()))?,
+            content_type: ContentType::Reel,
+            // caption: None,
+        })
+    }
+
+    fn parse_carousel_image(&self, node: &serde_json::Value) -> BotResult<CarouselItem> {
+        let url = self.find_display_url(node)?;
+        Ok(CarouselItem {
+            url: Url::parse(&url).map_err(|e| BotError::InvalidUrl(e.to_string()))?,
+            content_type: ContentType::Image,
+            // caption: None,
+            // timestamp: None,
         })
     }
 
@@ -173,31 +265,56 @@ impl InstagramService {
         })
     }
 
-    fn parse_carousel_image(&self, node: &serde_json::Value) -> BotResult<CarouselItem> {
-        let url = self.find_display_url(node)?;
-        Ok(CarouselItem {
-            url: Url::parse(&url).map_err(|e| BotError::InvalidUrl(e.to_string()))?,
-            content_type: ContentType::Image,
-            // caption: None,
-            // timestamp: None,
+    fn get_author(&self, media: &serde_json::Value) -> BotResult<MediaAuthor> {
+        let username = media
+            .get("owner")
+            .and_then(|o| o.get("username"))
+            .and_then(|u| u.as_str())
+            .unwrap_or("unknown");
+
+        Ok(MediaAuthor {
+            username: username.to_string(),
         })
     }
 
-    fn parse_carousel_video(&self, node: &serde_json::Value) -> BotResult<CarouselItem> {
-        let url = node
-            .get("video_url")
-            .and_then(|u| u.as_str())
-            .ok_or_else(|| {
-                BotError::ServiceError(ServiceError::InstagramError(InstagramError::InvalidResponseStructure(
-                    "Missing carousel video URL".to_string(),
-                )))
-            })?
+    fn get_dimensions(&self, media: &serde_json::Value) -> BotResult<(u64, u64)> {
+        let width = media
+            .get("dimensions")
+            .and_then(|d| d.get("width"))
+            .and_then(|w| w.as_u64())
+            .unwrap_or(1080);
+
+        let height = media
+            .get("dimensions")
+            .and_then(|d| d.get("height"))
+            .and_then(|h| h.as_u64())
+            .unwrap_or(1080);
+
+        Ok((width, height))
+    }
+
+    fn find_display_url(&self, media_or_node: &serde_json::Value) -> BotResult<String> {
+        let (width, height) = self.get_dimensions(media_or_node)?;
+
+        let url = media_or_node
+            .get("display_resources")
+            .and_then(|resources| resources.as_array())
+            .and_then(|resources| {
+                resources
+                    .iter()
+                    .find(|resource| {
+                        let res_width = resource.get("config_width").and_then(|w| w.as_u64()).unwrap_or(0);
+                        let res_height = resource.get("config_height").and_then(|h| h.as_u64()).unwrap_or(0);
+                        res_width == width && res_height == height
+                    })
+                    .or_else(|| resources.last())
+                    .and_then(|resource| resource.get("src"))
+                    .and_then(|u| u.as_str())
+            })
+            .unwrap_or_else(|| media_or_node.get("display_url").and_then(|u| u.as_str()).unwrap_or(""))
             .to_string();
-        Ok(CarouselItem {
-            url: Url::parse(&url).map_err(|e| BotError::InvalidUrl(e.to_string()))?,
-            content_type: ContentType::Reel,
-            // caption: None,
-        })
+
+        Ok(url)
     }
 }
 

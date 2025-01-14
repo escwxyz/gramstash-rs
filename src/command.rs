@@ -1,5 +1,4 @@
 use teloxide::{
-    adaptors::DefaultParseMode,
     macros::BotCommands,
     payloads::SetMyCommandsSetters,
     prelude::Requester,
@@ -48,13 +47,13 @@ impl Command {
     }
 }
 
-pub async fn setup_user_commands(bot: &DefaultParseMode<Bot>) -> HandlerResult<()> {
+pub async fn setup_user_commands(bot: &Bot) -> HandlerResult<()> {
     bot.delete_my_commands().await?;
     bot.set_my_commands(Command::user_commands()).await?;
     Ok(())
 }
 
-pub async fn setup_admin_commands(bot: &DefaultParseMode<Bot>, chat_id: ChatId) -> HandlerResult<()> {
+pub async fn setup_admin_commands(bot: &Bot, chat_id: ChatId) -> HandlerResult<()> {
     bot.delete_my_commands().await?;
     bot.set_my_commands(Command::admin_commands())
         .scope(BotCommandScope::Chat {

@@ -7,13 +7,10 @@ pub mod test;
 
 use once_cell::sync::Lazy;
 use regex::Regex;
-use teloxide::types::UserId;
+
 use url::Url;
 
-use crate::{
-    config::AdminConfig,
-    error::{BotError, BotResult},
-};
+use crate::error::{BotError, BotResult};
 
 static INSTAGRAM_URL_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"https?://(?:www\.)?instagram\.com/[^\s]+").unwrap());
@@ -43,10 +40,6 @@ pub fn validate_instagram_username(username: &str) -> bool {
 
 pub fn validate_instagram_password(password: &str) -> bool {
     INSTAGRAM_PASSWORD_REGEX.is_match(password)
-}
-
-pub fn is_admin(user_id: UserId, admin_config: &AdminConfig) -> BotResult<bool> {
-    Ok(admin_config.telegram_user_id == user_id)
 }
 
 #[cfg(test)]

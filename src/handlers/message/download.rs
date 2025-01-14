@@ -1,7 +1,7 @@
 use crate::error::{BotError, HandlerResult};
 use crate::services::cache::CacheService;
 use crate::services::dialogue::DialogueState;
-use crate::services::instagram::types::{InstagramIdentifier, MediaContent, PostContent};
+use crate::services::instagram::{InstagramIdentifier, MediaContent, PostContent};
 use crate::services::ratelimiter::RateLimiter;
 use crate::state::AppState;
 use crate::utils::{extract_instagram_url, keyboard, parse_url};
@@ -40,14 +40,16 @@ pub(super) async fn handle_message_awaiting_download_link(
         .send_message(msg.chat.id, t!("messages.download.processing_request"))
         .await?;
 
-    let instagram_service = AppState::get()?.instagram.lock().await;
     let parsed_url = parse_url(&url)?;
-    let identifier = instagram_service.parse_instagram_url(&parsed_url)?;
 
-    let (shortcode, content_type) = match identifier {
-        InstagramIdentifier::Story { username: _, shortcode } => (shortcode, "story"),
-        InstagramIdentifier::Post { shortcode } => (shortcode, "post"),
-        InstagramIdentifier::Reel { shortcode } => (shortcode, "reel"),
+    let (shortcode, content_type) = {
+        let identifier = AppState::get()?.instagram.parse_instagram_url(&parsed_url)?;
+
+        match identifier {
+            InstagramIdentifier::Story { username: _, shortcode } => (shortcode, "story"),
+            InstagramIdentifier::Post { shortcode } => (shortcode, "post"),
+            InstagramIdentifier::Reel { shortcode } => (shortcode, "reel"),
+        }
     };
 
     // check cache first
@@ -80,9 +82,10 @@ pub(super) async fn handle_message_awaiting_download_link(
         return Ok(());
     }
 
+    let instagram_service = AppState::get()?.instagram.clone();
+
     let media_info = match content_type {
         "story" => {
-            info!("Fetching story info for shortcode: {}", shortcode);
             todo!()
         }
         _ => instagram_service.fetch_post_info(&shortcode).await,
@@ -91,7 +94,6 @@ pub(super) async fn handle_message_awaiting_download_link(
     match media_info {
         Ok(media_info) => {
             CacheService::set_media_info(&shortcode, &media_info).await?;
-
             process_media_content(&bot, &dialogue, &msg, &processing_msg, &media_info.content).await?;
         }
         Err(e) => {
