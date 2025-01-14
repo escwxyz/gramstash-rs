@@ -17,12 +17,6 @@ jobs:
     timeout-minutes: 30
     name: Test & Coverage
     runs-on: ubuntu-latest
-    container:
-      image: xd009642/tarpaulin:develop-nightly
-      options: --security-opt seccomp=unconfined
-      env:
-        REDIS_HOST: redis
-        SRH_HOST: srh
 
     services:
       redis:
@@ -46,10 +40,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
       - name: Run tests with coverage
         id: coverage
         run: |
-          cargo tarpaulin --out xml
+          cargo +nightly tarpaulin --out xml
         # --fail-under $MIN_COVERAGE # TODO
 
       - name: Upload coverage to Codecov
