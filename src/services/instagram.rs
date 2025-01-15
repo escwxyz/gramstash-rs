@@ -80,7 +80,7 @@ impl InstagramService {
         let builder = reqwest::Client::builder()
             .timeout(Duration::from_secs(30))
             .connect_timeout(Duration::from_secs(30))
-            .default_headers(http::build_instagram_headers())
+            .default_headers(http::build_desktop_instagram_headers())
             .user_agent(http::INSTAGRAM_USER_AGENT);
 
         let public_client = http::build_client(builder)?;

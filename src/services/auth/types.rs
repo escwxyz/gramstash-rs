@@ -60,7 +60,6 @@ pub struct Session {
     pub session_data: Option<SessionData>,
     pub last_accessed: DateTime<Utc>,
     pub last_refresh: DateTime<Utc>,
-    // pub language: Language, // preferred language
 }
 
 impl Default for Session {
@@ -71,7 +70,6 @@ impl Default for Session {
             session_data: None,
             last_accessed: now,
             last_refresh: now,
-            // language: Language::English,
         }
     }
 }

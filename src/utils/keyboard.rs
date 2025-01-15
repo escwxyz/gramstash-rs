@@ -2,6 +2,30 @@
 
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
+// pub trait MarkupHelper {
+//     fn contains_button_with(&self, data: &str) -> bool;
+//     fn get_callback_data(&self) -> Option<String>;
+// }
+
+// impl MarkupHelper for InlineKeyboardMarkup {
+//     fn contains_button_with(&self, data: &str) -> bool {
+//         self.inline_keyboard
+//             .iter()
+//             .flatten()
+//             .any(|btn| matches!(&btn.kind, teloxide::types::InlineKeyboardButtonKind::CallbackData(cb_data) if cb_data == data))
+//     }
+
+//     fn get_callback_data(&self) -> Option<String> {
+//         self.inline_keyboard.iter().flatten().find_map(|btn| {
+//             if let teloxide::types::InlineKeyboardButtonKind::CallbackData(cb_data) = &btn.kind {
+//                 Some(cb_data.clone())
+//             } else {
+//                 None
+//             }
+//         })
+//     }
+// }
+
 pub struct MainMenu;
 
 impl MainMenu {
@@ -105,11 +129,15 @@ impl LanguageMenu {
         InlineKeyboardMarkup::new([
             [InlineKeyboardButton::callback(
                 t!("buttons.language_menu.en"),
-                "language_en",
+                "lang:en:{}",
             )],
             [InlineKeyboardButton::callback(
                 t!("buttons.language_menu.zh"),
-                "language_zh",
+                "lang:zh:{}",
+            )],
+            [InlineKeyboardButton::callback(
+                t!("buttons.language_menu.de"),
+                "lang:de:{}",
             )],
         ])
     }

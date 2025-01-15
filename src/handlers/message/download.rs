@@ -5,13 +5,12 @@ use crate::services::instagram::{InstagramIdentifier, MediaContent, PostContent}
 use crate::services::ratelimiter::RateLimiter;
 use crate::state::AppState;
 use crate::utils::{extract_instagram_url, keyboard, parse_url};
-use teloxide::adaptors::DefaultParseMode;
 use teloxide::dispatching::dialogue::ErasedStorage;
 use teloxide::prelude::*;
 use teloxide::types::MessageId;
 
 pub(super) async fn handle_message_awaiting_download_link(
-    bot: DefaultParseMode<Bot>,
+    bot: Bot,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
     message_id: MessageId,
@@ -117,7 +116,7 @@ pub(super) async fn handle_message_awaiting_download_link(
 
 // TODO: implement media preview with better UI and more information
 async fn show_media_preview(
-    bot: &DefaultParseMode<Bot>,
+    bot: &Bot,
     msg: &Message,
     processing_msg: &Message,
     content: &MediaContent,
@@ -147,7 +146,7 @@ async fn show_media_preview(
 }
 
 async fn process_media_content(
-    bot: &DefaultParseMode<Bot>,
+    bot: &Bot,
     dialogue: &Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: &Message,
     processing_msg: &Message,

@@ -27,7 +27,7 @@ impl AuthClient {
             .timeout(Duration::from_secs(30))
             .connect_timeout(Duration::from_secs(30))
             .cookie_provider(Arc::clone(&cookie_store))
-            .default_headers(http::build_instagram_headers())
+            .default_headers(http::build_desktop_instagram_headers())
             .user_agent(http::INSTAGRAM_USER_AGENT);
 
         http::build_client(builder)
@@ -70,9 +70,6 @@ impl AuthClient {
             self.cookie_jar
                 .add_cookie_str(&cookie_str, &"https://www.instagram.com".parse().unwrap());
         }
-
-        // Update the auth_client with the new cookies
-        // self.auth_client = http::create_instagram_auth_client(Arc::clone(&self.cookie_jar))?;
 
         Ok(())
     }

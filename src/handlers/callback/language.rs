@@ -1,62 +1,65 @@
-// pub(super) async fn handle_callback_language_en(
-//     bot: &DefaultParseMode<Bot>,
-//     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
-//     message: MaybeInaccessibleMessage,
-// ) -> HandlerResult<()> {
-//     info!("handle_callback_language_en");
-//     // Store current state before updating language
-//     let current_state = dialogue.get().await?.unwrap_or(DialogueState::Start);
+use std::str::FromStr;
 
-//     let mut language = AppState::get()?.language.lock().await;
-//     *language = Language::English;
-//     rust_i18n::set_locale(language.get_locale());
+use crate::{
+    error::HandlerResult,
+    handlers::RequestContext,
+    services::{dialogue::DialogueState, language::Language},
+    state::AppState,
+};
+use teloxide::{dispatching::dialogue::ErasedStorage, prelude::*, types::MaybeInaccessibleMessage};
 
-//     let new_text = get_text_for_state(&current_state)?;
+pub async fn handle_callback_language_change(
+    bot: &Bot,
+    dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
+    message: MaybeInaccessibleMessage,
+    ctx: RequestContext,
+    app_state: &AppState,
+    lang_code: &str,
+) -> HandlerResult<()> {
+    let language = Language::from_str(lang_code).unwrap_or(Language::English);
 
-//     bot.edit_message_text(message.chat().id, message.id(), new_text).await?;
+    Language::set_user_language(app_state, &ctx.telegram_user_id.to_string(), language).await?;
 
-//     // Restore the same state
-//     dialogue
-//         .update(current_state)
-//         .await
-//         .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
+    rust_i18n::set_locale(&language.to_string());
 
-//     Ok(())
-// }
+    // Update commands
+    if ctx.is_admin {
+        crate::command::setup_admin_commands(&bot, message.chat().id).await?;
+    } else {
+        crate::command::setup_user_commands(&bot).await?;
+    }
 
-// pub(super) async fn handle_callback_language_zh(
-//     bot: &DefaultParseMode<Bot>,
-//     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
-//     message: MaybeInaccessibleMessage,
-// ) -> HandlerResult<()> {
-//     info!("handle_callback_language_zh");
-//     // Store current state before updating language
-//     let current_state = dialogue.get().await?.unwrap_or(DialogueState::Start);
+    bot.edit_message_text(
+        message.chat().id,
+        message.id(),
+        t!(
+            "callbacks.language.change_language",
+            language = t!(format!("buttons.language_menu.{}", language.to_string()))
+        ),
+    )
+    .await?;
 
-//     let mut language = AppState::get()?.language.lock().await;
-//     *language = Language::Chinese;
-//     rust_i18n::set_locale(language.get_locale());
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-//     // Get the appropriate text based on current state
-//     let new_text = get_text_for_state(&current_state)?;
+    let return_to = app_state.language.get_last_interface(&ctx.telegram_user_id.to_string());
 
-//     bot.edit_message_text(message.chat().id, message.id(), new_text).await?;
+    match return_to.as_str() {
+        // download
+        "ask_for_download_link" => {
+            super::download::handle_callback_asking_for_download_link(bot, dialogue, message).await?
+        }
+        "confirm_download" => super::download::handle_callback_confirm_download(bot, dialogue, message).await?,
+        "cancel_download" => super::download::handle_callback_cancel_download(bot, message).await?,
 
-//     // Restore the same state
-//     dialogue
-//         .update(current_state)
-//         .await
-//         .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
+        // profile
+        "profile_menu" | "cancel_auth" => super::profile::handle_callback_profile_menu(bot, message, ctx).await?,
+        "auth_login" => super::profile::handle_callback_auth_login(bot, dialogue, message).await?,
 
-//     Ok(())
-// }
+        // navigation
+        "back_to_main_menu" => super::navigation::handle_callback_back_to_main_menu(bot, dialogue, message).await?,
 
-// // Helper function to get the appropriate text based on dialogue state
-// fn get_text_for_state(state: &DialogueState) -> HandlerResult<String> {
-//     let text = match state {
-//         DialogueState::Start => t!("commands.start"),
-//         // Add other states here with their corresponding translations
-//         _ => t!("commands.start"), // fallback to start text
-//     };
-//     Ok(text.to_string())
-// }
+        _ => super::navigation::handle_callback_back_to_main_menu(bot, dialogue, message).await?,
+    }
+
+    Ok(())
+}

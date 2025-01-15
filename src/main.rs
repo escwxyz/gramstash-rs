@@ -17,7 +17,7 @@ mod services;
 mod state;
 mod utils;
 
-i18n!("locales");
+i18n!("locales", fallback = "en");
 
 #[shuttle_runtime::main]
 async fn shuttle_main(

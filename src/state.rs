@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    services::auth::{service::AuthService, SessionService},
+    services::{
+        auth::{service::AuthService, SessionService},
+        language::LanguageService,
+    },
     utils::redis::RedisClient,
 };
 use chrono::Duration;
@@ -21,6 +24,7 @@ pub struct AppState {
     pub redis: RedisClient,
     pub instagram: InstagramService,
     pub auth: Arc<Mutex<AuthService>>,
+    pub language: LanguageService,
 }
 
 pub static APP_STATE: OnceCell<AppState> = OnceCell::new();
@@ -52,6 +56,7 @@ impl AppState {
                 redis,
                 instagram,
                 auth: auth_service,
+                language: LanguageService::new(),
             })
             .map_err(|_| BotError::AppStateError("App state already initialized".to_string()))?;
 

@@ -32,6 +32,7 @@ impl SessionService {
         format!("session:{}", telegram_user_id)
     }
 
+    #[allow(dead_code)]
     pub async fn init_telegram_user_context(&mut self, telegram_user_id: &str) -> BotResult<()> {
         if self.session.belongs_to(telegram_user_id) && !self.needs_refresh() {
             info!("Session for {} is fresh, skipping ...", telegram_user_id);
@@ -62,6 +63,7 @@ impl SessionService {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn get_session(&self, telegram_user_id: &str) -> BotResult<Option<Session>> {
         // Use local session if fresh and belongs to the same user
         if self.session.belongs_to(telegram_user_id) && !self.needs_refresh() {

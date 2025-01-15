@@ -61,7 +61,7 @@ SESSION_REFRESH_INTERVAL_SECS = "your-session-refresh-interval-secs"
 - [ ] Session management
 - [ ] Story downloading
 - [ ] Highlight downloading
-- [ ] Internationalization
+- [x] Internationalization
 - [ ] Metrics
 - [ ] Monetization
 
@@ -98,65 +98,9 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ## License 📝
 
-This project is licensed under the MIT License with Commons Clause. This means:
-
-✅ You CAN:
-
-- View and study the code
-- Modify the code
-- Use the code for personal, non-commercial projects
-- Fork and contribute back to the project
-
-❌ You CANNOT:
-
-- Sell the software or hosted services based on it
-- Use the code for commercial purposes without explicit permission
-- Offer paid hosting or support services for the bot
-- Create competing commercial services
-
-The Commons Clause is specifically added to prevent commercial use while maintaining the open-source nature of the project. The only authorized commercial implementation is the official bot service provided by the original author.
+This project is licensed under the Apache 2.0 License.
 
 See the [LICENSE](LICENSE) file for the complete license text.
-
-## Commercial Usage 💼
-
-This bot is the only authorized commercial implementation of the codebase. To use premium features:
-
-1. Use the `/increase_download_limit` command in the bot
-2. See [Monetization](#monetization-) section for pricing
-
-For any commercial licensing inquiries, please contact the project maintainers.
-
-## Monetization 💰
-
-While this project is open source, the official bot service operates on a freemium model:
-
-### Free Tier
-
-- 3 downloads per day
-- Basic media support
-- Standard response time
-
-### Pay-As-You-Go
-
-- 0.25 USD per download
-- Bulk discount: 20 downloads for 5 USD
-- No daily limits
-- Priority support
-
-### Premium Subscription
-
-- 10 USD per month
-- Unlimited downloads
-- Priority support
-- Early access to new features
-- No daily limits
-
-To upgrade your plan, use the `/increase_download_limit` command in the bot.
-
-Note: This is the only authorized commercial implementation of this codebase. While the code is open source, commercial use by third parties is not permitted under the license.
-
-For business inquiries or custom plans, please contact the project maintainers.
 
 ## Acknowledgments 👏
 
@@ -168,4 +112,4 @@ For support, please open an issue.
 
 ## Disclaimer ⚠️
 
-This bot is not affiliated with Instagram or Meta. Use it responsibly and in accordance with Instagram's terms of service.
+This bot is not affiliated with Instagram or Meta. The codebase is only for educational purposes. Use it responsibly and in accordance with Instagram's terms of service. You are responsible for your own actions.

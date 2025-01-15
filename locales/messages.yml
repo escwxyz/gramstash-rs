@@ -2,42 +2,53 @@ _version: 2
 messages.profile_menu:
   en: "👋 Hey, what would you like to do?"
   zh: "👋 你好，你想做什么？"
+  de: "👋 Hey, was möchten Sie tun?"
 messages.download.processing_request:
   en: "⏳ Processing your request..."
   zh: "⏳ 正在处理你的请求..."
+  de: "⏳ Verarbeite Ihre Anfrage..."
 messages.download.ask_for_download_link:
   en: "🔍 Please send me a message containing an Instagram content URL (post, story, reel, highlight) you want to download."
   zh: "🔍 请发送包含 Instagram 内容的 URL（帖子、Story、Reel、Highlight）的消息。"
+  de: "🔍 Bitte senden Sie mir eine Nachricht mit einer Instagram-Inhalts-URL (Post, Story, Reel, Highlight), die Sie herunterladen möchten."
 messages.download.invalid_url:
   en: "❌ Please provide a valid Instagram URL."
   zh: "❌ 请提供有效的 Instagram URL。"
+  de: "❌ Bitte geben Sie eine gültige Instagram-URL an."
 messages.download.download_limit_reached:
   en: "⚠️ Daily download limit reached. Try again tomorrow!"
   zh: "⚠️ 每日下载限制已达到。请明天再试！"
+  de: "⚠️ Tägliches Download-Limit erreicht. Versuchen Sie es morgen erneut!"
 messages.unknown_message:
   en: "🤷‍♂️ Unknown message.\n\nPlease click the following keyboard buttons to continue.\n\n"
   zh: "🤷‍♂️ 未知消息。\n\n请点击以下键盘按钮继续。\n\n"
 messages.profile.username.validating:
   en: "🔑 Validating username ..."
   zh: "🔑 正在验证 Instagram 用户名 ..."
+  de: "🔑 Validieren Sie den Instagram-Benutzernamen ..."
 messages.profile.username.invalid:
   en: "❌ Invalid username %{username}. \n\nPlease input a valid username again."
   zh: "❌ 无效的 Instagram 用户名 %{username}. \n\n请再次输入有效的用户名。"
+  de: "❌ Ungültiger Instagram-Benutzername %{username}. \n\nBitte geben Sie einen gültigen Benutzernamen erneut ein."
 messages.profile.username.validating_session:
   en: "🔑 Validating session ..."
   zh: "🔑 正在验证会话 ..."
+  de: "🔑 Validieren Sie die Sitzung ..."
 messages.profile.username.validating_session_success:
   en: "✅ Successfully logged in with existing session!\n\nWhat would you like to do?"
   zh: "✅ 成功使用现有会话登录！\n\n你想做什么？"
+  de: "✅ Erfolgreich mit vorhandener Sitzung eingeloggt! \n\nWas möchten Sie tun?"
 messages.profile.username.invalid_session:
   en: "🔑 Session is invalid, %{username}.\n\nPlease login again and input your Instagram password.\n\nNote: Your password will never be stored or used for anything else."
   zh: "🔑 会话无效，%{username}.\n\n请重新登录并输入你的 Instagram 密码。\n\n注意：你的密码永远不会被存储或用于其他任何用途。"
 messages.profile.password.invalid:
   en: "❌ Invalid password. Please try again."
   zh: "❌ 密码错误。请再试一次。"
+  de: "❌ Ungültiges Passwort. Bitte versuchen Sie es erneut."
 messages.profile.password.logging_in:
   en: "🔄 Logging in to Instagram ..."
   zh: "🔄 正在登录 Instagram ..."
+  de: "🔄 Anmelden bei Instagram ..."
 messages.profile.password.login_success:
   en: "✅ Login successful! You can now download stories.\n\n\
     Note: This session won't expire until you logout manually."
@@ -45,25 +56,35 @@ messages.profile.password.login_success:
 messages.profile.password.login_failed:
   en: "❌ Login failed: %{error}.\n\nPlease try again by inputing your username."
   zh: "❌ 登录失败：%{error}.\n\n请再次输入你的用户名。"
-
+  de: "❌ Login fehlgeschlagen: %{error}.\n\nBitte versuchen Sie es erneut, indem Sie Ihren Benutzernamen eingeben."
 callbacks.profile.profile_menu:
   en: "👋 Hey, what would you like to do?"
   zh: "👋 你好，你想做什么？"
 callbacks.profile.auth_login:
   en: "🔑 Please input your Instagram username"
   zh: "🔑 请输入你的 Instagram 用户名"
+  de: "🔑 Bitte geben Sie Ihren Instagram-Benutzernamen ein"
 callbacks.download.ask_for_download_link:
   en: "🔍 Please send me a message containing an Instagram content URL (post, story, reel, highlight) you want to download."
   zh: "🔍 请发送包含 Instagram 内容的 URL（帖子、Story、Reel、Highlight）的消息。"
+  de: "🔍 Bitte senden Sie mir eine Nachricht mit einer Instagram-Inhalts-URL (Post, Story, Reel, Highlight), die Sie herunterladen möchten."
 callbacks.download.downloading:
   en: "⬇️ Downloading..."
   zh: "⬇️ 正在下载..."
+  de: "⬇️ Herunterladen..."
 callbacks.download.download_completed:
   en: "✅ Download completed! What would you like to do next?"
   zh: "✅ 下载完成！你想做什么？"
+  de: "✅ Download abgeschlossen! Was möchten Sie als Nächstes tun?"
 callbacks.download.cancel_download:
   en: "Download cancelled. What would you like to do?"
   zh: "下载已取消。你想做什么？"
+  de: "Download abgebrochen. Was möchten Sie als Nächstes tun?"
 callbacks.navigation.back_to_main_menu:
   en: "🔙 Back to Main Menu, what would you like to do?"
   zh: "🔙 已返回主菜单，你想做什么？"
+  de: "🔙 Zurück zum Hauptmenü, was möchten Sie als Nächstes tun?"
+callbacks.language.change_language:
+  en: "🔄 Language changed to %{language}!"
+  zh: "🔄 语言已更改为 %{language}!"
+  de: "🔄 Sprache geändert zu %{language}!"

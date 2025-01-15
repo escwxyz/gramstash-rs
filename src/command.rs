@@ -41,8 +41,8 @@ impl Command {
             BotCommand::new("start", t!("commands.description.start")),
             BotCommand::new("help", t!("commands.description.help")),
             BotCommand::new("language", t!("commands.description.language")),
-            BotCommand::new("stats", "some stats"),
-            BotCommand::new("status", "some status"),
+            BotCommand::new("stats", t!("commands.description.stats")),
+            BotCommand::new("status", t!("commands.description.status")),
         ]
     }
 }

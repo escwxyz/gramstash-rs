@@ -1,5 +1,4 @@
 use teloxide::{
-    adaptors::DefaultParseMode,
     dispatching::dialogue::ErasedStorage,
     payloads::{EditMessageTextSetters, SendMessageSetters},
     prelude::{Dialogue, Requester},
@@ -19,7 +18,7 @@ use crate::{
 };
 
 pub(super) async fn handle_callback_asking_for_download_link(
-    bot: &DefaultParseMode<Bot>,
+    bot: &Bot,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {
@@ -40,7 +39,7 @@ pub(super) async fn handle_callback_asking_for_download_link(
 }
 
 pub(super) async fn handle_callback_confirm_download(
-    bot: &DefaultParseMode<Bot>,
+    bot: &Bot,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {
@@ -83,10 +82,7 @@ pub(super) async fn handle_callback_confirm_download(
     Ok(())
 }
 
-pub(super) async fn handle_callback_cancel_download(
-    bot: &DefaultParseMode<Bot>,
-    message: MaybeInaccessibleMessage,
-) -> HandlerResult<()> {
+pub(super) async fn handle_callback_cancel_download(bot: &Bot, message: MaybeInaccessibleMessage) -> HandlerResult<()> {
     info!("handle_callback_cancel_download");
     bot.edit_message_text(
         message.chat().id,

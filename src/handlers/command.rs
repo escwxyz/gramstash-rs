@@ -3,26 +3,18 @@ use teloxide::dispatching::{HandlerExt, UpdateHandler};
 use teloxide::prelude::*;
 use teloxide::{types::Message, Bot};
 
-use crate::command::{setup_admin_commands, Command};
+use crate::command::Command;
 use crate::error::{BotError, HandlerResult};
 use crate::services::dialogue::DialogueState;
 use crate::state::AppState;
-use crate::utils::keyboard;
+use crate::utils::keyboard::{self};
 
 use super::RequestContext;
 
-async fn handle_language(
-    bot: Bot,
-    _dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
-    msg: Message,
-) -> HandlerResult<()> {
+async fn handle_language(bot: Bot, msg: Message) -> HandlerResult<()> {
     bot.send_message(msg.chat.id, t!("commands.language"))
         .reply_markup(keyboard::LanguageMenu::get_language_menu_inline_keyboard())
         .await?;
-
-    // TODO: update session with language
-
-    // bot.edit_message
 
     Ok(())
 }
@@ -37,7 +29,6 @@ async fn handle_start(
     let RequestContext {
         telegram_user_id,
         telegram_user_name,
-        is_admin,
         ..
     } = ctx;
 
@@ -68,10 +59,6 @@ async fn handle_start(
         .await
         .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
 
-    if is_admin {
-        setup_admin_commands(&bot, msg.chat.id).await?;
-    }
-
     Ok(())
 }
 
@@ -99,7 +86,7 @@ async fn handle_command(
     match cmd {
         Command::Start => handle_start(bot, state, dialogue, msg, ctx).await?,
         Command::Help => handle_help(bot, msg).await?,
-        Command::Language => handle_language(bot, dialogue, msg).await?,
+        Command::Language => handle_language(bot, msg).await?,
         Command::Stats | Command::Status if !ctx.is_admin => handle_unknown_command(bot, msg).await?,
         _ => handle_unknown_command(bot, msg).await?,
     }

@@ -1,5 +1,4 @@
 use teloxide::{
-    adaptors::DefaultParseMode,
     dispatching::dialogue::ErasedStorage,
     payloads::EditMessageTextSetters,
     prelude::{Dialogue, Requester},
@@ -19,7 +18,7 @@ use crate::{
 };
 
 pub(super) async fn handle_message_username(
-    bot: DefaultParseMode<Bot>,
+    bot: Bot,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
     prompt_msg_id: MessageId,
@@ -134,7 +133,7 @@ pub(super) async fn handle_message_username(
 }
 
 pub(super) async fn handle_message_password(
-    bot: DefaultParseMode<Bot>,
+    bot: Bot,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
     (username, prompt_msg_id): (String, MessageId),

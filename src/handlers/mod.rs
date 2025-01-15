@@ -8,10 +8,11 @@ use command::get_command_handler;
 use message::{get_message_handler, handle_message_unknown};
 use teloxide::{
     dispatching::{
-        dialogue::{self, ErasedStorage},
+        dialogue::{self, ErasedStorage, GetChatId},
         UpdateFilterExt, UpdateHandler,
     },
     types::{Update, UserId},
+    Bot,
 };
 
 use crate::{
@@ -24,32 +25,48 @@ pub struct RequestContext {
     pub telegram_user_id: UserId,
     pub telegram_user_name: String,
     pub is_admin: bool,
-    // TODO: think if we need to put auth service into the context
     #[allow(dead_code)]
     pub language: Language,
 }
 
 pub fn get_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync + 'static>> {
     dialogue::enter::<Update, ErasedStorage<DialogueState>, DialogueState, _>()
-        .filter_map_async(|update: Update, state: &'static AppState| async move {
+        .filter_map_async(|update: Update, bot: Bot, state: &'static AppState| async move {
             if let Some(user) = extract_user(&update) {
-                {
-                    let auth_service = state.auth.lock().await;
-                    let mut session_service = auth_service.session_service.clone();
-                    // TODO put init_telegram_user_context in into the middleware of the auth service
-                    if let Err(e) = session_service.init_telegram_user_context(&user.id.to_string()).await {
-                        error!("Failed to initialize telegram user context: {:?}", e);
+                // TODO: this part does not work properly, sometimes refreshes every time
+                // {
+                //     let auth_service = state.auth.lock().await;
+                //     let mut session_service = auth_service.session_service.clone();
+                //     // TODO put init_telegram_user_context in into the middleware of the auth service
+                //     if let Err(e) = session_service.init_telegram_user_context(&user.id.to_string()).await {
+                //         error!("Failed to initialize telegram user context: {:?}", e);
+                //     }
+                // }
+
+                let is_admin = state.config.admin.telegram_user_id == user.id;
+
+                let language = Language::get_user_language(&state, &user.id.to_string())
+                    .await
+                    .unwrap_or(Language::English);
+
+                rust_i18n::set_locale(&language.to_string());
+
+                if is_admin {
+                    if let Err(e) = crate::command::setup_admin_commands(&bot, update.chat_id().unwrap()).await {
+                        error!("Failed to setup admin commands: {:?}", e);
+                    }
+                } else {
+                    if let Err(e) = crate::command::setup_user_commands(&bot).await {
+                        error!("Failed to setup user commands: {:?}", e);
                     }
                 }
 
                 let context = RequestContext {
                     telegram_user_id: user.id,
                     telegram_user_name: user.first_name,
-                    is_admin: state.config.admin.telegram_user_id == user.id,
-                    language: Language::English, // TODO: add language
+                    is_admin,
+                    language,
                 };
-
-                info!("RequestContext: {:?}", context);
 
                 Some(context) // update is always present
             } else {

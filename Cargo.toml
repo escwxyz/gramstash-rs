@@ -14,6 +14,7 @@ publish = false
 anyhow = "1.0.95"
 async-trait = "0.1.83"
 chrono = { version = "0.4.39", features = ["serde"] }
+dashmap = "6.1.0"
 log = "0.4.22"
 once_cell = "1.20.2"
 pretty_env_logger = "0.5.0"
@@ -25,7 +26,7 @@ serde = { version = "1.0.216", features = ["derive"] }
 serde_json = "1.0.134"
 sha2 = "0.10"
 shuttle-runtime = "0.49.0"
-teloxide = { version = "0.13.0", features = ["macros", "throttle", "redis-storage"] }
+teloxide = { version = "0.13.0", features = ["macros", "redis-storage"] }
 thiserror = "2.0.9"
 tokio = { version = "1.42.0", features = ["full"] }
 url = "2.5.2"

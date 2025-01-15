@@ -2,39 +2,56 @@ _version: 2
 buttons.language_menu.en:
   en: "🇺🇸 English"
   zh: "🇺🇸 英文"
+  de: "🇺🇸 Englisch"
 buttons.language_menu.zh:
   en: "🇨🇳 Chinese"
   zh: "🇨🇳 中文"
+  de: "🇨🇳 Chinesisch"
+buttons.language_menu.de:
+  en: "🇩🇪 German"
+  zh: "🇩🇪 德语"
+  de: "🇩🇪 Deutsch"
 buttons.download_menu.continue:
   en: "🔍 Continue Download"
   zh: "🔍 继续下载"
+  de: "🔍 Weiterhin herunterladen"
 buttons.download_menu.cancel:
   en: "❌ Cancel Download"
   zh: "❌ 取消下载"
+  de: "❌ Herunterladen abbrechen"
 buttons.confirm_download.confirm:
   en: "✅ Confirm"
   zh: "✅ 确认"
+  de: "✅ Bestätigen"
 buttons.confirm_download.cancel:
   en: "❌ Cancel"
   zh: "❌ 取消"
+  de: "❌ Abbrechen"
 buttons.main_menu.download:
   en: "📥 Download"
   zh: "📥 下载"
+  de: "📥 Herunterladen"
 buttons.main_menu.profile:
   en: "👤 Profile"
   zh: "👤 个人资料"
+  de: "👤 Profil"
 buttons.profile_menu.login:
   en: "🔑 Login"
   zh: "🔑 登录"
+  de: "🔑 Anmelden"
 buttons.profile_menu.usage:
   en: "📊 Usage"
   zh: "📊 使用情况"
+  de: "📊 Nutzung"
 buttons.profile_menu.logout:
   en: "🔓 Logout"
   zh: "🔓 登出"
+  de: "🔓 Ausloggen"
 buttons.login_dialogue.cancel:
   en: "🔙 Back"
   zh: "🔙 返回"
+  de: "🔙 Zurück"
 buttons.back_to_main_menu:
   en: "🔙 Back to Main Menu"
   zh: "🔙 返回主菜单"
+  de: "🔙 Zurück zum Hauptmenü"

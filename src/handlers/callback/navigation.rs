@@ -1,5 +1,4 @@
 use teloxide::{
-    adaptors::DefaultParseMode,
     dispatching::dialogue::ErasedStorage,
     payloads::EditMessageTextSetters,
     prelude::{Dialogue, Requester},
@@ -10,7 +9,7 @@ use teloxide::{
 use crate::{error::HandlerResult, services::dialogue::DialogueState, utils::keyboard};
 
 pub(super) async fn handle_callback_back_to_main_menu(
-    bot: &DefaultParseMode<Bot>,
+    bot: &Bot,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {

@@ -2,7 +2,6 @@ mod download;
 mod profile;
 
 use teloxide::{
-    adaptors::DefaultParseMode,
     dispatching::{dialogue::ErasedStorage, UpdateFilterExt, UpdateHandler},
     dptree::{self},
     payloads::SendMessageSetters,
@@ -35,7 +34,7 @@ pub fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send +
 }
 
 pub async fn handle_message_unknown(
-    bot: DefaultParseMode<Bot>,
+    bot: Bot,
     message: Message,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
 ) -> HandlerResult<()> {

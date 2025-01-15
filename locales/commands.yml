@@ -6,6 +6,10 @@ commands.start.unauthenticated:
   zh: "👋 你好 %{first_name}! 你的 ID 是 %{telegram_user_id}.\n\n\
     欢迎使用 GramStash! 我可以帮助你从 Instagram 下载内容。\n\n\
     请选择一个选项："
+  de:
+    "👋 Hi %{first_name}, willkommen zurück! Ihre ID ist %{telegram_user_id}.\n\n\
+    Willkommen bei GramStash! Ich kann Ihnen Inhalte von Instagram herunterladen.\n\n\
+    Bitte wählen Sie eine Option unten aus:"
 commands.start.authenticated:
   en: "👋 Hi %{first_name}, welcome back! Your ID is %{telegram_user_id}.\n\n\
     Welcome to GramStash! I can help you download content from Instagram.\n\n\
@@ -13,6 +17,10 @@ commands.start.authenticated:
   zh: "👋 你好 %{first_name}, 欢迎回来! 你的 ID 是 %{telegram_user_id}.\n\n\
     欢迎使用 GramStash! 我可以帮助你从 Instagram 下载内容。\n\n\
     请选择一个选项："
+  de:
+    "👋 Hi %{first_name}, willkommen zurück! Ihre ID ist %{telegram_user_id}.\n\n\
+    Willkommen bei GramStash! Ich kann Ihnen Inhalte von Instagram herunterladen.\n\n\
+    Bitte wählen Sie eine Option unten aus:"
 commands.help:
   en: "This is a help message\n\n
     You can download content from Instagram by selecting the download option from the main menu.\n\n
@@ -24,18 +32,36 @@ commands.help:
     你也可以通过从主菜单中选择个人资料选项来管理你的个人资料和订阅。\n\n
     为了更快地访问，你可以简单地点击键盘上的持久按钮。\n\n
     有任何问题吗？使用 /language 更改机器人的语言。\n\n"
+  de: "Dies ist eine Hilfsmeldung\n\n
+    Sie können Inhalte von Instagram herunterladen, indem Sie die Download-Option aus dem Hauptmenü auswählen.\n\n
+    Sie können auch Ihr Profil und Ihre Abonnement verwalten, indem Sie die Profiloption aus dem Hauptmenü auswählen.\n\n
+    Für schnellen Zugriff können Sie einfach die dauerhaften Buttons in Ihrer Tastatur klicken.\n\n
+    Haben Sie Fragen? Verwenden Sie /language, um die Sprache des Bots zu ändern.\n\n"
 commands.language:
   en: "🌐 Please select a language below 👇"
   zh: "🌐 请选择以下语言 👇"
+  de: "🌐 Bitte wählen Sie eine Sprache unten 👇"
 commands.unknown_command:
   en: "⚠️ Unknown command\n\nPlease use /help to see available commands."
   zh: "⚠️ 未知命令\n\n请使用 /help 查看可用命令。"
+  de: "⚠️ Unbekannte Befehl\n\nBitte verwenden Sie /help, um verfügbare Befehle zu sehen."
 commands.description.start:
   en: "Start the bot and show main menu"
   zh: "启动机器人并显示主菜单"
+  de: "Starten Sie den Bot und zeigen Sie das Hauptmenü"
 commands.description.help:
   en: "Show help message"
   zh: "显示帮助消息"
+  de: "Zeige Hilfsmeldung"
 commands.description.language:
   en: "Change language"
   zh: "更改语言"
+  de: "Sprache ändern"
+commands.description.stats:
+  en: "Show some stats"
+  zh: "显示一些统计数据"
+  de: "Zeige einige Statistiken"
+commands.description.status:
+  en: "Show some status"
+  zh: "显示一些状态"
+  de: "Zeige einige Status"
