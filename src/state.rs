@@ -5,7 +5,7 @@ use crate::{
         auth::{service::AuthService, SessionService},
         language::LanguageService,
     },
-    utils::redis::RedisClient,
+    utils::{redis::RedisClient, turso::TursoClient},
 };
 use chrono::Duration;
 use once_cell::sync::OnceCell;
@@ -22,6 +22,7 @@ use crate::{
 pub struct AppState {
     pub config: AppConfig,
     pub redis: RedisClient,
+    pub turso: TursoClient,
     pub instagram: InstagramService,
     pub auth: Arc<Mutex<AuthService>>,
     pub language: LanguageService,
@@ -42,6 +43,7 @@ impl AppState {
 
     async fn init_common(config: AppConfig) -> BotResult<()> {
         let redis = RedisClient::new(config.redis.url.as_str()).await?;
+        let turso = TursoClient::new(config.turso.url.as_str(), config.turso.token.as_str()).await?;
 
         let instagram = InstagramService::new()?;
 
@@ -54,6 +56,7 @@ impl AppState {
             .set(AppState {
                 config,
                 redis,
+                turso,
                 instagram,
                 auth: auth_service,
                 language: LanguageService::new(),

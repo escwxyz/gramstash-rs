@@ -85,6 +85,10 @@ callbacks.navigation.back_to_main_menu:
   zh: "🔙 已返回主菜单，你想做什么？"
   de: "🔙 Zurück zum Hauptmenü, was möchten Sie als Nächstes tun?"
 callbacks.language.change_language:
-  en: "🔄 Language changed to %{language}!"
-  zh: "🔄 语言已更改为 %{language}!"
-  de: "🔄 Sprache geändert zu %{language}!"
+  en: "✅ Language changed to %{language}!"
+  zh: "✅ 语言已更改为 %{language}!"
+  de: "✅ Sprache geändert zu %{language}!"
+callbacks.language.change_language_status:
+  en: "🔄 Setting language..."
+  zh: "🔄 正在设置语言..."
+  de: "🔄 Sprache wird gesetzt..."

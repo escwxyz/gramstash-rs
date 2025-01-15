@@ -45,7 +45,9 @@ pub fn get_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync + 
 
                 let is_admin = state.config.admin.telegram_user_id == user.id;
 
-                let language = Language::get_user_language(&state, &user.id.to_string())
+                let language = state
+                    .language
+                    .get_user_language(&user.id.to_string())
                     .await
                     .unwrap_or(Language::English);
 

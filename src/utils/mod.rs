@@ -1,6 +1,7 @@
 pub mod http;
 pub mod keyboard;
 pub mod redis;
+pub mod turso;
 
 #[cfg(test)]
 pub mod test;

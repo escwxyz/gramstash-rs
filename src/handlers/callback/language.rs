@@ -16,9 +16,16 @@ pub async fn handle_callback_language_change(
     app_state: &AppState,
     lang_code: &str,
 ) -> HandlerResult<()> {
+    let status_message = bot
+        .send_message(message.chat().id, t!("callbacks.language.change_language_status"))
+        .await?;
+
     let language = Language::from_str(lang_code).unwrap_or(Language::English);
 
-    Language::set_user_language(app_state, &ctx.telegram_user_id.to_string(), language).await?;
+    app_state
+        .language
+        .set_user_language(ctx.telegram_user_id.to_string(), language)
+        .await?;
 
     rust_i18n::set_locale(&language.to_string());
 
@@ -31,7 +38,7 @@ pub async fn handle_callback_language_change(
 
     bot.edit_message_text(
         message.chat().id,
-        message.id(),
+        status_message.id,
         t!(
             "callbacks.language.change_language",
             language = t!(format!("buttons.language_menu.{}", language.to_string()))
@@ -39,9 +46,10 @@ pub async fn handle_callback_language_change(
     )
     .await?;
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-
-    let return_to = app_state.language.get_last_interface(&ctx.telegram_user_id.to_string());
+    let return_to = app_state
+        .language
+        .get_last_interface(&ctx.telegram_user_id.to_string())
+        .await?;
 
     match return_to.as_str() {
         // download

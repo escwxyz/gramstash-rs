@@ -13,6 +13,7 @@ pub struct AppConfig {
     pub dialogue: DialogueConfig,
     pub admin: AdminConfig,
     pub session: SessionConfig,
+    pub turso: TursoConfig,
 }
 
 impl AppConfig {
@@ -27,6 +28,7 @@ impl AppConfig {
             dialogue: DialogueConfig::new_test_config(),
             admin: AdminConfig::new_test_config(),
             session: SessionConfig::new_test_config(),
+            turso: TursoConfig::new_test_config(),
         }
     }
 }
@@ -146,6 +148,22 @@ impl SessionConfig {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct TursoConfig {
+    pub url: String,
+    pub token: String,
+}
+
+impl TursoConfig {
+    #[cfg(test)]
+    pub fn new_test_config() -> Self {
+        Self {
+            url: "localhost".to_string(),
+            token: "test_token".to_string(),
+        }
+    }
+}
+
 pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
     let redis_host = secret_store
         .get("UPSTASH_REDIS_HOST")
@@ -221,6 +239,14 @@ pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
                 .ok_or_else(|| BotError::SecretKeyError("Missing SESSION_REFRESH_INTERVAL_SECS".to_string()))?
                 .parse::<i64>()
                 .map_err(|_| BotError::SecretKeyError("Invalid SESSION_REFRESH_INTERVAL_SECS".to_string()))?,
+        },
+        turso: TursoConfig {
+            url: secret_store
+                .get("TURSO_URL")
+                .ok_or_else(|| BotError::SecretKeyError("Missing TURSO_URL".to_string()))?,
+            token: secret_store
+                .get("TURSO_TOKEN")
+                .ok_or_else(|| BotError::SecretKeyError("Missing TURSO_TOKEN".to_string()))?,
         },
     })
 }

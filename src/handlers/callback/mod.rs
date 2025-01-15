@@ -36,19 +36,22 @@ async fn handle_callback(
         "ask_for_download_link" => {
             app_state
                 .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "ask_for_download_link");
+                .set_last_interface(&ctx.telegram_user_id.to_string(), "ask_for_download_link")
+                .await?;
             download::handle_callback_asking_for_download_link(&bot, dialogue, message).await?
         }
         "confirm_download" => {
             app_state
                 .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "confirm_download");
+                .set_last_interface(&ctx.telegram_user_id.to_string(), "confirm_download")
+                .await?;
             download::handle_callback_confirm_download(&bot, dialogue, message).await?
         }
         "cancel_download" => {
             app_state
                 .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "cancel_download");
+                .set_last_interface(&ctx.telegram_user_id.to_string(), "cancel_download")
+                .await?;
             download::handle_callback_cancel_download(&bot, message).await?
         }
 
@@ -56,19 +59,22 @@ async fn handle_callback(
         "profile_menu" => {
             app_state
                 .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "profile_menu");
+                .set_last_interface(&ctx.telegram_user_id.to_string(), "profile_menu")
+                .await?;
             profile::handle_callback_profile_menu(&bot, message, ctx).await?
         }
         "cancel_auth" => {
             app_state
                 .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "cancel_auth");
+                .set_last_interface(&ctx.telegram_user_id.to_string(), "cancel_auth")
+                .await?;
             profile::handle_callback_profile_menu(&bot, message, ctx).await?
         }
         "auth_login" => {
             app_state
                 .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "auth_login");
+                .set_last_interface(&ctx.telegram_user_id.to_string(), "auth_login")
+                .await?;
             profile::handle_callback_auth_login(&bot, dialogue, message).await?
         }
         "auth_logout" => todo!(),
@@ -77,7 +83,8 @@ async fn handle_callback(
         "back_to_main_menu" => {
             app_state
                 .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "back_to_main_menu");
+                .set_last_interface(&ctx.telegram_user_id.to_string(), "back_to_main_menu")
+                .await?;
             navigation::handle_callback_back_to_main_menu(&bot, dialogue, message).await?
         }
 

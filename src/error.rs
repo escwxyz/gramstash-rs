@@ -104,6 +104,9 @@ pub enum BotError {
     #[error("Redis error: {0}")] // check
     RedisError(String),
 
+    #[error("Turso error: {0}")] // check
+    TursoError(String),
+
     #[error("App state error: {0}")] // check
     AppStateError(String),
 
