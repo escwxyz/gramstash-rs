@@ -17,6 +17,12 @@ jobs:
     timeout-minutes: 30
     name: Test & Coverage
     runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin:0.31.4
+      options: --security-opt seccomp=unconfined
+      env:
+        REDIS_HOST: redis
+        SRH_HOST: srh
 
     services:
       redis:
@@ -40,16 +46,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust nightly
-        uses: dtolnay/rust-toolchain@nightly
-
-      - name: Install cargo-tarpaulin
-        run: cargo install cargo-tarpaulin
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ~/.rustup/toolchains/ 
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cargo-
 
       - name: Run tests with coverage
         id: coverage
         run: |
-          cargo +nightly tarpaulin --out xml
+          cargo tarpaulin --out xml
         # --fail-under $MIN_COVERAGE # TODO
 
       - name: Upload coverage to Codecov

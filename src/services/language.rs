@@ -1,13 +1,19 @@
+#[derive(Clone, Debug)]
 pub enum Language {
     English,
+    #[allow(dead_code)]
     Chinese,
+    #[allow(dead_code)]
+    German,
 }
 
 impl Language {
+    #[allow(dead_code)]
     pub fn get_locale(&self) -> &str {
         match self {
             Language::English => "en",
             Language::Chinese => "zh",
+            Language::German => "de",
         }
     }
 
