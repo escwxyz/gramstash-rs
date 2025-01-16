@@ -58,10 +58,10 @@ impl LanguageService {
                 [telegram_user_id],
             )
             .await
-            .unwrap();
+            .map_err(|e| BotError::TursoError(e.to_string()))?;
 
         while let Some(row) = rows.next().await.map_err(|e| BotError::TursoError(e.to_string()))? {
-            let language = row.get::<String>(0).unwrap();
+            let language = row.get::<String>(0).unwrap_or_else(|_| "en".to_string());
             return Ok(Language::from_str(&language).unwrap_or(Language::English));
         }
         // self.cache
@@ -110,7 +110,7 @@ impl LanguageService {
             .map_err(|e| BotError::TursoError(e.to_string()))?;
 
         while let Some(row) = rows.next().await.map_err(|e| BotError::TursoError(e.to_string()))? {
-            let interface = row.get::<String>(0).unwrap();
+            let interface = row.get::<String>(0).unwrap_or_else(|_| "main".to_string());
             return Ok(interface);
         }
 
