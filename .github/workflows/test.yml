@@ -53,14 +53,14 @@ jobs:
       - name: Create Turso Test Database
         id: create_db
         run: |
-          # Create the new database
-          echo "Creating database: ${{ github.ref_name }}_${{ github.run_id }}"
+          echo "Creating database: ${{ github.ref_name }}-${{ github.run_id }}"
 
+          # Create database
           CREATE_RESPONSE=$(curl -L -X POST "https://api.turso.tech/v1/organizations/${{ secrets.TURSO_ORGANIZATION_NAME }}/databases" \
             -H "Authorization: Bearer ${{ secrets.TURSO_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "name": "${{ github.ref_name }}_${{ github.run_id }}",
+              "name": "${{ github.ref_name }}-${{ github.run_id }}",
               "group": "default",
               "seed": {
                 "type": "database",
@@ -68,15 +68,36 @@ jobs:
               }
             }')
 
-          echo "Database created successfully"
+          # Check for errors in creation response
+          ERROR=$(echo "$CREATE_RESPONSE" | jq -r '.error')
+          if [ "$ERROR" != "null" ]; then
+            echo "Failed to create database: $ERROR"
+            echo "Full response: $CREATE_RESPONSE"
+            exit 1
+          fi
+
+          echo "Database creation successful"
 
       - name: Get Database Token
         run: |
-          curl -sSf https://github.com/tursodatabase/turso-cli/releases/download/v1.0.0/turso_Linux_x86_64.tar.gz | tar -xz
-          ./turso auth login --token ${{ secrets.TURSO_API_TOKEN }}
-          ./turso db tokens create ${{ github.ref_name }}_${{ github.run_id }} --expiration 1h > token.txt
-          echo "TURSO_TOKEN=$(cat token.txt)" >> $GITHUB_ENV
-          echo "TURSO_URL=libsql://${{ github.ref_name }}_${{ github.run_id }}.turso.io" >> $GITHUB_ENV
+          set +x  # Disable command echo
+
+          # Create database token using Platform API
+          token=$(curl -L -X POST \
+            "https://api.turso.tech/v1/organizations/${{ secrets.TURSO_ORGANIZATION_NAME }}/databases/${{ github.ref_name }}-${{ github.run_id }}/auth/tokens?expiration=1h&authorization=full-access" \
+            -H "Authorization: Bearer ${{ secrets.TURSO_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            | jq -r '.jwt')
+
+          # Verify we got a token
+          if [ -z "$token" ]; then
+            echo "Failed to get database token"
+            exit 1
+          fi
+
+          echo "::add-mask::$token"
+          echo "TURSO_TOKEN=$token" >> $GITHUB_ENV
+          echo "TURSO_URL=libsql://${{ env.TURSO_HOSTNAME }}" >> $GITHUB_ENV
 
       - name: Cache dependencies
         uses: actions/cache@v4
@@ -111,4 +132,15 @@ jobs:
       - name: Cleanup Turso Database
         if: always()
         run: |
-          ./turso db destroy ${{ github.ref_name }}_${{ github.run_id }} --yes
+          response=$(
+            curl -L -X DELETE \
+              "https://api.turso.tech/v1/organizations/${{ secrets.TURSO_ORGANIZATION_NAME }}/databases/${{ github.ref_name }}-${{ github.run_id }}" \
+              -H "Authorization: Bearer ${{ secrets.TURSO_API_TOKEN }}"
+          )
+
+          if [ $(echo "$response" | jq -r '.error') != "null" ]; then
+            echo "Failed to delete database"
+            exit 1
+          fi
+
+          echo "Database deleted successfully"

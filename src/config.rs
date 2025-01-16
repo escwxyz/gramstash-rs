@@ -158,8 +158,8 @@ impl TursoConfig {
     #[cfg(test)]
     pub fn new_test_config() -> Self {
         Self {
-            url: "localhost".to_string(),
-            token: "test_token".to_string(),
+            url: std::env::var("TURSO_URL").unwrap_or("localhost".to_string()),
+            token: std::env::var("TURSO_TOKEN").unwrap_or("test_token".to_string()),
         }
     }
 }
