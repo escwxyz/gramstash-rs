@@ -53,14 +53,8 @@ pub fn get_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync + 
 
                 rust_i18n::set_locale(&language.to_string());
 
-                if is_admin {
-                    if let Err(e) = crate::command::setup_admin_commands(&bot, update.chat_id().unwrap()).await {
-                        error!("Failed to setup admin commands: {:?}", e);
-                    }
-                } else {
-                    if let Err(e) = crate::command::setup_user_commands(&bot).await {
-                        error!("Failed to setup user commands: {:?}", e);
-                    }
+                if let Err(e) = crate::command::setup_commands(&bot, is_admin, update.chat_id().unwrap()).await {
+                    error!("Failed to setup commands: {:?}", e);
                 }
 
                 let context = RequestContext {

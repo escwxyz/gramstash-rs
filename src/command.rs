@@ -52,13 +52,28 @@ pub async fn setup_user_commands(bot: &Bot) -> HandlerResult<()> {
     bot.set_my_commands(Command::user_commands()).await?;
     Ok(())
 }
-
-pub async fn setup_admin_commands(bot: &Bot, chat_id: ChatId) -> HandlerResult<()> {
+#[allow(unused)]
+async fn setup_admin_commands(bot: &Bot, chat_id: ChatId) -> HandlerResult<()> {
     bot.delete_my_commands().await?;
     bot.set_my_commands(Command::admin_commands())
         .scope(BotCommandScope::Chat {
             chat_id: Recipient::Id(chat_id),
         })
         .await?;
+    Ok(())
+}
+
+#[cfg(not(test))]
+pub async fn setup_commands(bot: &Bot, is_admin: bool, chat_id: ChatId) -> HandlerResult<()> {
+    if is_admin {
+        setup_admin_commands(bot, chat_id).await?;
+    } else {
+        setup_user_commands(bot).await?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+pub async fn setup_commands(_bot: &Bot, _is_admin: bool, _chat_id: ChatId) -> HandlerResult<()> {
     Ok(())
 }

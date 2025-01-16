@@ -62,7 +62,6 @@ impl DialogueService {
 
     pub async fn get_dialogue_storage(config: &DialogueConfig) -> BotResult<Arc<ErasedStorage<DialogueState>>> {
         let storage = if config.use_redis {
-            info!("Using Redis Storage");
             let storage = {
                 RedisStorage::open(config.redis_url.as_str(), Json)
                     .await
@@ -71,7 +70,6 @@ impl DialogueService {
             };
             storage
         } else {
-            info!("Using In-Memory Storage");
             InMemStorage::new().erase()
         };
 

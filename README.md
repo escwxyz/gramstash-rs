@@ -23,7 +23,7 @@ A Telegram bot that allows users to download media content from Instagram, inclu
 - A Telegram Bot Token (get it from [@BotFather](https://t.me/botfather))
 - [Upstash](https://upstash.com/) account (for Redis and Rate Limiting)
 - [Shuttle](https://shuttle.dev/) account (for deployment)
-- [Turso](https://turso.tech/) account (for database)
+- [Turso](https://turso.tech/) account (for user language storage)
 
 ### Environment Variables
 

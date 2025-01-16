@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use crate::{
+    command,
     error::HandlerResult,
     handlers::RequestContext,
     services::{dialogue::DialogueState, language::Language},
@@ -29,13 +30,6 @@ pub async fn handle_callback_language_change(
 
     rust_i18n::set_locale(&language.to_string());
 
-    // Update commands
-    if ctx.is_admin {
-        crate::command::setup_admin_commands(&bot, message.chat().id).await?;
-    } else {
-        crate::command::setup_user_commands(&bot).await?;
-    }
-
     bot.edit_message_text(
         message.chat().id,
         status_message.id,
@@ -50,6 +44,9 @@ pub async fn handle_callback_language_change(
         .language
         .get_last_interface(&ctx.telegram_user_id.to_string())
         .await?;
+
+    // Update commands
+    command::setup_commands(bot, ctx.is_admin, message.chat().id).await?;
 
     match return_to.as_str() {
         // download

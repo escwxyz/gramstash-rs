@@ -27,7 +27,6 @@ async fn setup_test_state() -> BotResult<(&'static AppState, Arc<ErasedStorage<D
     test_config.redis.url = format!("redis://{}:6379", redis_host);
     test_config.dialogue.redis_url = format!("redis://{}:6379", redis_host);
 
-    // Only initialize if not already initialized
     if AppState::get().is_err() {
         AppState::init_test_with_config(test_config.clone())
             .await

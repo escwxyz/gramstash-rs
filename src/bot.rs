@@ -3,7 +3,6 @@ use std::time::Duration;
 use teloxide::prelude::*;
 use teloxide::Bot;
 
-use crate::command::setup_user_commands;
 use crate::error::{BotResult, HandlerResult};
 use crate::handlers::get_handler;
 use crate::services::dialogue::DialogueService;
@@ -43,7 +42,7 @@ impl BotService {
         let state = AppState::get()?;
         let storage = DialogueService::get_dialogue_storage(&state.config.dialogue).await?;
 
-        setup_user_commands(&bot).await?;
+        crate::command::setup_user_commands(&bot).await?;
 
         let handler = get_handler();
 

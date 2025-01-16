@@ -129,15 +129,27 @@ impl LanguageMenu {
         InlineKeyboardMarkup::new([
             [InlineKeyboardButton::callback(
                 t!("buttons.language_menu.en"),
-                "lang:en:{}",
+                "lang:en",
             )],
             [InlineKeyboardButton::callback(
                 t!("buttons.language_menu.zh"),
-                "lang:zh:{}",
+                "lang:zh",
             )],
             [InlineKeyboardButton::callback(
                 t!("buttons.language_menu.de"),
-                "lang:de:{}",
+                "lang:de",
+            )],
+            [InlineKeyboardButton::callback(
+                t!("buttons.language_menu.fr"),
+                "lang:fr",
+            )],
+            [InlineKeyboardButton::callback(
+                t!("buttons.language_menu.ja"),
+                "lang:ja",
+            )],
+            [InlineKeyboardButton::callback(
+                t!("buttons.language_menu.es"),
+                "lang:es",
             )],
         ])
     }

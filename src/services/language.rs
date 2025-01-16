@@ -1,5 +1,4 @@
 use libsql::params;
-use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -12,10 +11,11 @@ use crate::{
 #[serde(rename_all = "lowercase")]
 pub enum Language {
     English,
-    #[allow(dead_code)]
     Chinese,
-    #[allow(dead_code)]
     German,
+    French,
+    Japanese,
+    Spanish,
 }
 
 impl FromStr for Language {
@@ -26,6 +26,9 @@ impl FromStr for Language {
             "en" | "english" => Ok(Language::English),
             "zh" | "chinese" => Ok(Language::Chinese),
             "de" | "german" => Ok(Language::German),
+            "fr" | "french" => Ok(Language::French),
+            "ja" | "japanese" => Ok(Language::Japanese),
+            "es" | "spanish" => Ok(Language::Spanish),
             _ => Err(format!("Unknown language code: {}", s)),
         }
     }
@@ -37,6 +40,9 @@ impl ToString for Language {
             Language::English => "en".to_string(),
             Language::Chinese => "zh".to_string(),
             Language::German => "de".to_string(),
+            Language::French => "fr".to_string(),
+            Language::Japanese => "ja".to_string(),
+            Language::Spanish => "es".to_string(),
         }
     }
 }
@@ -48,7 +54,7 @@ impl LanguageService {
     pub fn new() -> Self {
         Self
     }
-
+    // TODO: Turso, Redis or In-Memory Storage
     pub async fn get_user_language(&self, telegram_user_id: &str) -> BotResult<Language> {
         let app_state = AppState::get()?;
         let conn = app_state.turso.get_connection().await?;
@@ -121,16 +127,16 @@ impl LanguageService {
         Ok("main".to_string())
     }
 
-    #[allow(unused)]
-    /// Background task to persist user language to redis for metrics
-    pub async fn persist_user_language(&self, telegram_user_id: String, language: Language) -> BotResult<()> {
-        let app_state = AppState::get()?;
-        let mut conn = app_state.redis.get_connection().await?;
-        conn.set::<_, _, String>(format!("user_language:{}", telegram_user_id), language.to_string())
-            .await?;
+    // #[allow(unused)]
+    // /// Background task to persist user language to redis for metrics
+    // pub async fn persist_user_language(&self, telegram_user_id: String, language: Language) -> BotResult<()> {
+    //     let app_state = AppState::get()?;
+    //     let mut conn = app_state.redis.get_connection().await?;
+    //     conn.set::<_, _, String>(format!("user_language:{}", telegram_user_id), language.to_string())
+    //         .await?;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }
 
 // TODO: Add tests

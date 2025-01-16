@@ -10,6 +10,16 @@ commands.start.unauthenticated:
     "👋 Hi %{first_name}, willkommen zurück! Ihre ID ist %{telegram_user_id}.\n\n\
     Willkommen bei GramStash! Ich kann Ihnen Inhalte von Instagram herunterladen.\n\n\
     Bitte wählen Sie eine Option unten aus:"
+  fr: "👋 Salut, %{first_name}! Votre ID est %{telegram_user_id}.\n\n\
+    Bienvenue sur GramStash! Je peux vous aider à télécharger du contenu Instagram.\n\n\
+    Veuillez sélectionner une option ci-dessous:"
+  ja:
+    "👋 こんにちは, %{first_name}! あなたの ID は %{telegram_user_id} です。\n\n\
+    GramStash へようこそ! 私は Instagram のコンテンツをダウンロードできます。\n\n\
+    下のオプションから選んでください:"
+  es: "👋 ¡Hola, %{first_name}! Tu ID es %{telegram_user_id}.\n\n\
+    ¡Bienvenido a GramStash! Puedo ayudarte a descargar contenido de Instagram.\n\n\
+    Por favor, selecciona una opción a continuación:"
 commands.start.authenticated:
   en: "👋 Hi %{first_name}, welcome back! Your ID is %{telegram_user_id}.\n\n\
     Welcome to GramStash! I can help you download content from Instagram.\n\n\
@@ -21,6 +31,16 @@ commands.start.authenticated:
     "👋 Hi %{first_name}, willkommen zurück! Ihre ID ist %{telegram_user_id}.\n\n\
     Willkommen bei GramStash! Ich kann Ihnen Inhalte von Instagram herunterladen.\n\n\
     Bitte wählen Sie eine Option unten aus:"
+  fr: "👋 Salut, %{first_name}! Votre ID est %{telegram_user_id}.\n\n\
+    Bienvenue sur GramStash! Je peux vous aider à télécharger du contenu Instagram.\n\n\
+    Veuillez sélectionner une option ci-dessous:"
+  ja:
+    "👋 こんにちは, %{first_name}! あなたの ID は %{telegram_user_id} です。\n\n\
+    GramStash へようこそ! 私は Instagram のコンテンツをダウンロードできます。\n\n\
+    下のオプションから選んでください:"
+  es: "👋 ¡Hola, %{first_name}! Tu ID es %{telegram_user_id}.\n\n\
+    ¡Bienvenido a GramStash! Puedo ayudarte a descargar contenido de Instagram.\n\n\
+    Por favor, selecciona una opción a continuación:"
 commands.help:
   en: "This is a help message\n\n
     You can download content from Instagram by selecting the download option from the main menu.\n\n
@@ -37,31 +57,67 @@ commands.help:
     Sie können auch Ihr Profil und Ihre Abonnement verwalten, indem Sie die Profiloption aus dem Hauptmenü auswählen.\n\n
     Für schnellen Zugriff können Sie einfach die dauerhaften Buttons in Ihrer Tastatur klicken.\n\n
     Haben Sie Fragen? Verwenden Sie /language, um die Sprache des Bots zu ändern.\n\n"
+  fr: "Cette est une aide message\n\n
+    Vous pouvez télécharger du contenu Instagram en sélectionnant l'option de téléchargement dans le menu principal.\n\n
+    Vous pouvez également gérer votre profil et votre abonnement en sélectionnant l'option profil dans le menu principal.\n\n
+    Pour un accès rapide, vous pouvez simplement cliquer sur les boutons persistants dans votre clavier.\n\n
+    Vous avez des questions ? Utilisez /language pour changer la langue du bot.\n\n"
+  ja: "これはヘルプメッセージです\n\n
+    Instagram のコンテンツをダウンロードするには、メインメニューからダウンロードオプションを選択します。\n\n
+    メインメニューからプロフィールオプションを選択して、プロフィールとサブスクリプションを管理できます。\n\n
+    迅速にアクセスするには、キーボードの永続ボタンをクリックするだけです。\n\n
+    質問がありますか？ /language を使用してボットの言語を変更します。\n\n"
+  es: "Este es un mensaje de ayuda\n\n
+    Puede descargar contenido de Instagram seleccionando la opción de descarga en el menú principal.\n\n
+    También puede gestionar su perfil y suscripción seleccionando la opción de perfil en el menú principal.\n\n
+    Para un acceso rápido, simplemente puede hacer clic en los botones persistentes en su teclado.\n\n
+    ¿Tiene alguna pregunta? Utilice /language para cambiar el idioma del bot.\n\n"
 commands.language:
   en: "🌐 Please select a language below 👇"
   zh: "🌐 请选择以下语言 👇"
   de: "🌐 Bitte wählen Sie eine Sprache unten 👇"
+  fr: "🌐 Veuillez sélectionner une langue ci-dessous 👇"
+  ja: "🌐 下の言語を選択してください 👇"
+  es: "🌐 Por favor, selecciona una lengua abajo 👇"
 commands.unknown_command:
   en: "⚠️ Unknown command\n\nPlease use /help to see available commands."
   zh: "⚠️ 未知命令\n\n请使用 /help 查看可用命令。"
   de: "⚠️ Unbekannte Befehl\n\nBitte verwenden Sie /help, um verfügbare Befehle zu sehen."
+  fr: "⚠️ Commande inconnue\n\nVeuillez utiliser /help pour voir les commandes disponibles."
+  ja: "⚠️ 未知コマンド\n\n/help を使用して利用可能なコマンドを確認してください。"
+  es: "⚠️ Comando desconocido\n\nUtilice /help para ver los comandos disponibles."
 commands.description.start:
   en: "Start the bot and show main menu"
   zh: "启动机器人并显示主菜单"
   de: "Starten Sie den Bot und zeigen Sie das Hauptmenü"
+  fr: "Démarrer le bot et afficher le menu principal"
+  ja: "ボットを起動してメインメニューを表示"
+  es: "Iniciar el bot y mostrar el menú principal"
 commands.description.help:
   en: "Show help message"
   zh: "显示帮助消息"
   de: "Zeige Hilfsmeldung"
+  fr: "Afficher le message d'aide"
+  ja: "ヘルプメッセージを表示"
+  es: "Mostrar mensaje de ayuda"
 commands.description.language:
   en: "Change language"
   zh: "更改语言"
   de: "Sprache ändern"
+  fr: "Changer de langue"
+  ja: "言語を変更"
+  es: "Cambiar idioma"
 commands.description.stats:
   en: "Show some stats"
   zh: "显示一些统计数据"
   de: "Zeige einige Statistiken"
+  fr: "Afficher quelques statistiques"
+  ja: "いくつかの統計情報を表示"
+  es: "Mostrar algunas estadísticas"
 commands.description.status:
   en: "Show some status"
   zh: "显示一些状态"
   de: "Zeige einige Status"
+  fr: "Afficher quelques statuts"
+  ja: "いくつかのステータスを表示"
+  es: "Mostrar algunas estadísticas"
