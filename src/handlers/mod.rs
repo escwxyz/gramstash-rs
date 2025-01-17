@@ -25,24 +25,13 @@ pub struct RequestContext {
     pub telegram_user_id: UserId,
     pub telegram_user_name: String,
     pub is_admin: bool,
-    #[allow(dead_code)]
-    pub language: Language,
+    pub is_authenticated: bool,
 }
 
 pub fn get_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync + 'static>> {
     dialogue::enter::<Update, ErasedStorage<DialogueState>, DialogueState, _>()
         .filter_map_async(|update: Update, bot: Bot, state: &'static AppState| async move {
             if let Some(user) = extract_user(&update) {
-                // TODO: this part does not work properly, sometimes refreshes every time
-                // {
-                //     let auth_service = state.auth.lock().await;
-                //     let mut session_service = auth_service.session_service.clone();
-                //     // TODO put init_telegram_user_context in into the middleware of the auth service
-                //     if let Err(e) = session_service.init_telegram_user_context(&user.id.to_string()).await {
-                //         error!("Failed to initialize telegram user context: {:?}", e);
-                //     }
-                // }
-
                 let is_admin = state.config.admin.telegram_user_id == user.id;
 
                 let language = state
@@ -61,10 +50,10 @@ pub fn get_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync + 
                     telegram_user_id: user.id,
                     telegram_user_name: user.first_name,
                     is_admin,
-                    language,
+                    is_authenticated: state.session.is_authenticated_cached(&user.id.to_string()),
                 };
 
-                Some(context) // update is always present
+                Some(context)
             } else {
                 None
             }

@@ -6,7 +6,6 @@ use teloxide::{types::Message, Bot};
 use crate::command::Command;
 use crate::error::{BotError, HandlerResult};
 use crate::services::dialogue::DialogueState;
-use crate::state::AppState;
 use crate::utils::keyboard::{self};
 
 use super::RequestContext;
@@ -21,7 +20,6 @@ async fn handle_language(bot: Bot, msg: Message) -> HandlerResult<()> {
 
 async fn handle_start(
     bot: Bot,
-    state: &AppState,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
     ctx: RequestContext,
@@ -32,11 +30,8 @@ async fn handle_start(
         ..
     } = ctx;
 
-    let auth_service = state.auth.lock().await;
-
-    let is_authenticated = auth_service.is_authenticated(&telegram_user_id.to_string()).await?;
-
-    let welcome_text = if is_authenticated {
+    let welcome_text = if ctx.is_authenticated {
+        //
         t!(
             "commands.start.authenticated",
             first_name = telegram_user_name,
@@ -80,11 +75,10 @@ async fn handle_command(
     msg: Message,
     cmd: Command,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
-    state: &AppState,
     ctx: RequestContext,
 ) -> HandlerResult<()> {
     match cmd {
-        Command::Start => handle_start(bot, state, dialogue, msg, ctx).await?,
+        Command::Start => handle_start(bot, dialogue, msg, ctx).await?,
         Command::Help => handle_help(bot, msg).await?,
         Command::Language => handle_language(bot, msg).await?,
         Command::Stats | Command::Status if !ctx.is_admin => handle_unknown_command(bot, msg).await?,

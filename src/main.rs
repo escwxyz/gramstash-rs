@@ -1,6 +1,7 @@
 use bot::BotService;
+
 use state::AppState;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 extern crate pretty_env_logger;
 #[macro_use]
@@ -46,7 +47,6 @@ async fn shuttle_main(
 impl shuttle_runtime::Service for BotService {
     async fn bind(self, _addr: std::net::SocketAddr) -> Result<(), shuttle_runtime::Error> {
         let shared_self = Arc::new(self);
-        // TODO: disable this for now
         // tokio::spawn(async move {
         //     let state = match AppState::get() {
         //         Ok(state) => state,
@@ -56,10 +56,15 @@ impl shuttle_runtime::Service for BotService {
         //         }
         //     };
 
-        //     let mut interval = tokio::time::interval(Duration::from_secs(state.config.dialogue.clear_interval_secs));
+        //     let mut interval = tokio::time::interval(Duration::from_secs(60));
         //     loop {
-        //         if let Err(e) = services::dialogue::DialogueService::clear_dialogue_storage().await {
-        //             error!("Failed to clear dialogue storage: {}", e);
+        //         // Validate all sessions in cache
+        //         for entry in state.session.session_cache.iter() {
+        //             let telegram_user_id = entry.key();
+        //             info!("Validating session for user: {}", telegram_user_id);
+        //             if let Err(e) = state.session.validate_session(telegram_user_id).await {
+        //                 error!("Failed to validate session for user {}: {}", telegram_user_id, e);
+        //             }
         //         }
         //         interval.tick().await;
         //     }

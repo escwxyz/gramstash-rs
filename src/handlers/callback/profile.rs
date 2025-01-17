@@ -11,12 +11,12 @@ use crate::{error::HandlerResult, handlers::RequestContext, services::dialogue::
 pub async fn handle_callback_profile_menu(
     bot: &Bot,
     message: MaybeInaccessibleMessage,
-    _ctx: RequestContext,
+    ctx: RequestContext,
 ) -> HandlerResult<()> {
     info!("handle_callback_profile_menu");
     bot.edit_message_text(message.chat().id, message.id(), t!("callbacks.profile.profile_menu"))
         .reply_markup(keyboard::ProfileMenu::get_profile_menu_inline_keyboard(
-            true, // TODO: temporary
+            ctx.is_authenticated,
         ))
         .await?;
 

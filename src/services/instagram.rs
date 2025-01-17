@@ -2,12 +2,13 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use url::Url;
 
-use super::auth::SessionData;
 use crate::{
     error::{BotError, BotResult, InstagramError, ServiceError},
     state::AppState,
     utils::http,
 };
+
+use super::session::SessionData;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ContentType {
@@ -80,7 +81,7 @@ impl InstagramService {
         let builder = reqwest::Client::builder()
             .timeout(Duration::from_secs(30))
             .connect_timeout(Duration::from_secs(30))
-            .default_headers(http::build_desktop_instagram_headers())
+            .default_headers(http::build_desktop_instagram_headers(true))
             .user_agent(http::INSTAGRAM_USER_AGENT);
 
         let public_client = http::build_client(builder)?;
