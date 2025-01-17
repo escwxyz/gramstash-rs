@@ -25,7 +25,7 @@ pub async fn handle_callback_language_change(
 
     app_state
         .language
-        .set_user_language(ctx.telegram_user_id.to_string(), language)
+        .set_user_language(&ctx.telegram_user_id.to_string(), language)
         .await?;
 
     rust_i18n::set_locale(&language.to_string());

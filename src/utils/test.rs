@@ -10,9 +10,7 @@ use crate::{
 };
 use teloxide::{dispatching::dialogue::ErasedStorage, dptree};
 
-#[allow(unused)]
 pub static TEST_MUTEX: Mutex<()> = Mutex::const_new(());
-#[allow(unused)]
 fn get_redis_host() -> String {
     std::env::var("REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".to_string())
 }

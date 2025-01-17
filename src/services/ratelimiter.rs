@@ -4,7 +4,7 @@ use teloxide::types::ChatId;
 use crate::{error::BotResult, state::AppState};
 
 pub struct RateLimiter {
-    max_requests: u32,
+    max_requests: usize,
     window_seconds: u64,
 }
 
@@ -39,7 +39,7 @@ impl RateLimiter {
         let pattern = format!("rate_limit:{}:*:{}", chat_id.0, chrono::Utc::now().date_naive());
         let keys: Vec<String> = conn.keys(&pattern).await?;
 
-        if keys.len() >= self.max_requests as usize {
+        if keys.len() >= self.max_requests {
             info!("User has {} cached downloads", keys.len());
             return Ok(false);
         }

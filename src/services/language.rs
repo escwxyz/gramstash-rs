@@ -1,6 +1,7 @@
+use dashmap::DashMap;
 use libsql::params;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
     error::{BotError, BotResult},
@@ -48,14 +49,34 @@ impl ToString for Language {
 }
 
 #[derive(Debug, Clone)]
-pub struct LanguageService;
+pub struct LanguageService {
+    pub language_cache: Arc<DashMap<String, Language>>,
+    pub interface_cache: Arc<DashMap<String, String>>,
+}
 
 impl LanguageService {
-    pub fn new() -> Self {
-        Self
+    pub fn new() -> BotResult<Self> {
+        let config = &AppState::get()?.config;
+        let capacity = config.language.cache_capacity;
+        Ok(Self {
+            language_cache: Arc::new(DashMap::with_capacity(capacity)),
+            interface_cache: Arc::new(DashMap::with_capacity(capacity)),
+        })
     }
-    // TODO: Turso, Redis or In-Memory Storage
+
     pub async fn get_user_language(&self, telegram_user_id: &str) -> BotResult<Language> {
+        if let Some(lang) = self.language_cache.get(telegram_user_id) {
+            return Ok(*lang);
+        }
+
+        let lang = self.load_language_from_database(telegram_user_id).await?;
+
+        self.language_cache.insert(telegram_user_id.to_string(), lang);
+
+        Ok(lang)
+    }
+
+    async fn load_language_from_database(&self, telegram_user_id: &str) -> BotResult<Language> {
         let app_state = AppState::get()?;
         let conn = app_state.turso.get_connection().await?;
         let mut rows = conn
@@ -70,15 +91,19 @@ impl LanguageService {
             let language = row.get::<String>(0).unwrap_or_else(|_| "en".to_string());
             return Ok(Language::from_str(&language).unwrap_or(Language::English));
         }
-        // self.cache
-        //     .get(telegram_user_id)
-        //     .map(|lang| *lang)
-        //     .unwrap_or(Language::English)
 
         Ok(Language::English)
     }
 
-    pub async fn set_user_language(&self, telegram_user_id: String, language: Language) -> BotResult<()> {
+    pub async fn set_user_language(&self, telegram_user_id: &str, language: Language) -> BotResult<()> {
+        self.save_language_to_database(telegram_user_id, language).await?;
+
+        self.language_cache.insert(telegram_user_id.to_string(), language);
+
+        Ok(())
+    }
+
+    async fn save_language_to_database(&self, telegram_user_id: &str, language: Language) -> BotResult<()> {
         let app_state = AppState::get()?;
         let conn = app_state.turso.get_connection().await?;
         conn.execute(
@@ -87,11 +112,19 @@ impl LanguageService {
         )
         .await
         .map_err(|e| BotError::TursoError(e.to_string()))?;
-        // self.cache.insert(telegram_user_id, language);
+
         Ok(())
     }
 
     pub async fn set_last_interface(&self, user_id: &str, interface: &str) -> BotResult<()> {
+        self.save_interface_to_database(user_id, interface).await?;
+
+        self.interface_cache.insert(user_id.to_string(), interface.to_string());
+
+        Ok(())
+    }
+
+    async fn save_interface_to_database(&self, user_id: &str, interface: &str) -> BotResult<()> {
         let app_state = AppState::get()?;
         let conn = app_state.turso.get_connection().await?;
         conn.execute(
@@ -100,11 +133,20 @@ impl LanguageService {
         )
         .await
         .map_err(|e| BotError::TursoError(e.to_string()))?;
-        // self.last_interface.insert(user_id.to_string(), interface.to_string());
         Ok(())
     }
 
     pub async fn get_last_interface(&self, user_id: &str) -> BotResult<String> {
+        if let Some(interface) = self.interface_cache.get(user_id) {
+            return Ok(interface.clone());
+        }
+
+        let interface = self.load_interface_from_database(user_id).await?;
+        self.interface_cache.insert(user_id.to_string(), interface.clone());
+        Ok(interface)
+    }
+
+    async fn load_interface_from_database(&self, user_id: &str) -> BotResult<String> {
         let app_state = AppState::get()?;
         let conn = app_state.turso.get_connection().await?;
         let mut rows = conn
@@ -120,23 +162,8 @@ impl LanguageService {
             return Ok(interface);
         }
 
-        // self.last_interface
-        //     .get(user_id)
-        //     .map(|v| v.clone())
-        //     .unwrap_or_else(|| "main".to_string())
         Ok("main".to_string())
     }
-
-    // #[allow(unused)]
-    // /// Background task to persist user language to redis for metrics
-    // pub async fn persist_user_language(&self, telegram_user_id: String, language: Language) -> BotResult<()> {
-    //     let app_state = AppState::get()?;
-    //     let mut conn = app_state.redis.get_connection().await?;
-    //     conn.set::<_, _, String>(format!("user_language:{}", telegram_user_id), language.to_string())
-    //         .await?;
-
-    //     Ok(())
-    // }
 }
 
 // TODO: Add tests

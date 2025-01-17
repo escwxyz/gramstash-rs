@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    services::{
-        auth::{service::AuthService, SessionService},
-        language::LanguageService,
-    },
+    services::{auth::AuthService, language::LanguageService, session::SessionService},
     utils::{redis::RedisClient, turso::TursoClient},
 };
 use chrono::Duration;
@@ -26,6 +23,7 @@ pub struct AppState {
     pub instagram: InstagramService,
     pub auth: Arc<Mutex<AuthService>>,
     pub language: LanguageService,
+    pub session: SessionService,
 }
 
 pub static APP_STATE: OnceCell<AppState> = OnceCell::new();
@@ -48,9 +46,9 @@ impl AppState {
         let instagram = InstagramService::new()?;
 
         let session_service =
-            SessionService::with_refresh_interval(Duration::seconds(config.session.refresh_interval_secs));
+            SessionService::with_refresh_interval(Duration::seconds(config.session.refresh_interval_secs))?;
 
-        let auth_service = Arc::new(Mutex::new(AuthService::new(session_service)?));
+        let auth_service = Arc::new(Mutex::new(AuthService::new()?));
 
         APP_STATE
             .set(AppState {
@@ -59,7 +57,8 @@ impl AppState {
                 turso,
                 instagram,
                 auth: auth_service,
-                language: LanguageService::new(),
+                session: session_service,
+                language: LanguageService::new()?,
             })
             .map_err(|_| BotError::AppStateError("App state already initialized".to_string()))?;
 

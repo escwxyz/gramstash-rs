@@ -14,6 +14,7 @@ pub struct AppConfig {
     pub admin: AdminConfig,
     pub session: SessionConfig,
     pub turso: TursoConfig,
+    pub language: LanguageConfig,
 }
 
 impl AppConfig {
@@ -29,6 +30,7 @@ impl AppConfig {
             admin: AdminConfig::new_test_config(),
             session: SessionConfig::new_test_config(),
             turso: TursoConfig::new_test_config(),
+            language: LanguageConfig::new_test_config(),
         }
     }
 }
@@ -75,7 +77,7 @@ impl InstagramConfig {
 
 #[derive(Clone, Debug)]
 pub struct RateLimitConfig {
-    pub daily_limit: u32,
+    pub daily_limit: usize,
     pub window_secs: u64,
 }
 
@@ -137,6 +139,12 @@ impl AdminConfig {
 #[derive(Clone, Debug)]
 pub struct SessionConfig {
     pub refresh_interval_secs: i64,
+    /// Memory usage estimate:
+    /// - Session cache: ~1KB (1009 bytes) per entry × 1,000 = ~1 MB
+    /// - Actual Redis size measured: 1009 bytes per session
+    /// - Additional DashMap overhead: ~16 bytes per entry
+    /// Total: ~1.02 MB for 1,000 concurrent sessions
+    pub cache_capacity: usize,
 }
 
 impl SessionConfig {
@@ -144,6 +152,7 @@ impl SessionConfig {
     pub fn new_test_config() -> Self {
         Self {
             refresh_interval_secs: 300,
+            cache_capacity: 100,
         }
     }
 }
@@ -161,6 +170,21 @@ impl TursoConfig {
             url: std::env::var("TURSO_URL").unwrap_or("localhost".to_string()),
             token: std::env::var("TURSO_TOKEN").unwrap_or("test_token".to_string()),
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct LanguageConfig {
+    /// Memory usage estimate:
+    /// - Language cache: ~41 bytes per entry × 20,000 = ~0.82 MB
+    /// - Interface cache: ~56 bytes per entry × 20,000 = ~1.12 MB
+    pub cache_capacity: usize,
+}
+
+impl LanguageConfig {
+    #[cfg(test)]
+    pub fn new_test_config() -> Self {
+        Self { cache_capacity: 20000 }
     }
 }
 
@@ -196,7 +220,7 @@ pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
             daily_limit: secret_store
                 .get("RATE_LIMIT_DAILY_LIMIT")
                 .ok_or_else(|| BotError::SecretKeyError("Missing RATE_LIMIT_DAILY_LIMIT".to_string()))?
-                .parse::<u32>()
+                .parse::<usize>()
                 .map_err(|_| BotError::SecretKeyError("Invalid RATE_LIMIT_DAILY_LIMIT".to_string()))?,
             window_secs: secret_store
                 .get("RATE_LIMIT_WINDOW_SECS")
@@ -239,6 +263,11 @@ pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
                 .ok_or_else(|| BotError::SecretKeyError("Missing SESSION_REFRESH_INTERVAL_SECS".to_string()))?
                 .parse::<i64>()
                 .map_err(|_| BotError::SecretKeyError("Invalid SESSION_REFRESH_INTERVAL_SECS".to_string()))?,
+            cache_capacity: secret_store
+                .get("SESSION_CACHE_CAPACITY")
+                .ok_or_else(|| BotError::SecretKeyError("Missing SESSION_CACHE_CAPACITY".to_string()))?
+                .parse::<usize>()
+                .map_err(|_| BotError::SecretKeyError("Invalid SESSION_CACHE_CAPACITY".to_string()))?,
         },
         turso: TursoConfig {
             url: secret_store
@@ -247,6 +276,13 @@ pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
             token: secret_store
                 .get("TURSO_TOKEN")
                 .ok_or_else(|| BotError::SecretKeyError("Missing TURSO_TOKEN".to_string()))?,
+        },
+        language: LanguageConfig {
+            cache_capacity: secret_store
+                .get("LANGUAGE_CACHE_CAPACITY")
+                .ok_or_else(|| BotError::SecretKeyError("Missing LANGUAGE_CACHE_CAPACITY".to_string()))?
+                .parse::<usize>()
+                .map_err(|_| BotError::SecretKeyError("Invalid LANGUAGE_CACHE_CAPACITY".to_string()))?,
         },
     })
 }
