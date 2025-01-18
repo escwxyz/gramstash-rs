@@ -111,6 +111,20 @@ buttons.login_dialogue.cancel:
   fr: "🔙 Retour"
   ja: "🔙 戻る"
   es: "🔙 Volver"
+buttons.logout_menu.confirm:
+  en: "🔓 Confirm"
+  zh: "🔓 确认"
+  de: "🔓 Bestätigen"
+  fr: "🔓 Confirmer"
+  ja: "🔓 確認"
+  es: "🔓 Confirmar"
+buttons.logout_menu.cancel:
+  en: "🔙 Cancel"
+  zh: "🔙 取消"
+  de: "🔙 Abbrechen"
+  fr: "🔙 Annuler"
+  ja: "🔙 キャンセル"
+  es: "🔙 Cancelar"
 buttons.back_to_main_menu:
   en: "🔙 Back to Main Menu"
   zh: "🔙 返回主菜单"

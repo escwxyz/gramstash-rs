@@ -209,7 +209,7 @@ impl SessionService {
     }
 
     /// Remove session from both cache and Redis
-    async fn remove_session(&self, telegram_user_id: &str) -> BotResult<()> {
+    pub async fn remove_session(&self, telegram_user_id: &str) -> BotResult<()> {
         // Remove from cache
         self.session_cache.remove(telegram_user_id);
 

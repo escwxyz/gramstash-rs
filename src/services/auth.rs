@@ -137,6 +137,14 @@ impl AuthService {
         Ok(session_data)
     }
 
+    pub async fn logout(&mut self) -> BotResult<()> {
+        info!("Logging out ...");
+        self.cookie_jar = Arc::new(Jar::default());
+        self.client = Self::create_client(Arc::clone(&self.cookie_jar))?;
+        info!("Logged out");
+        Ok(())
+    }
+
     pub async fn verify_session(&self) -> BotResult<bool> {
         info!("Verifying session ...");
         if self.extract_session_id().is_err() {

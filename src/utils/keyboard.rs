@@ -122,6 +122,23 @@ impl LoginDialogue {
     }
 }
 
+pub struct LogoutMenu;
+
+impl LogoutMenu {
+    pub fn get_logout_menu_inline_keyboard() -> InlineKeyboardMarkup {
+        InlineKeyboardMarkup::new([
+            [InlineKeyboardButton::callback(
+                t!("buttons.logout_menu.confirm"),
+                "confirm_logout",
+            )],
+            [InlineKeyboardButton::callback(
+                t!("buttons.logout_menu.cancel"),
+                "cancel_logout",
+            )],
+        ])
+    }
+}
+
 pub struct LanguageMenu;
 
 impl LanguageMenu {

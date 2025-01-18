@@ -62,7 +62,18 @@ async fn handle_callback(
             interaction.set_last_interface(ctx.telegram_user_id.to_string(), "auth_login");
             profile::handle_callback_auth_login(&bot, dialogue, message).await?
         }
-        "auth_logout" => todo!(),
+        "auth_logout" => {
+            interaction.set_last_interface(ctx.telegram_user_id.to_string(), "auth_logout");
+            profile::handle_callback_auth_logout(&bot, message).await?
+        }
+        "confirm_logout" => {
+            interaction.set_last_interface(ctx.telegram_user_id.to_string(), "confirm_logout");
+            profile::handle_callback_confirm_logout(&bot, dialogue, message, ctx).await?
+        }
+        "cancel_logout" => {
+            interaction.set_last_interface(ctx.telegram_user_id.to_string(), "cancel_logout");
+            profile::handle_callback_cancel_logout(&bot, message).await?
+        }
 
         // navigation
         "back_to_main_menu" => {

@@ -15,7 +15,6 @@ use crate::{
 
 use super::instagram::MediaInfo;
 
-// TODO: reduce states
 #[derive(Clone, Default, Serialize, Deserialize, Debug)]
 pub enum DialogueState {
     #[default]
@@ -32,7 +31,6 @@ pub enum DialogueState {
         username: String,
         prompt_msg_id: MessageId,
     },
-    AwaitingLogoutConfirmation(MessageId),
     ConfirmLogout,
 }
 
