@@ -1,4 +1,5 @@
 use teloxide::{
+    adaptors::Throttle,
     dispatching::dialogue::ErasedStorage,
     payloads::EditMessageTextSetters,
     prelude::{Dialogue, Requester},
@@ -9,7 +10,7 @@ use teloxide::{
 use crate::{error::HandlerResult, handlers::RequestContext, services::dialogue::DialogueState, utils::keyboard};
 
 pub async fn handle_callback_profile_menu(
-    bot: &Bot,
+    bot: &Throttle<Bot>,
     message: MaybeInaccessibleMessage,
     ctx: RequestContext,
 ) -> HandlerResult<()> {
@@ -24,7 +25,7 @@ pub async fn handle_callback_profile_menu(
 }
 
 pub(super) async fn handle_callback_auth_login(
-    bot: &Bot,
+    bot: &Throttle<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {

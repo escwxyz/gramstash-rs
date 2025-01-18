@@ -18,25 +18,11 @@ pub struct AppConfig {
     pub session: SessionConfig,
     pub turso: TursoConfig,
     pub language: LanguageConfig,
+    pub interaction: InteractionConfig,
+    pub background_tasks: BackgroundTasksConfig,
 }
 
 impl AppConfig {
-    // #[cfg(test)]
-    // pub fn new_test_config() -> Self {
-    //     Self {
-    //         redis: RedisConfig::new_test_config(),
-    //         telegram: TelegramConfig::new_test_config(),
-    //         instagram: InstagramConfig::new_test_config(),
-    //         rate_limit: RateLimitConfig::new_test_config(),
-    //         cache: CacheConfig::new_test_config(),
-    //         dialogue: DialogueConfig::new_test_config(),
-    //         admin: AdminConfig::new_test_config(),
-    //         session: SessionConfig::new_test_config(),
-    //         turso: TursoConfig::new_test_config(),
-    //         language: LanguageConfig::new_test_config(),
-    //     }
-    // }
-
     pub fn set_global(config: AppConfig) -> BotResult<()> {
         APP_CONFIG
             .set(config)
@@ -55,39 +41,13 @@ pub struct RedisConfig {
     pub url: String,
 }
 
-impl RedisConfig {
-    // #[cfg(test)]
-    // pub fn new_test_config() -> Self {
-    //     Self {
-    //         url: "redis://127.0.0.1:6379".to_string(),
-    //     }
-    // }
-}
-
 #[derive(Clone, Debug)]
 pub struct TelegramConfig(pub String);
-
-impl TelegramConfig {
-    // #[cfg(test)]
-    // pub fn new_test_config() -> Self {
-    //     Self("test_token".to_string())
-    // }
-}
 
 #[derive(Clone, Debug)]
 pub struct InstagramConfig {
     pub api_endpoint: String,
     pub doc_id: String,
-}
-
-impl InstagramConfig {
-    // #[cfg(test)]
-    // pub fn new_test_config() -> Self {
-    //     Self {
-    //         api_endpoint: "https://www.instagram.com/graphql/query/".to_string(),
-    //         doc_id: "8845758582119845".to_string(),
-    //     }
-    // }
 }
 
 #[derive(Clone, Debug)]
@@ -96,26 +56,9 @@ pub struct RateLimitConfig {
     pub window_secs: u64,
 }
 
-impl RateLimitConfig {
-    // #[cfg(test)]
-    // pub fn new_test_config() -> Self {
-    //     Self {
-    //         daily_limit: 100,
-    //         window_secs: 86400,
-    //     }
-    // }
-}
-
 #[derive(Clone, Debug)]
 pub struct CacheConfig {
     pub expiry_secs: u64,
-}
-
-impl CacheConfig {
-    // #[cfg(test)]
-    // pub fn new_test_config() -> Self {
-    //     Self { expiry_secs: 300 }
-    // }
 }
 
 #[derive(Clone, Debug)]
@@ -126,29 +69,9 @@ pub struct DialogueConfig {
     pub clear_interval_secs: u64,
 }
 
-impl DialogueConfig {
-    // #[cfg(test)]
-    // pub fn new_test_config() -> Self {
-    //     Self {
-    //         use_redis: true,
-    //         redis_url: "redis://127.0.0.1:6379".to_string(),
-    //         clear_interval_secs: 60,
-    //     }
-    // }
-}
-
 #[derive(Clone, Debug)]
 pub struct AdminConfig {
     pub telegram_user_id: UserId,
-}
-
-impl AdminConfig {
-    // #[cfg(test)]
-    // pub fn new_test_config() -> Self {
-    //     Self {
-    //         telegram_user_id: UserId(1234567890),
-    //     }
-    // }
 }
 
 #[derive(Clone, Debug)]
@@ -162,45 +85,30 @@ pub struct SessionConfig {
     pub cache_capacity: usize,
 }
 
-impl SessionConfig {
-    // #[cfg(test)]
-    // pub fn new_test_config() -> Self {
-    //     Self {
-    //         refresh_interval_secs: 300,
-    //         cache_capacity: 100,
-    //     }
-    // }
-}
-
 #[derive(Clone, Debug)]
 pub struct TursoConfig {
     pub url: String,
     pub token: String,
 }
 
-impl TursoConfig {
-    // #[cfg(test)]
-    // pub fn new_test_config() -> Self {
-    //     Self {
-    //         url: std::env::var("TURSO_URL").unwrap_or("localhost".to_string()),
-    //         token: std::env::var("TURSO_TOKEN").unwrap_or("test_token".to_string()),
-    //     }
-    // }
-}
-
 #[derive(Clone, Debug)]
 pub struct LanguageConfig {
     /// Memory usage estimate:
     /// - Language cache: ~41 bytes per entry × 20,000 = ~0.82 MB
-    /// - Interface cache: ~56 bytes per entry × 20,000 = ~1.12 MB
     pub cache_capacity: usize,
 }
 
-impl LanguageConfig {
-    // #[cfg(test)]
-    // pub fn new_test_config() -> Self {
-    //     Self { cache_capacity: 20000 }
-    // }
+#[derive(Clone, Debug)]
+pub struct InteractionConfig {
+    pub cache_capacity: usize,
+    pub interface_lifespan_secs: i64,
+}
+
+#[derive(Clone, Debug)]
+pub struct BackgroundTasksConfig {
+    pub cleanup_interaction_interval_secs: u64,
+    pub sync_interface_interval_secs: u64,
+    pub sync_language_interval_secs: u64,
 }
 
 pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
@@ -299,6 +207,47 @@ pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
                 .ok_or_else(|| BotError::SecretKeyError("Missing LANGUAGE_CACHE_CAPACITY".to_string()))?
                 .parse::<usize>()
                 .map_err(|_| BotError::SecretKeyError("Invalid LANGUAGE_CACHE_CAPACITY".to_string()))?,
+        },
+        interaction: InteractionConfig {
+            cache_capacity: secret_store
+                .get("INTERACTION_CACHE_CAPACITY")
+                .ok_or_else(|| BotError::SecretKeyError("Missing INTERACTION_CACHE_CAPACITY".to_string()))?
+                .parse::<usize>()
+                .map_err(|_| BotError::SecretKeyError("Invalid INTERACTION_CACHE_CAPACITY".to_string()))?,
+            interface_lifespan_secs: secret_store
+                .get("INTERACTION_INTERFACE_LIFESPAN_SECS")
+                .ok_or_else(|| BotError::SecretKeyError("Missing INTERACTION_INTERFACE_LIFESPAN_SECS".to_string()))?
+                .parse::<i64>()
+                .map_err(|_| BotError::SecretKeyError("Invalid INTERACTION_INTERFACE_LIFESPAN_SECS".to_string()))?,
+        },
+        background_tasks: BackgroundTasksConfig {
+            cleanup_interaction_interval_secs: secret_store
+                .get("BACKGROUND_TASKS_CLEANUP_INTERACTION_INTERVAL_SECS")
+                .ok_or_else(|| {
+                    BotError::SecretKeyError("Missing BACKGROUND_TASKS_CLEANUP_INTERACTION_INTERVAL_SECS".to_string())
+                })?
+                .parse::<u64>()
+                .map_err(|_| {
+                    BotError::SecretKeyError("Invalid BACKGROUND_TASKS_CLEANUP_INTERACTION_INTERVAL_SECS".to_string())
+                })?,
+            sync_interface_interval_secs: secret_store
+                .get("BACKGROUND_TASKS_SYNC_INTERFACE_INTERVAL_SECS")
+                .ok_or_else(|| {
+                    BotError::SecretKeyError("Missing BACKGROUND_TASKS_SYNC_INTERFACE_INTERVAL_SECS".to_string())
+                })?
+                .parse::<u64>()
+                .map_err(|_| {
+                    BotError::SecretKeyError("Invalid BACKGROUND_TASKS_SYNC_INTERFACE_INTERVAL_SECS".to_string())
+                })?,
+            sync_language_interval_secs: secret_store
+                .get("BACKGROUND_TASKS_SYNC_LANGUAGE_INTERVAL_SECS")
+                .ok_or_else(|| {
+                    BotError::SecretKeyError("Missing BACKGROUND_TASKS_SYNC_LANGUAGE_INTERVAL_SECS".to_string())
+                })?
+                .parse::<u64>()
+                .map_err(|_| {
+                    BotError::SecretKeyError("Invalid BACKGROUND_TASKS_SYNC_LANGUAGE_INTERVAL_SECS".to_string())
+                })?,
         },
     };
     info!("AppConfig built");

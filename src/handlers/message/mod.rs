@@ -2,6 +2,7 @@ mod download;
 mod profile;
 
 use teloxide::{
+    adaptors::Throttle,
     dispatching::{dialogue::ErasedStorage, UpdateFilterExt, UpdateHandler},
     dptree::{self},
     payloads::SendMessageSetters,
@@ -18,7 +19,6 @@ use crate::{
 
 pub fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync>> {
     Update::filter_message()
-        // handle dialogue state
         .branch(
             dptree::case![DialogueState::AwaitingDownloadLink(message_id)]
                 .endpoint(download::handle_message_awaiting_download_link),
@@ -34,7 +34,7 @@ pub fn get_message_handler() -> UpdateHandler<Box<dyn std::error::Error + Send +
 }
 
 pub async fn handle_message_unknown(
-    bot: Bot,
+    bot: Throttle<Bot>,
     message: Message,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
 ) -> HandlerResult<()> {

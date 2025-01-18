@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 use url::Url;
 
 use crate::{
@@ -81,8 +80,8 @@ impl InstagramService {
     pub fn new() -> BotResult<Self> {
         info!("Initializing InstagramService...");
         let builder = reqwest::Client::builder()
-            .timeout(Duration::from_secs(30))
-            .connect_timeout(Duration::from_secs(30))
+            .timeout(std::time::Duration::from_secs(30))
+            .connect_timeout(std::time::Duration::from_secs(30))
             .default_headers(http::build_desktop_instagram_headers(true))
             .user_agent(http::INSTAGRAM_USER_AGENT);
 
@@ -175,7 +174,7 @@ impl InstagramService {
         self.parse_post_response(data)
     }
     #[allow(dead_code)]
-    pub async fn fetch_story_info(&self, shortcode: &str) -> BotResult<MediaInfo> {
+    pub async fn fetch_story_info(&self, _shortcode: &str) -> BotResult<MediaInfo> {
         // let state = AppState::get()?;
         // TODO: check out instaloader
         todo!()

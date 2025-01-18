@@ -1,3 +1,4 @@
+use teloxide::adaptors::Throttle;
 use teloxide::dispatching::dialogue::ErasedStorage;
 use teloxide::dispatching::{HandlerExt, UpdateHandler};
 use teloxide::prelude::*;
@@ -10,7 +11,7 @@ use crate::utils::keyboard::{self};
 
 use super::RequestContext;
 
-async fn handle_language(bot: Bot, msg: Message) -> HandlerResult<()> {
+async fn handle_language(bot: Throttle<Bot>, msg: Message) -> HandlerResult<()> {
     bot.send_message(msg.chat.id, t!("commands.language"))
         .reply_markup(keyboard::LanguageMenu::get_language_menu_inline_keyboard())
         .await?;
@@ -19,7 +20,7 @@ async fn handle_language(bot: Bot, msg: Message) -> HandlerResult<()> {
 }
 
 async fn handle_start(
-    bot: Bot,
+    bot: Throttle<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
     ctx: RequestContext,
@@ -57,7 +58,7 @@ async fn handle_start(
     Ok(())
 }
 
-async fn handle_help(bot: Bot, msg: Message) -> HandlerResult<()> {
+async fn handle_help(bot: Throttle<Bot>, msg: Message) -> HandlerResult<()> {
     bot.send_message(msg.chat.id, t!("commands.help"))
         .reply_markup(keyboard::MainMenu::get_inline_keyboard())
         .await?;
@@ -65,13 +66,13 @@ async fn handle_help(bot: Bot, msg: Message) -> HandlerResult<()> {
     Ok(())
 }
 
-async fn handle_unknown_command(bot: Bot, msg: Message) -> HandlerResult<()> {
+async fn handle_unknown_command(bot: Throttle<Bot>, msg: Message) -> HandlerResult<()> {
     bot.send_message(msg.chat.id, t!("commands.unknown_command")).await?;
     Ok(())
 }
 
 async fn handle_command(
-    bot: Bot,
+    bot: Throttle<Bot>,
     msg: Message,
     cmd: Command,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,

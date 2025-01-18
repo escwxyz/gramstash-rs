@@ -7,6 +7,7 @@ use callback::get_callback_handler;
 use command::get_command_handler;
 use message::{get_message_handler, handle_message_unknown};
 use teloxide::{
+    adaptors::Throttle,
     dispatching::{
         dialogue::{self, ErasedStorage, GetChatId},
         UpdateFilterExt, UpdateHandler,
@@ -31,7 +32,7 @@ pub struct RequestContext {
 
 pub fn get_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync + 'static>> {
     dialogue::enter::<Update, ErasedStorage<DialogueState>, DialogueState, _>()
-        .filter_map_async(|update: Update, bot: Bot| async move {
+        .filter_map_async(|update: Update, bot: Throttle<Bot>| async move {
             let state = match AppState::get() {
                 Ok(state) => state,
                 Err(e) => {
@@ -59,8 +60,10 @@ pub fn get_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync + 
 
                 rust_i18n::set_locale(&language.to_string());
 
-                if let Err(e) = crate::command::setup_commands(&bot, is_admin, update.chat_id().unwrap()).await {
-                    error!("Failed to setup commands: {:?}", e);
+                if is_admin {
+                    if let Err(e) = crate::command::setup_admin_commands(&bot, update.chat_id().unwrap()).await {
+                        error!("Failed to setup commands: {:?}", e);
+                    }
                 }
 
                 let context = RequestContext {

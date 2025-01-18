@@ -1,5 +1,4 @@
 use redis::AsyncCommands;
-use teloxide::types::ChatId;
 
 use crate::{config::AppConfig, error::BotResult, state::AppState};
 

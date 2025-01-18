@@ -28,7 +28,7 @@ serde_json = "1.0.134"
 sha2 = "0.10"
 shuttle-runtime = "0.51.0"
 shuttle-turso = "0.51.0"
-teloxide = { version = "0.13.0", features = ["macros", "redis-storage"] }
+teloxide = { version = "0.13.0", features = ["macros", "redis-storage", "throttle"] }
 thiserror = "2.0.9"
 tokio = { version = "1.42.0", features = ["full"] }
 url = "2.5.2"

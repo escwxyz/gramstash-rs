@@ -61,7 +61,6 @@ TURSO_TOKEN = "your-turso-token"
 - [x] Rate limiting
 - [x] Dialogue state management
 - [x] Session management
-- [ ] Debounce
 - [ ] Story downloading
 - [ ] Highlight downloading
 - [x] Internationalization

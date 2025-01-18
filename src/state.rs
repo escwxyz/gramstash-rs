@@ -1,7 +1,9 @@
 use std::sync::{Arc, OnceLock};
 
 use crate::{
-    services::{auth::AuthService, language::LanguageService, session::SessionService},
+    services::{
+        auth::AuthService, interaction::InteractionService, language::LanguageService, session::SessionService,
+    },
     utils::{redis::RedisClient, turso::TursoClient},
 };
 use chrono::Duration;
@@ -21,6 +23,7 @@ pub struct AppState {
     pub auth: Arc<Mutex<AuthService>>,
     pub language: LanguageService,
     pub session: SessionService,
+    pub interaction: InteractionService,
 }
 
 static APP_STATE: OnceLock<AppState> = OnceLock::new();
@@ -35,6 +38,7 @@ impl AppState {
         let auth = Arc::new(Mutex::new(AuthService::new()?));
         let language = LanguageService::new(config.language.cache_capacity)?;
 
+        let interaction = InteractionService::new()?;
         Ok(Self {
             redis,
             turso,
@@ -42,6 +46,7 @@ impl AppState {
             auth,
             language,
             session,
+            interaction,
         })
     }
 
@@ -59,40 +64,4 @@ impl AppState {
             .cloned()
             .ok_or_else(|| BotError::AppStateError("App state not initialized".into()))
     }
-
-    // pub async fn init(secret_store: &SecretStore) -> BotResult<()> {
-    //     let config = crate::config::build_config(secret_store)?;
-    //     Self::init_common(config).await
-    // }
-
-    // #[cfg(test)]
-    // pub async fn init_test_with_config(config: AppConfig) -> BotResult<()> {
-    //     Self::init_common(config).await
-    // }
-
-    // async fn init_common(config: AppConfig) -> BotResult<()> {
-    //     let redis = RedisClient::new(config.redis.url.as_str()).await?;
-    //     let turso = TursoClient::new(config.turso.url.as_str(), config.turso.token.as_str()).await?;
-
-    //     let instagram = InstagramService::new()?;
-
-    //     let session_service =
-    //         SessionService::with_refresh_interval(Duration::seconds(config.session.refresh_interval_secs))?;
-
-    //     let auth_service = Arc::new(Mutex::new(AuthService::new()?));
-
-    //     APP_STATE
-    //         .set(AppState {
-    //             config,
-    //             redis,
-    //             turso,
-    //             instagram,
-    //             auth: auth_service,
-    //             session: session_service,
-    //             language: LanguageService::new()?,
-    //         })
-    //         .map_err(|_| BotError::AppStateError("App state already initialized".to_string()))?;
-
-    //     Ok(())
-    // }
 }

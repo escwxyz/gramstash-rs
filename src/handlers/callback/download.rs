@@ -1,4 +1,5 @@
 use teloxide::{
+    adaptors::Throttle,
     dispatching::dialogue::ErasedStorage,
     payloads::{EditMessageTextSetters, SendMessageSetters},
     prelude::{Dialogue, Requester},
@@ -19,7 +20,7 @@ use crate::{
 };
 
 pub(super) async fn handle_callback_asking_for_download_link(
-    bot: &Bot,
+    bot: &Throttle<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {
@@ -40,7 +41,7 @@ pub(super) async fn handle_callback_asking_for_download_link(
 }
 
 pub(super) async fn handle_callback_confirm_download(
-    bot: &Bot,
+    bot: &Throttle<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {
@@ -86,7 +87,10 @@ pub(super) async fn handle_callback_confirm_download(
     Ok(())
 }
 
-pub(super) async fn handle_callback_cancel_download(bot: &Bot, message: MaybeInaccessibleMessage) -> HandlerResult<()> {
+pub(super) async fn handle_callback_cancel_download(
+    bot: &Throttle<Bot>,
+    message: MaybeInaccessibleMessage,
+) -> HandlerResult<()> {
     info!("handle_callback_cancel_download");
     bot.edit_message_text(
         message.chat().id,

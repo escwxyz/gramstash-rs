@@ -4,13 +4,13 @@ use crate::{
     command,
     error::HandlerResult,
     handlers::RequestContext,
-    services::{dialogue::DialogueState, language::Language},
+    services::{dialogue::DialogueState, interaction::LastInterfaceState, language::Language},
     state::AppState,
 };
-use teloxide::{dispatching::dialogue::ErasedStorage, prelude::*, types::MaybeInaccessibleMessage};
+use teloxide::{adaptors::Throttle, dispatching::dialogue::ErasedStorage, prelude::*, types::MaybeInaccessibleMessage};
 
 pub async fn handle_callback_language_change(
-    bot: &Bot,
+    bot: &Throttle<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     message: MaybeInaccessibleMessage,
     ctx: RequestContext,
@@ -40,15 +40,21 @@ pub async fn handle_callback_language_change(
     )
     .await?;
 
-    let return_to = app_state
-        .language
-        .get_last_interface(&ctx.telegram_user_id.to_string())
-        .await?;
+    let LastInterfaceState { interface, .. } = app_state
+        .interaction
+        .get_last_interface(ctx.telegram_user_id.to_string())
+        .unwrap_or_default();
+
+    info!("return_to: {}", interface);
 
     // Update commands
-    command::setup_commands(bot, ctx.is_admin, message.chat().id).await?;
+    if ctx.is_admin {
+        command::setup_admin_commands(bot, message.chat().id).await?;
+    } else {
+        command::setup_user_commands(bot).await?;
+    }
 
-    match return_to.as_str() {
+    match interface.as_str() {
         // download
         "ask_for_download_link" => {
             super::download::handle_callback_asking_for_download_link(bot, dialogue, message).await?

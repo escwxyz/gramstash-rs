@@ -167,3 +167,10 @@ callbacks.language.change_language_status:
   fr: "🔄 Définition de la langue..."
   ja: "🔄 言語を設定中..."
   es: "🔄 Estableciendo idioma..."
+callbacks.errors.please_wait:
+  en: "⏳ Please wait..."
+  zh: "⏳ 请稍等..."
+  de: "⏳ Bitte warten Sie..."
+  fr: "⏳ Veuillez patienter..."
+  ja: "⏳ しばらくお待ちください..."
+  es: "⏳ Por favor, espere..."

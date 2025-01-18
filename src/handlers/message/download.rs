@@ -1,21 +1,25 @@
 use crate::error::{BotError, HandlerResult};
+
 use crate::services::cache::CacheService;
 use crate::services::dialogue::DialogueState;
 use crate::services::instagram::{InstagramIdentifier, MediaContent, MediaInfo, PostContent};
+
 use crate::services::ratelimiter::RateLimiter;
 use crate::state::AppState;
 use crate::utils::{extract_instagram_url, keyboard, parse_url};
+use teloxide::adaptors::Throttle;
 use teloxide::dispatching::dialogue::ErasedStorage;
 use teloxide::prelude::*;
 use teloxide::types::MessageId;
 
 pub(super) async fn handle_message_awaiting_download_link(
-    bot: Bot,
+    bot: Throttle<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
     message_id: MessageId,
 ) -> HandlerResult<()> {
     info!("handle_message_awaiting_download_link");
+
     bot.delete_message(msg.chat.id, message_id).await?; // TODO
 
     let url = match validate_message(&msg) {
@@ -119,7 +123,7 @@ pub(super) async fn handle_message_awaiting_download_link(
 
 // TODO: implement media preview with better UI and more information
 async fn show_media_preview(
-    bot: &Bot,
+    bot: &Throttle<Bot>,
     msg: &Message,
     processing_msg: &Message,
     media_info: &MediaInfo,
@@ -149,7 +153,7 @@ async fn show_media_preview(
 }
 
 async fn process_media_content(
-    bot: &Bot,
+    bot: &Throttle<Bot>,
     dialogue: &Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: &Message,
     processing_msg: &Message,

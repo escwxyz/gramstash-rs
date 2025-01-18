@@ -1,5 +1,6 @@
 use dptree;
-use std::time::Duration;
+use teloxide::adaptors::throttle::Limits;
+use teloxide::adaptors::Throttle;
 use teloxide::prelude::*;
 use teloxide::Bot;
 
@@ -11,7 +12,7 @@ use crate::state::AppState;
 use crate::utils::http;
 
 pub struct BotService {
-    pub bot: Bot,
+    pub bot: Throttle<Bot>,
 }
 
 impl BotService {
@@ -23,15 +24,15 @@ impl BotService {
         info!("AppState initialized");
 
         let builder = reqwest::Client::builder()
-            .timeout(Duration::from_secs(30))
-            .connect_timeout(Duration::from_secs(10))
-            .pool_idle_timeout(Duration::from_secs(60))
-            .tcp_keepalive(Duration::from_secs(30))
+            .timeout(std::time::Duration::from_secs(30))
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .pool_idle_timeout(std::time::Duration::from_secs(60))
+            .tcp_keepalive(std::time::Duration::from_secs(30))
             .user_agent(http::DEFAULT_USER_AGENT);
 
         let client = http::build_client(builder)?;
 
-        let bot = Bot::with_client(config.telegram.0.clone(), client);
+        let bot = Bot::with_client(config.telegram.0.clone(), client).throttle(Limits::default());
 
         Ok(Self { bot })
     }

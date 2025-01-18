@@ -11,13 +11,14 @@ use crate::{
 
 use super::RequestContext;
 use teloxide::{
+    adaptors::Throttle,
     dispatching::{dialogue::ErasedStorage, UpdateHandler},
     prelude::*,
     types::CallbackQuery,
 };
 
 async fn handle_callback(
-    bot: Bot,
+    bot: Throttle<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     q: CallbackQuery,
     ctx: RequestContext,
@@ -26,65 +27,46 @@ async fn handle_callback(
         .data
         .ok_or_else(|| BotError::DialogueStateError("No callback data".into()))?;
 
+    let app_state = AppState::get()?;
+    let interaction = app_state.interaction;
+
     let message: teloxide::types::MaybeInaccessibleMessage = q
         .message
         .ok_or_else(|| BotError::DialogueStateError("No message".into()))?;
 
-    let app_state = AppState::get()?;
     match data.as_str() {
         // download
         "ask_for_download_link" => {
-            app_state
-                .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "ask_for_download_link")
-                .await?;
+            interaction.set_last_interface(ctx.telegram_user_id.to_string(), "ask_for_download_link");
             download::handle_callback_asking_for_download_link(&bot, dialogue, message).await?
         }
         "confirm_download" => {
-            app_state
-                .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "confirm_download")
-                .await?;
+            interaction.set_last_interface(ctx.telegram_user_id.to_string(), "confirm_download");
             download::handle_callback_confirm_download(&bot, dialogue, message).await?
         }
         "cancel_download" => {
-            app_state
-                .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "cancel_download")
-                .await?;
+            interaction.set_last_interface(ctx.telegram_user_id.to_string(), "cancel_download");
             download::handle_callback_cancel_download(&bot, message).await?
         }
 
         // profile
         "profile_menu" => {
-            app_state
-                .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "profile_menu")
-                .await?;
+            interaction.set_last_interface(ctx.telegram_user_id.to_string(), "profile_menu");
             profile::handle_callback_profile_menu(&bot, message, ctx).await?
         }
         "cancel_auth" => {
-            app_state
-                .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "cancel_auth")
-                .await?;
+            interaction.set_last_interface(ctx.telegram_user_id.to_string(), "cancel_auth");
             profile::handle_callback_profile_menu(&bot, message, ctx).await?
         }
         "auth_login" => {
-            app_state
-                .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "auth_login")
-                .await?;
+            interaction.set_last_interface(ctx.telegram_user_id.to_string(), "auth_login");
             profile::handle_callback_auth_login(&bot, dialogue, message).await?
         }
         "auth_logout" => todo!(),
 
         // navigation
         "back_to_main_menu" => {
-            app_state
-                .language
-                .set_last_interface(&ctx.telegram_user_id.to_string(), "back_to_main_menu")
-                .await?;
+            interaction.set_last_interface(ctx.telegram_user_id.to_string(), "back_to_main_menu");
             navigation::handle_callback_back_to_main_menu(&bot, dialogue, message).await?
         }
 
@@ -96,7 +78,7 @@ async fn handle_callback(
         _ => todo!(),
     }
 
-    bot.answer_callback_query(&q.id).await?;
+    bot.answer_callback_query(&q.id).cache_time(1).await?;
 
     Ok(())
 }

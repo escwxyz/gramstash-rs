@@ -1,4 +1,8 @@
+use std::fmt::Display;
+
+use serde::Deserialize;
 use teloxide::{
+    adaptors::Throttle,
     macros::BotCommands,
     payloads::SetMyCommandsSetters,
     prelude::Requester,
@@ -8,15 +12,15 @@ use teloxide::{
 
 use crate::error::HandlerResult;
 
-#[derive(BotCommands, Clone)]
-#[command(rename_rule = "lowercase")]
-pub enum UserCommand {
-    Start,
-    Language,
-    Help,
-}
+// #[derive(BotCommands, Clone)]
+// #[command(rename_rule = "lowercase")]
+// pub enum UserCommand {
+//     Start,
+//     Language,
+//     Help,
+// }
 
-#[derive(BotCommands, Clone)]
+#[derive(BotCommands, Clone, Deserialize, PartialEq, Debug)]
 #[command(rename_rule = "lowercase")]
 pub enum Command {
     Start,
@@ -24,6 +28,12 @@ pub enum Command {
     Help,
     Stats,
     Status,
+}
+
+impl Display for Command {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
 }
 
 impl Command {
@@ -47,33 +57,18 @@ impl Command {
     }
 }
 
-pub async fn setup_user_commands(bot: &Bot) -> HandlerResult<()> {
+pub async fn setup_user_commands(bot: &Throttle<Bot>) -> HandlerResult<()> {
     bot.delete_my_commands().await?;
     bot.set_my_commands(Command::user_commands()).await?;
     Ok(())
 }
-#[allow(unused)]
-async fn setup_admin_commands(bot: &Bot, chat_id: ChatId) -> HandlerResult<()> {
+
+pub async fn setup_admin_commands(bot: &Throttle<Bot>, chat_id: ChatId) -> HandlerResult<()> {
     bot.delete_my_commands().await?;
     bot.set_my_commands(Command::admin_commands())
         .scope(BotCommandScope::Chat {
             chat_id: Recipient::Id(chat_id),
         })
         .await?;
-    Ok(())
-}
-
-#[cfg(not(test))]
-pub async fn setup_commands(bot: &Bot, is_admin: bool, chat_id: ChatId) -> HandlerResult<()> {
-    if is_admin {
-        setup_admin_commands(bot, chat_id).await?;
-    } else {
-        setup_user_commands(bot).await?;
-    }
-    Ok(())
-}
-
-#[cfg(test)]
-pub async fn setup_commands(_bot: &Bot, _is_admin: bool, _chat_id: ChatId) -> HandlerResult<()> {
     Ok(())
 }

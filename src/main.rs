@@ -1,6 +1,8 @@
 use bot::BotService;
-use config::AppConfig;
+use config::{AppConfig, BackgroundTasksConfig};
+use state::AppState;
 use std::sync::Arc;
+use std::time::Duration;
 
 extern crate pretty_env_logger;
 #[macro_use]
@@ -46,28 +48,10 @@ async fn shuttle_main(
 impl shuttle_runtime::Service for BotService {
     async fn bind(self, _addr: std::net::SocketAddr) -> Result<(), shuttle_runtime::Error> {
         let shared_self = Arc::new(self);
-        // tokio::spawn(async move {
-        //     let state = match AppState::get() {
-        //         Ok(state) => state,
-        //         Err(e) => {
-        //             error!("Failed to get AppState: {}", e);
-        //             return;
-        //         }
-        //     };
 
-        //     let mut interval = tokio::time::interval(Duration::from_secs(60));
-        //     loop {
-        //         // Validate all sessions in cache
-        //         for entry in state.session.session_cache.iter() {
-        //             let telegram_user_id = entry.key();
-        //             info!("Validating session for user: {}", telegram_user_id);
-        //             if let Err(e) = state.session.validate_session(telegram_user_id).await {
-        //                 error!("Failed to validate session for user {}: {}", telegram_user_id, e);
-        //             }
-        //         }
-        //         interval.tick().await;
-        //     }
-        // });
+        tokio::spawn(async move {
+            run_background_tasks().await;
+        });
 
         shared_self
             .start()
@@ -77,5 +61,60 @@ impl shuttle_runtime::Service for BotService {
             })?;
 
         Ok(())
+    }
+}
+
+async fn run_background_tasks() {
+    let state = match AppState::get() {
+        Ok(state) => state,
+        Err(e) => {
+            error!("Failed to get AppState: {}", e);
+            return;
+        }
+    };
+
+    let config = match AppConfig::get() {
+        Ok(config) => config,
+        Err(e) => {
+            error!("Failed to get AppConfig: {}", e);
+            return;
+        }
+    };
+
+    let BackgroundTasksConfig {
+        cleanup_interaction_interval_secs,
+        sync_interface_interval_secs,
+        sync_language_interval_secs,
+    } = config.background_tasks;
+
+    let interaction_service = state.interaction;
+    let language_service = state.language;
+
+    let mut cleanup_interaction_interval =
+        tokio::time::interval(Duration::from_secs(cleanup_interaction_interval_secs));
+    let mut sync_interface_interval = tokio::time::interval(Duration::from_secs(sync_interface_interval_secs));
+    let mut sync_language_interval = tokio::time::interval(Duration::from_secs(sync_language_interval_secs));
+
+    info!("Background tasks initialized");
+
+    loop {
+        tokio::select! {
+            _ = cleanup_interaction_interval.tick() => {
+                debug!("Background task: Cleaning up old interfaces & interactions ...");
+                interaction_service.cleanup_old_entries();
+            }
+            _ = sync_interface_interval.tick() => {
+                debug!("Background task: Syncing interfaces to database ...");
+                if let Err(e) = interaction_service.save_interfaces_to_database().await {
+                    error!("Failed to save interfaces to database: {}", e);
+                }
+            }
+            _ = sync_language_interval.tick() => {
+                debug!("Background task: Syncing languages to database ...");
+                if let Err(e) = language_service.save_languages_to_database().await {
+                    error!("Failed to save languages to database: {}", e);
+                }
+            }
+        }
     }
 }
