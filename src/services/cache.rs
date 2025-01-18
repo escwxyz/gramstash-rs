@@ -1,4 +1,5 @@
 use crate::{
+    config::AppConfig,
     error::{BotError, BotResult, ServiceError},
     services::instagram::MediaInfo,
     state::AppState,
@@ -29,7 +30,8 @@ impl CacheService {
     }
 
     pub async fn set_media_info(shortcode: &str, media_info: &MediaInfo) -> BotResult<()> {
-        let expiry_secs = AppState::get()?.config.cache.expiry_secs;
+        let config = AppConfig::get()?;
+        let expiry_secs = config.cache.expiry_secs;
         let mut conn = AppState::get()?.redis.get_connection().await?;
         let key = Self::generate_key(shortcode);
 

@@ -8,6 +8,7 @@ pub struct RedisClient(pub Arc<Client>);
 
 impl RedisClient {
     pub async fn new(url: &str) -> BotResult<Self> {
+        info!("Initializing RedisClient...");
         let redis = Arc::new(Client::open(url)?);
 
         // Test Redis connection
@@ -17,7 +18,7 @@ impl RedisClient {
             return Err(BotError::RedisError("Redis connection test failed".to_string()));
         }
         info!("Redis connection test successful");
-
+        info!("RedisClient initialized");
         Ok(Self(redis))
     }
 

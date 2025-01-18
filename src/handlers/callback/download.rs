@@ -11,6 +11,7 @@ use teloxide::types::MaybeInaccessibleMessage;
 use crate::{
     error::HandlerResult,
     services::{
+        cache::CacheService,
         dialogue::DialogueState,
         instagram::{ContentType, MediaContent, PostContent},
     },
@@ -44,7 +45,7 @@ pub(super) async fn handle_callback_confirm_download(
     message: MaybeInaccessibleMessage,
 ) -> HandlerResult<()> {
     info!("handle_callback_confirm_download");
-    if let Some(DialogueState::ConfirmDownload { content }) = dialogue.get().await? {
+    if let Some(DialogueState::ConfirmDownload { shortcode, media_info }) = dialogue.get().await? {
         bot.delete_message(message.chat().id, message.id()).await?;
         let download_msg = bot
             .send_message(message.chat().id, t!("callbacks.download.downloading"))
@@ -52,7 +53,10 @@ pub(super) async fn handle_callback_confirm_download(
 
         bot.delete_message(message.chat().id, download_msg.id).await?;
 
-        match content {
+        // Cache the media info in Redis
+        CacheService::set_media_info(&shortcode, &media_info).await?;
+
+        match media_info.content {
             MediaContent::Post(PostContent::Single { url, content_type }) => {
                 let _ = match content_type {
                     // TODO add caption and meta data etc

@@ -1,7 +1,6 @@
 use bot::BotService;
-
-use state::AppState;
-use std::{sync::Arc, time::Duration};
+use config::AppConfig;
+use std::sync::Arc;
 
 extern crate pretty_env_logger;
 #[macro_use]
@@ -31,12 +30,12 @@ async fn shuttle_main(
     }
     let _ = pretty_env_logger::try_init_timed();
 
-    info!("Initializing AppState...");
-    AppState::init(&secrets).await?;
+    info!("Initializing AppConfig...");
+    let config = crate::config::build_config(&secrets)?;
+    AppConfig::set_global(config)?;
+    info!("AppConfig initialized");
 
-    let state = AppState::get()?;
-
-    let bot_service = BotService::new_from_state(&state).map_err(|_| anyhow::anyhow!("Failed to create BotService"))?;
+    let bot_service = BotService::new().await?;
 
     info!("Bot instance created");
 

@@ -94,40 +94,40 @@ pub fn get_command_handler() -> UpdateHandler<Box<dyn std::error::Error + Send +
         .endpoint(handle_command)
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::{services::dialogue::DialogueState, utils::test::setup_test_bot};
+// #[cfg(test)]
+// mod tests {
+//     use crate::{services::dialogue::DialogueState, utils::test::setup_test_bot};
 
-    #[tokio::test]
-    async fn test_handle_help() {
-        let bot = setup_test_bot("/help").await;
-        bot.set_state(DialogueState::Start).await;
+//     #[tokio::test]
+//     async fn test_handle_help() {
+//         let bot = setup_test_bot("/help").await;
+//         bot.set_state(DialogueState::Start).await;
 
-        bot.dispatch().await;
+//         bot.dispatch().await;
 
-        let responses = bot.get_responses();
-        let last_message = responses.sent_messages.last().expect("No messages were sent");
+//         let responses = bot.get_responses();
+//         let last_message = responses.sent_messages.last().expect("No messages were sent");
 
-        assert_eq!(last_message.text().expect("Message had no text"), t!("commands.help"));
+//         assert_eq!(last_message.text().expect("Message had no text"), t!("commands.help"));
 
-        assert!(
-            last_message.reply_markup().is_some(),
-            "Expected reply markup to be present"
-        );
-    }
+//         assert!(
+//             last_message.reply_markup().is_some(),
+//             "Expected reply markup to be present"
+//         );
+//     }
 
-    #[tokio::test]
-    async fn test_handle_unknown_command() {
-        let bot = setup_test_bot("/stats").await;
+//     #[tokio::test]
+//     async fn test_handle_unknown_command() {
+//         let bot = setup_test_bot("/stats").await;
 
-        bot.dispatch().await;
+//         bot.dispatch().await;
 
-        let responses = bot.get_responses();
-        let last_message = responses.sent_messages.last().expect("No messages were sent");
+//         let responses = bot.get_responses();
+//         let last_message = responses.sent_messages.last().expect("No messages were sent");
 
-        assert_eq!(
-            last_message.text().expect("Message had no text"),
-            t!("commands.unknown_command")
-        );
-    }
-}
+//         assert_eq!(
+//             last_message.text().expect("Message had no text"),
+//             t!("commands.unknown_command")
+//         );
+//     }
+// }

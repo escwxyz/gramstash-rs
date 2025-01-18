@@ -7,7 +7,6 @@ use url::Url;
 
 use crate::{
     error::{AuthenticationError, BotError, BotResult, InstagramError, ServiceError},
-    state::AppState,
     utils::http,
 };
 
@@ -23,7 +22,9 @@ pub struct LoginResponse {
     #[serde(rename = "userId")]
     pub user_id: Option<String>,
     pub message: Option<String>,
+    #[allow(dead_code)]
     pub two_factor_required: Option<bool>,
+    #[allow(dead_code)]
     pub checkpoint_url: Option<String>,
 }
 
@@ -40,9 +41,10 @@ pub struct AuthService {
 
 impl AuthService {
     pub fn new() -> BotResult<Self> {
+        info!("Initializing AuthService...");
         let cookie_jar = Arc::new(Jar::default());
         let client = Self::create_client(Arc::clone(&cookie_jar))?;
-
+        info!("AuthService initialized");
         Ok(Self { client, cookie_jar })
     }
 

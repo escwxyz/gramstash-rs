@@ -55,12 +55,14 @@ pub struct LanguageService {
 }
 
 impl LanguageService {
-    pub fn new() -> BotResult<Self> {
-        let config = &AppState::get()?.config;
-        let capacity = config.language.cache_capacity;
+    pub fn new(capacity: usize) -> BotResult<Self> {
+        info!("Initializing LanguageService...");
+        let language_cache = Arc::new(DashMap::with_capacity(capacity));
+        let interface_cache = Arc::new(DashMap::with_capacity(capacity));
+        info!("LanguageService initialized");
         Ok(Self {
-            language_cache: Arc::new(DashMap::with_capacity(capacity)),
-            interface_cache: Arc::new(DashMap::with_capacity(capacity)),
+            language_cache,
+            interface_cache,
         })
     }
 

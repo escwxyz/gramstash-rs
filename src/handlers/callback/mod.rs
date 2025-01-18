@@ -21,7 +21,6 @@ async fn handle_callback(
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     q: CallbackQuery,
     ctx: RequestContext,
-    app_state: &AppState,
 ) -> HandlerResult<()> {
     let data = q
         .data
@@ -31,6 +30,7 @@ async fn handle_callback(
         .message
         .ok_or_else(|| BotError::DialogueStateError("No message".into()))?;
 
+    let app_state = AppState::get()?;
     match data.as_str() {
         // download
         "ask_for_download_link" => {
@@ -91,7 +91,7 @@ async fn handle_callback(
         // language
         s if s.starts_with("lang:") => {
             let lang_code = s.split(":").nth(1).unwrap_or("en");
-            language::handle_callback_language_change(&bot, dialogue, message, ctx, app_state, lang_code).await?
+            language::handle_callback_language_change(&bot, dialogue, message, ctx, lang_code).await?
         }
         _ => todo!(),
     }

@@ -16,6 +16,7 @@ use teloxide::{
 };
 
 use crate::{
+    config::AppConfig,
     services::{dialogue::DialogueState, language::Language, middleware::extract_user},
     state::AppState,
 };
@@ -30,9 +31,25 @@ pub struct RequestContext {
 
 pub fn get_handler() -> UpdateHandler<Box<dyn std::error::Error + Send + Sync + 'static>> {
     dialogue::enter::<Update, ErasedStorage<DialogueState>, DialogueState, _>()
-        .filter_map_async(|update: Update, bot: Bot, state: &'static AppState| async move {
+        .filter_map_async(|update: Update, bot: Bot| async move {
+            let state = match AppState::get() {
+                Ok(state) => state,
+                Err(e) => {
+                    error!("Failed to get AppState: {:?}", e);
+                    return None;
+                }
+            };
+
+            let config = match AppConfig::get() {
+                Ok(config) => config,
+                Err(e) => {
+                    error!("Failed to get AppConfig: {:?}", e);
+                    return None;
+                }
+            };
+
             if let Some(user) = extract_user(&update) {
-                let is_admin = state.config.admin.telegram_user_id == user.id;
+                let is_admin = config.admin.telegram_user_id == user.id;
 
                 let language = state
                     .language

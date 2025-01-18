@@ -3,6 +3,7 @@ use std::time::Duration;
 use url::Url;
 
 use crate::{
+    config::AppConfig,
     error::{BotError, BotResult, InstagramError, ServiceError},
     state::AppState,
     utils::http,
@@ -73,24 +74,31 @@ pub enum InstagramIdentifier {
 
 #[derive(Clone)]
 pub struct InstagramService {
-    pub public_client: reqwest::Client,
+    pub client: reqwest::Client,
 }
 
 impl InstagramService {
     pub fn new() -> BotResult<Self> {
+        info!("Initializing InstagramService...");
         let builder = reqwest::Client::builder()
             .timeout(Duration::from_secs(30))
             .connect_timeout(Duration::from_secs(30))
             .default_headers(http::build_desktop_instagram_headers(true))
             .user_agent(http::INSTAGRAM_USER_AGENT);
 
-        let public_client = http::build_client(builder)?;
-        Ok(Self { public_client })
+        let client = http::build_client(builder)?;
+        info!("InstagramService initialized");
+        Ok(Self { client })
     }
     #[allow(dead_code)]
-    pub fn with_session(_session_data: SessionData) -> BotResult<Self> {
-        // TODO: Create a new client with session cookies
-        todo!()
+    pub async fn with_session(session_data: &SessionData) -> BotResult<Self> {
+        let state = AppState::get()?;
+        let mut auth_service = state.auth.lock().await;
+        auth_service.restore_cookies(session_data)?;
+
+        let client = auth_service.client.clone();
+
+        Ok(Self { client })
     }
 
     pub fn parse_instagram_url(&self, url: &Url) -> BotResult<InstagramIdentifier> {
@@ -117,10 +125,10 @@ impl InstagramService {
     }
 
     pub async fn fetch_post_info(&self, shortcode: &str) -> BotResult<MediaInfo> {
-        let state = AppState::get()?;
-
-        let api_url = state.config.instagram.api_endpoint.clone();
-        let doc_id = state.config.instagram.doc_id.clone();
+        info!("Fetching post info for shortcode: {}", shortcode);
+        let config = AppConfig::get()?;
+        let api_url = config.instagram.api_endpoint.clone();
+        let doc_id = config.instagram.doc_id.clone();
 
         let body = serde_json::json!({
             "doc_id": doc_id,
@@ -130,29 +138,51 @@ impl InstagramService {
         });
 
         let response = self
-            .public_client
+            .client
             .post(&api_url)
             .json(&body)
             .send()
             .await
             .map_err(|e| BotError::ServiceError(ServiceError::InstagramError(InstagramError::NetworkError(e))))?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        let response_text = response
+            .text()
+            .await
+            .map_err(|e| BotError::ServiceError(ServiceError::InstagramError(InstagramError::NetworkError(e))))?;
+
+        if !status.is_success() {
             return Err(BotError::ServiceError(ServiceError::InstagramError(
-                InstagramError::ApiError(format!("Instagram API returned status: {}", response.status())),
+                InstagramError::ApiError(format!(
+                    "Instagram API returned status: {}, body: {}",
+                    status, response_text
+                )),
             )));
         }
 
-        let data: serde_json::Value = response.json().await.map_err(|e| {
+        if response_text.trim().is_empty() {
+            return Err(BotError::ServiceError(ServiceError::InstagramError(
+                InstagramError::DeserializationError("Empty response body".into()),
+            )));
+        }
+
+        let data: serde_json::Value = serde_json::from_str(&response_text).map_err(|e| {
             BotError::ServiceError(ServiceError::InstagramError(InstagramError::DeserializationError(
-                e.to_string(),
+                format!("Failed to parse JSON: {}, Response: {}", e, response_text),
             )))
         })?;
 
-        self.parse_media_response(data)
+        self.parse_post_response(data)
+    }
+    #[allow(dead_code)]
+    pub async fn fetch_story_info(&self, shortcode: &str) -> BotResult<MediaInfo> {
+        // let state = AppState::get()?;
+        // TODO: check out instaloader
+        todo!()
     }
 
-    fn parse_media_response(&self, data: serde_json::Value) -> BotResult<MediaInfo> {
+    fn parse_post_response(&self, data: serde_json::Value) -> BotResult<MediaInfo> {
+        info!("Parsing post response ...");
         let media = data
             .get("data")
             .and_then(|d| d.get("xdt_shortcode_media"))
@@ -383,7 +413,7 @@ mod tests {
         let service = create_service();
         let sample_response = load_test_data("image_post.json");
 
-        let result = service.parse_media_response(sample_response);
+        let result = service.parse_post_response(sample_response);
         assert!(result.is_ok());
         let media_info = result.unwrap();
         match media_info.content {
@@ -401,7 +431,7 @@ mod tests {
         let service = create_service();
         let sample_response = load_test_data("reel_post.json");
 
-        let result = service.parse_media_response(sample_response);
+        let result = service.parse_post_response(sample_response);
         assert!(result.is_ok());
         let media_info = result.unwrap();
         match media_info.content {
@@ -418,7 +448,7 @@ mod tests {
         let service = create_service();
         let sample_response = load_test_data("carousel_post.json");
 
-        let result = service.parse_media_response(sample_response);
+        let result = service.parse_post_response(sample_response);
         assert!(result.is_ok());
         let media_info = result.unwrap();
         match media_info.content {

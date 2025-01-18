@@ -7,6 +7,7 @@ pub struct TursoClient(pub Arc<Database>);
 
 impl TursoClient {
     pub async fn new(url: &str, token: &str) -> BotResult<Self> {
+        info!("Initializing TursoClient...");
         let db = Arc::new(
             Builder::new_remote(url.to_string(), token.to_string())
                 .build()
@@ -14,7 +15,7 @@ impl TursoClient {
                 .map_err(|e| BotError::TursoError(format!("Failed to connect to Turso database: {}", e)))?,
         );
 
-        info!("Connected to Turso database");
+        info!("TursoClient initialized");
         Ok(Self(db))
     }
 

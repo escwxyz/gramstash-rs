@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::{
+    config::AppConfig,
     error::{BotError, BotResult},
     state::AppState,
 };
@@ -54,7 +55,9 @@ pub struct SessionService {
 
 impl SessionService {
     pub fn with_refresh_interval(refresh_interval: Duration) -> BotResult<Self> {
-        let config = &AppState::get()?.config;
+        info!("Initializing SessionService...");
+        let config = AppConfig::get()?;
+        info!("SessionService initialized");
         Ok(Self {
             session_cache: Arc::new(DashMap::with_capacity(config.session.cache_capacity)),
             refresh_interval,
@@ -118,7 +121,8 @@ impl SessionService {
                 // Check if we need to validate
                 if self.is_session_stale(telegram_user_id) {
                     info!("Validating session for user: {}", telegram_user_id);
-                    let mut auth_service = AppState::get()?.auth.lock().await;
+                    let state = AppState::get()?;
+                    let mut auth_service = state.auth.lock().await;
                     auth_service.restore_cookies(session_data)?;
 
                     if auth_service.verify_session().await? {

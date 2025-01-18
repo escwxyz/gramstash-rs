@@ -1,7 +1,7 @@
 use crate::error::{BotError, HandlerResult};
 use crate::services::cache::CacheService;
 use crate::services::dialogue::DialogueState;
-use crate::services::instagram::{InstagramIdentifier, MediaContent, PostContent};
+use crate::services::instagram::{InstagramIdentifier, MediaContent, MediaInfo, PostContent};
 use crate::services::ratelimiter::RateLimiter;
 use crate::state::AppState;
 use crate::utils::{extract_instagram_url, keyboard, parse_url};
@@ -60,7 +60,11 @@ pub(super) async fn handle_message_awaiting_download_link(
     // check rate limit
     let rate_limiter = RateLimiter::new()?;
 
-    if !rate_limiter.check_rate_limit(msg.chat.id, &shortcode).await? {
+    if !rate_limiter
+        // In private chat, msg.chat.id is the same as UserId
+        .check_rate_limit(&msg.chat.id.to_string(), &shortcode)
+        .await?
+    {
         bot.edit_message_text(
             msg.chat.id,
             processing_msg.id,
@@ -77,7 +81,7 @@ pub(super) async fn handle_message_awaiting_download_link(
 
     if let Some(media_info) = cached_media_info {
         info!("Cache hit for shortcode: {}", shortcode);
-        process_media_content(&bot, &dialogue, &msg, &processing_msg, &media_info.content).await?;
+        process_media_content(&bot, &dialogue, &msg, &processing_msg, &shortcode, &media_info).await?;
         return Ok(());
     }
 
@@ -92,8 +96,7 @@ pub(super) async fn handle_message_awaiting_download_link(
 
     match media_info {
         Ok(media_info) => {
-            CacheService::set_media_info(&shortcode, &media_info).await?;
-            process_media_content(&bot, &dialogue, &msg, &processing_msg, &media_info.content).await?;
+            process_media_content(&bot, &dialogue, &msg, &processing_msg, &shortcode, &media_info).await?;
         }
         Err(e) => {
             let msg = bot
@@ -119,9 +122,9 @@ async fn show_media_preview(
     bot: &Bot,
     msg: &Message,
     processing_msg: &Message,
-    content: &MediaContent,
+    media_info: &MediaInfo,
 ) -> ResponseResult<()> {
-    let preview_text = match content {
+    let preview_text = match &media_info.content {
         MediaContent::Post(post_content) => match post_content {
             PostContent::Single { content_type, .. } => {
                 format!("Found a single {:?} post. Would you like to download it?", content_type)
@@ -150,15 +153,19 @@ async fn process_media_content(
     dialogue: &Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: &Message,
     processing_msg: &Message,
-    content: &MediaContent,
+    shortcode: &str,
+    media_info: &MediaInfo,
 ) -> HandlerResult<()> {
-    let content_clone = content.clone();
+    let media_info_clone = media_info.clone();
 
     dialogue
-        .update(DialogueState::ConfirmDownload { content: content_clone })
+        .update(DialogueState::ConfirmDownload {
+            shortcode: shortcode.to_string(),
+            media_info: media_info_clone,
+        })
         .await?;
 
-    show_media_preview(bot, msg, processing_msg, &content).await?;
+    show_media_preview(bot, msg, processing_msg, &media_info).await?;
 
     Ok(())
 }

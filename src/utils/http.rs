@@ -1,9 +1,4 @@
-use std::{sync::Arc, time::Duration};
-
-use reqwest::{
-    cookie::Jar,
-    header::{self, HeaderMap, HeaderValue},
-};
+use reqwest::header::{self, HeaderMap, HeaderValue};
 
 use crate::error::BotResult;
 
@@ -25,6 +20,7 @@ pub fn build_client(builder: reqwest::ClientBuilder) -> BotResult<reqwest::Clien
         builder.build().map_err(|_| anyhow::anyhow!("Failed to build client"))?
     };
 
+    info!("Client built");
     Ok(client)
 }
 
@@ -33,10 +29,15 @@ pub fn build_desktop_instagram_headers(anonymous: bool) -> HeaderMap {
 
     // Standard headers
     headers.insert(header::ACCEPT, HeaderValue::from_static("*/*"));
-    headers.insert(
-        header::ACCEPT_ENCODING,
-        HeaderValue::from_static("gzip, deflate, br, zstd"),
-    );
+    // NOTE: Don't set ACCEPT_ENCODING header
+    // Let reqwest handle compression automatically with its default supported algorithms
+    // If we specify additional compression types like 'zstd' without having a decoder,
+    // we'll get garbled responses
+    //
+    // headers.insert(
+    //     header::ACCEPT_ENCODING,
+    //     HeaderValue::from_static("gzip, deflate, br, zstd"),
+    // );
     headers.insert(
         header::ACCEPT_LANGUAGE,
         HeaderValue::from_static("en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7,en-DE;q=0.6,zh-TW;q=0.5"),

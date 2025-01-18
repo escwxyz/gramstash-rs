@@ -3,6 +3,7 @@ use std::time::Duration;
 use teloxide::prelude::*;
 use teloxide::Bot;
 
+use crate::config::AppConfig;
 use crate::error::{BotResult, HandlerResult};
 use crate::handlers::get_handler;
 use crate::services::dialogue::DialogueService;
@@ -14,7 +15,13 @@ pub struct BotService {
 }
 
 impl BotService {
-    pub fn new_from_state(state: &AppState) -> BotResult<Self> {
+    pub async fn new() -> BotResult<Self> {
+        info!("Initializing AppState...");
+        let config = AppConfig::get()?;
+        let state = AppState::new(&config).await?;
+        AppState::set_global(state.clone())?;
+        info!("AppState initialized");
+
         let builder = reqwest::Client::builder()
             .timeout(Duration::from_secs(30))
             .connect_timeout(Duration::from_secs(10))
@@ -23,9 +30,10 @@ impl BotService {
             .user_agent(http::DEFAULT_USER_AGENT);
 
         let client = http::build_client(builder)?;
-        Ok(Self {
-            bot: Bot::with_client(state.config.telegram.0.clone(), client),
-        })
+
+        let bot = Bot::with_client(config.telegram.0.clone(), client);
+
+        Ok(Self { bot })
     }
 
     pub async fn start(&self) -> HandlerResult<()> {
@@ -40,7 +48,8 @@ impl BotService {
 
         let bot = self.bot.clone();
         let state = AppState::get()?;
-        let storage = DialogueService::get_dialogue_storage(&state.config.dialogue).await?;
+        let config = AppConfig::get()?;
+        let storage = DialogueService::get_dialogue_storage(&config.dialogue).await?;
 
         crate::command::setup_user_commands(&bot).await?;
 

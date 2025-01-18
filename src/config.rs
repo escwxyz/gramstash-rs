@@ -1,7 +1,10 @@
 use shuttle_runtime::SecretStore;
+use std::sync::OnceLock;
 use teloxide::types::UserId;
 
 use crate::error::{BotError, BotResult};
+
+static APP_CONFIG: OnceLock<AppConfig> = OnceLock::new();
 
 #[derive(Clone, Debug)]
 pub struct AppConfig {
@@ -18,20 +21,32 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    #[cfg(test)]
-    pub fn new_test_config() -> Self {
-        Self {
-            redis: RedisConfig::new_test_config(),
-            telegram: TelegramConfig::new_test_config(),
-            instagram: InstagramConfig::new_test_config(),
-            rate_limit: RateLimitConfig::new_test_config(),
-            cache: CacheConfig::new_test_config(),
-            dialogue: DialogueConfig::new_test_config(),
-            admin: AdminConfig::new_test_config(),
-            session: SessionConfig::new_test_config(),
-            turso: TursoConfig::new_test_config(),
-            language: LanguageConfig::new_test_config(),
-        }
+    // #[cfg(test)]
+    // pub fn new_test_config() -> Self {
+    //     Self {
+    //         redis: RedisConfig::new_test_config(),
+    //         telegram: TelegramConfig::new_test_config(),
+    //         instagram: InstagramConfig::new_test_config(),
+    //         rate_limit: RateLimitConfig::new_test_config(),
+    //         cache: CacheConfig::new_test_config(),
+    //         dialogue: DialogueConfig::new_test_config(),
+    //         admin: AdminConfig::new_test_config(),
+    //         session: SessionConfig::new_test_config(),
+    //         turso: TursoConfig::new_test_config(),
+    //         language: LanguageConfig::new_test_config(),
+    //     }
+    // }
+
+    pub fn set_global(config: AppConfig) -> BotResult<()> {
+        APP_CONFIG
+            .set(config)
+            .map_err(|_| BotError::AppStateError("Failed to set global app config".to_string()))
+    }
+
+    pub fn get() -> BotResult<&'static AppConfig> {
+        APP_CONFIG
+            .get()
+            .ok_or_else(|| BotError::AppStateError("App config not initialized".to_string()))
     }
 }
 
@@ -41,22 +56,22 @@ pub struct RedisConfig {
 }
 
 impl RedisConfig {
-    #[cfg(test)]
-    pub fn new_test_config() -> Self {
-        Self {
-            url: "redis://127.0.0.1:6379".to_string(),
-        }
-    }
+    // #[cfg(test)]
+    // pub fn new_test_config() -> Self {
+    //     Self {
+    //         url: "redis://127.0.0.1:6379".to_string(),
+    //     }
+    // }
 }
 
 #[derive(Clone, Debug)]
 pub struct TelegramConfig(pub String);
 
 impl TelegramConfig {
-    #[cfg(test)]
-    pub fn new_test_config() -> Self {
-        Self("test_token".to_string())
-    }
+    // #[cfg(test)]
+    // pub fn new_test_config() -> Self {
+    //     Self("test_token".to_string())
+    // }
 }
 
 #[derive(Clone, Debug)]
@@ -66,13 +81,13 @@ pub struct InstagramConfig {
 }
 
 impl InstagramConfig {
-    #[cfg(test)]
-    pub fn new_test_config() -> Self {
-        Self {
-            api_endpoint: "https://www.instagram.com/graphql/query/".to_string(),
-            doc_id: "8845758582119845".to_string(),
-        }
-    }
+    // #[cfg(test)]
+    // pub fn new_test_config() -> Self {
+    //     Self {
+    //         api_endpoint: "https://www.instagram.com/graphql/query/".to_string(),
+    //         doc_id: "8845758582119845".to_string(),
+    //     }
+    // }
 }
 
 #[derive(Clone, Debug)]
@@ -82,13 +97,13 @@ pub struct RateLimitConfig {
 }
 
 impl RateLimitConfig {
-    #[cfg(test)]
-    pub fn new_test_config() -> Self {
-        Self {
-            daily_limit: 100,
-            window_secs: 86400,
-        }
-    }
+    // #[cfg(test)]
+    // pub fn new_test_config() -> Self {
+    //     Self {
+    //         daily_limit: 100,
+    //         window_secs: 86400,
+    //     }
+    // }
 }
 
 #[derive(Clone, Debug)]
@@ -97,10 +112,10 @@ pub struct CacheConfig {
 }
 
 impl CacheConfig {
-    #[cfg(test)]
-    pub fn new_test_config() -> Self {
-        Self { expiry_secs: 300 }
-    }
+    // #[cfg(test)]
+    // pub fn new_test_config() -> Self {
+    //     Self { expiry_secs: 300 }
+    // }
 }
 
 #[derive(Clone, Debug)]
@@ -112,14 +127,14 @@ pub struct DialogueConfig {
 }
 
 impl DialogueConfig {
-    #[cfg(test)]
-    pub fn new_test_config() -> Self {
-        Self {
-            use_redis: true,
-            redis_url: "redis://127.0.0.1:6379".to_string(),
-            clear_interval_secs: 60,
-        }
-    }
+    // #[cfg(test)]
+    // pub fn new_test_config() -> Self {
+    //     Self {
+    //         use_redis: true,
+    //         redis_url: "redis://127.0.0.1:6379".to_string(),
+    //         clear_interval_secs: 60,
+    //     }
+    // }
 }
 
 #[derive(Clone, Debug)]
@@ -128,12 +143,12 @@ pub struct AdminConfig {
 }
 
 impl AdminConfig {
-    #[cfg(test)]
-    pub fn new_test_config() -> Self {
-        Self {
-            telegram_user_id: UserId(1234567890),
-        }
-    }
+    // #[cfg(test)]
+    // pub fn new_test_config() -> Self {
+    //     Self {
+    //         telegram_user_id: UserId(1234567890),
+    //     }
+    // }
 }
 
 #[derive(Clone, Debug)]
@@ -148,13 +163,13 @@ pub struct SessionConfig {
 }
 
 impl SessionConfig {
-    #[cfg(test)]
-    pub fn new_test_config() -> Self {
-        Self {
-            refresh_interval_secs: 300,
-            cache_capacity: 100,
-        }
-    }
+    // #[cfg(test)]
+    // pub fn new_test_config() -> Self {
+    //     Self {
+    //         refresh_interval_secs: 300,
+    //         cache_capacity: 100,
+    //     }
+    // }
 }
 
 #[derive(Clone, Debug)]
@@ -164,13 +179,13 @@ pub struct TursoConfig {
 }
 
 impl TursoConfig {
-    #[cfg(test)]
-    pub fn new_test_config() -> Self {
-        Self {
-            url: std::env::var("TURSO_URL").unwrap_or("localhost".to_string()),
-            token: std::env::var("TURSO_TOKEN").unwrap_or("test_token".to_string()),
-        }
-    }
+    // #[cfg(test)]
+    // pub fn new_test_config() -> Self {
+    //     Self {
+    //         url: std::env::var("TURSO_URL").unwrap_or("localhost".to_string()),
+    //         token: std::env::var("TURSO_TOKEN").unwrap_or("test_token".to_string()),
+    //     }
+    // }
 }
 
 #[derive(Clone, Debug)]
@@ -182,13 +197,14 @@ pub struct LanguageConfig {
 }
 
 impl LanguageConfig {
-    #[cfg(test)]
-    pub fn new_test_config() -> Self {
-        Self { cache_capacity: 20000 }
-    }
+    // #[cfg(test)]
+    // pub fn new_test_config() -> Self {
+    //     Self { cache_capacity: 20000 }
+    // }
 }
 
 pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
+    info!("Building AppConfig...");
     let redis_host = secret_store
         .get("UPSTASH_REDIS_HOST")
         .ok_or_else(|| BotError::SecretKeyError("Missing UPSTASH_REDIS_HOST".to_string()))?;
@@ -201,7 +217,7 @@ pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
 
     let redis_url = format!("rediss://default:{}@{}:{}", redis_password, redis_host, redis_port);
 
-    Ok(AppConfig {
+    let config = AppConfig {
         redis: RedisConfig { url: redis_url.clone() },
         telegram: TelegramConfig(
             secret_store
@@ -284,5 +300,8 @@ pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
                 .parse::<usize>()
                 .map_err(|_| BotError::SecretKeyError("Invalid LANGUAGE_CACHE_CAPACITY".to_string()))?,
         },
-    })
+    };
+    info!("AppConfig built");
+
+    Ok(config)
 }

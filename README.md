@@ -60,8 +60,8 @@ TURSO_TOKEN = "your-turso-token"
 - [x] Redis integration
 - [x] Rate limiting
 - [x] Dialogue state management
-- [x] Unit tests
 - [x] Session management
+- [ ] Debounce
 - [ ] Story downloading
 - [ ] Highlight downloading
 - [x] Internationalization
@@ -89,7 +89,7 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ## Known Issues 🐛
 
-- Due to the current limitation of `teloxide_tests`, we have to use the default `Bot` in `BotService` without any adapters. See [here](https://github.com/LasterAlex/teloxide_tests/issues/25) for more details.
+- Due to the current limitation of `teloxide_tests`, we either have to use the default `Bot` in `BotService` without any adapters or temporarily disable the tests. See [here](https://github.com/LasterAlex/teloxide_tests/issues/25) for more details.
 - User input is automatically processed by Telegram, currently we restore the display text back to the raw text, which is most likely not the perfect solution.
 
 ## Security 🔒

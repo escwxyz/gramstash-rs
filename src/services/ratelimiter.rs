@@ -1,7 +1,7 @@
 use redis::AsyncCommands;
 use teloxide::types::ChatId;
 
-use crate::{error::BotResult, state::AppState};
+use crate::{config::AppConfig, error::BotResult, state::AppState};
 
 pub struct RateLimiter {
     max_requests: usize,
@@ -10,19 +10,19 @@ pub struct RateLimiter {
 
 impl RateLimiter {
     pub fn new() -> BotResult<Self> {
-        let state = AppState::get()?;
+        let config = AppConfig::get()?;
         Ok(Self {
-            max_requests: state.config.rate_limit.daily_limit,
-            window_seconds: state.config.rate_limit.window_secs,
+            max_requests: config.rate_limit.daily_limit,
+            window_seconds: config.rate_limit.window_secs,
         })
     }
 
-    pub async fn check_rate_limit(&self, chat_id: ChatId, shortcode: &str) -> BotResult<bool> {
+    pub async fn check_rate_limit(&self, telegram_user_id: &str, shortcode: &str) -> BotResult<bool> {
         let mut conn = AppState::get()?.redis.get_connection().await?;
 
         let key = format!(
             "rate_limit:{}:{}:{}",
-            chat_id.0,
+            telegram_user_id,
             shortcode,
             chrono::Utc::now().date_naive()
         );
@@ -36,7 +36,7 @@ impl RateLimiter {
             return Ok(true);
         }
 
-        let pattern = format!("rate_limit:{}:*:{}", chat_id.0, chrono::Utc::now().date_naive());
+        let pattern = format!("rate_limit:{}:*:{}", telegram_user_id, chrono::Utc::now().date_naive());
         let keys: Vec<String> = conn.keys(&pattern).await?;
 
         if keys.len() >= self.max_requests {

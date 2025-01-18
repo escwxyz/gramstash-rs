@@ -14,7 +14,6 @@ pub async fn handle_callback_language_change(
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     message: MaybeInaccessibleMessage,
     ctx: RequestContext,
-    app_state: &AppState,
     lang_code: &str,
 ) -> HandlerResult<()> {
     let status_message = bot
@@ -23,6 +22,7 @@ pub async fn handle_callback_language_change(
 
     let language = Language::from_str(lang_code).unwrap_or(Language::English);
 
+    let app_state = AppState::get()?;
     app_state
         .language
         .set_user_language(&ctx.telegram_user_id.to_string(), language)
