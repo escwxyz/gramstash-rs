@@ -1,8 +1,10 @@
 use crate::error::{BotError, HandlerResult};
 
+use crate::handlers::RequestContext;
 use crate::services::cache::CacheService;
 use crate::services::dialogue::DialogueState;
-use crate::services::instagram::{InstagramIdentifier, MediaContent, MediaInfo, PostContent};
+use crate::services::http::{DeviceType, HttpService};
+use crate::services::instagram::{InstagramIdentifier, InstagramMedia};
 
 use crate::services::ratelimiter::RateLimiter;
 use crate::state::AppState;
@@ -17,6 +19,7 @@ pub(super) async fn handle_message_awaiting_download_link(
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: Message,
     message_id: MessageId,
+    ctx: RequestContext,
 ) -> HandlerResult<()> {
     info!("handle_message_awaiting_download_link");
 
@@ -45,19 +48,19 @@ pub(super) async fn handle_message_awaiting_download_link(
 
     let parsed_url = parse_url(&url)?;
 
-    let (shortcode, content_type) = {
+    let (shortcode, content_type, instagram_username) = {
         let identifier = AppState::get()?.instagram.parse_instagram_url(&parsed_url)?;
 
         match identifier {
-            InstagramIdentifier::Story { username: _, shortcode } => (shortcode, "story"),
-            InstagramIdentifier::Post { shortcode } => (shortcode, "post"),
-            InstagramIdentifier::Reel { shortcode } => (shortcode, "reel"),
+            InstagramIdentifier::Story { username, shortcode } => (shortcode, "story", Some(username)),
+            InstagramIdentifier::Post { shortcode } => (shortcode, "post", None),
+            InstagramIdentifier::Reel { shortcode } => (shortcode, "reel", None),
         }
     };
 
     // check cache first
 
-    let cached_media_info = CacheService::get_media_info(&shortcode).await?;
+    let cached_media_info = CacheService::get_media_from_redis(&ctx.telegram_user_id.to_string(), &shortcode).await?;
 
     info!("Checking rate limit for shortcode: {}", shortcode);
 
@@ -65,8 +68,7 @@ pub(super) async fn handle_message_awaiting_download_link(
     let rate_limiter = RateLimiter::new()?;
 
     if !rate_limiter
-        // In private chat, msg.chat.id is the same as UserId
-        .check_rate_limit(&msg.chat.id.to_string(), &shortcode)
+        .check_rate_limit(&ctx.telegram_user_id.to_string(), &shortcode)
         .await?
     {
         bot.edit_message_text(
@@ -89,18 +91,48 @@ pub(super) async fn handle_message_awaiting_download_link(
         return Ok(());
     }
 
-    let instagram_service = AppState::get()?.instagram.clone();
+    let state = AppState::get()?;
 
     let media_info = match content_type {
         "story" => {
-            todo!()
+            let session_data = state.session.get_valid_session(&msg.chat.id.to_string()).await?;
+
+            // todo!()
+            if let Some(session_data) = session_data {
+                let mut auth_service = state.auth.lock().await;
+                auth_service.restore_cookies(&session_data)?;
+                let http = HttpService::new(false, DeviceType::Desktop, Some(auth_service.client.clone()))?;
+                state
+                    .instagram
+                    .get_story(
+                        &ctx.telegram_user_id.to_string(),
+                        &instagram_username.unwrap_or_default(),
+                        &shortcode,
+                        &http,
+                    )
+                    .await
+            } else {
+                bot.edit_message_text(msg.chat.id, processing_msg.id, t!("messages.download.session_expired"))
+                    .reply_markup(keyboard::ProfileMenu::get_profile_menu_inline_keyboard(false))
+                    .await?;
+
+                dialogue
+                    .update(DialogueState::Start)
+                    .await
+                    .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
+
+                return Ok(());
+            }
         }
-        _ => instagram_service.fetch_post_info(&shortcode).await,
+        _ => {
+            let instagram_service = state.instagram;
+            instagram_service.fetch_post_info(&shortcode).await
+        }
     };
 
     match media_info {
-        Ok(media_info) => {
-            process_media_content(&bot, &dialogue, &msg, &processing_msg, &shortcode, &media_info).await?;
+        Ok(instagram_media) => {
+            process_media_content(&bot, &dialogue, &msg, &processing_msg, &shortcode, &instagram_media).await?;
         }
         Err(e) => {
             let msg = bot
@@ -121,27 +153,64 @@ pub(super) async fn handle_message_awaiting_download_link(
     Ok(())
 }
 
-// TODO: implement media preview with better UI and more information
+// TODO
 async fn show_media_preview(
     bot: &Throttle<Bot>,
     msg: &Message,
     processing_msg: &Message,
-    media_info: &MediaInfo,
+    instagram_media: &InstagramMedia,
 ) -> ResponseResult<()> {
-    let preview_text = match &media_info.content {
-        MediaContent::Post(post_content) => match post_content {
-            PostContent::Single { content_type, .. } => {
-                format!("Found a single {:?} post. Would you like to download it?", content_type)
+    let preview_text = match &instagram_media.content {
+        crate::services::instagram::InstagramContent::Single(media_item) => match media_item.media_type {
+            crate::services::instagram::MediaType::Image => {
+                t!(
+                    "messages.download.media_preview_single_image",
+                    username = instagram_media.author.username,
+                    timestamp = instagram_media.timestamp,
+                    caption = instagram_media.caption.clone().unwrap_or_default()
+                )
             }
-            PostContent::Carousel { items, .. } => {
-                format!(
-                    "Found a carousel with {} items. Would you like to download it?",
-                    items.len()
+            crate::services::instagram::MediaType::Video => {
+                t!(
+                    "messages.download.media_preview_single_video",
+                    username = instagram_media.author.username,
+                    timestamp = instagram_media.timestamp,
+                    caption = instagram_media.caption.clone().unwrap_or_default()
                 )
             }
         },
-        MediaContent::Story(_) => {
-            todo!();
+        crate::services::instagram::InstagramContent::Multiple(items) => {
+            let item = items.first().unwrap();
+
+            match item.media_type {
+                crate::services::instagram::MediaType::Image => {
+                    t!(
+                        "messages.download.media_preview_multiple_images",
+                        count = items.len(),
+                        username = instagram_media.author.username,
+                        timestamp = instagram_media.timestamp,
+                        caption = instagram_media.caption.clone().unwrap_or_default()
+                    )
+                }
+                crate::services::instagram::MediaType::Video => {
+                    t!(
+                        "messages.download.media_preview_multiple_videos",
+                        count = items.len(),
+                        username = instagram_media.author.username,
+                        timestamp = instagram_media.timestamp,
+                        caption = instagram_media.caption.clone().unwrap_or_default()
+                    )
+                }
+            }
+        }
+        crate::services::instagram::InstagramContent::Story(_) => {
+            t!(
+                "messages.download.media_preview_story",
+                count = 1,
+                username = instagram_media.author.username,
+                timestamp = instagram_media.timestamp,
+                caption = instagram_media.caption.clone().unwrap_or_default()
+            )
         }
     };
 
@@ -158,18 +227,18 @@ async fn process_media_content(
     msg: &Message,
     processing_msg: &Message,
     shortcode: &str,
-    media_info: &MediaInfo,
+    instagram_media: &InstagramMedia,
 ) -> HandlerResult<()> {
-    let media_info_clone = media_info.clone();
+    let instagram_media_clone = instagram_media.clone();
 
     dialogue
         .update(DialogueState::ConfirmDownload {
             shortcode: shortcode.to_string(),
-            media_info: media_info_clone,
+            instagram_media: instagram_media_clone,
         })
         .await?;
 
-    show_media_preview(bot, msg, processing_msg, &media_info).await?;
+    show_media_preview(bot, msg, processing_msg, &instagram_media).await?;
 
     Ok(())
 }

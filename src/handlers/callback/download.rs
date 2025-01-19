@@ -11,11 +11,8 @@ use teloxide::types::MaybeInaccessibleMessage;
 
 use crate::{
     error::HandlerResult,
-    services::{
-        cache::CacheService,
-        dialogue::DialogueState,
-        instagram::{ContentType, MediaContent, PostContent},
-    },
+    handlers::RequestContext,
+    services::{cache::CacheService, dialogue::DialogueState},
     utils::keyboard,
 };
 
@@ -44,9 +41,15 @@ pub(super) async fn handle_callback_confirm_download(
     bot: &Throttle<Bot>,
     dialogue: Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     message: MaybeInaccessibleMessage,
+    ctx: RequestContext,
 ) -> HandlerResult<()> {
     info!("handle_callback_confirm_download");
-    if let Some(DialogueState::ConfirmDownload { shortcode, media_info }) = dialogue.get().await? {
+
+    if let Some(DialogueState::ConfirmDownload {
+        shortcode,
+        instagram_media,
+    }) = dialogue.get().await?
+    {
         bot.delete_message(message.chat().id, message.id()).await?;
         let download_msg = bot
             .send_message(message.chat().id, t!("callbacks.download.downloading"))
@@ -54,29 +57,50 @@ pub(super) async fn handle_callback_confirm_download(
 
         bot.delete_message(message.chat().id, download_msg.id).await?;
 
-        // Cache the media info in Redis
-        CacheService::set_media_info(&shortcode, &media_info).await?;
+        CacheService::cache_media_to_redis(
+            &ctx.telegram_user_id.to_string(),
+            &instagram_media.author.username,
+            &shortcode,
+            &instagram_media,
+        )
+        .await?;
 
-        match media_info.content {
-            MediaContent::Post(PostContent::Single { url, content_type }) => {
-                let _ = match content_type {
-                    // TODO add caption and meta data etc
-                    ContentType::Image => bot.send_photo(message.chat().id, InputFile::url(url)).await?,
-                    ContentType::Reel => bot.send_video(message.chat().id, InputFile::url(url)).await?,
-                };
-            }
-            MediaContent::Post(PostContent::Carousel { items }) => {
+        match &instagram_media.content {
+            crate::services::instagram::InstagramContent::Single(media_item) => match media_item.media_type {
+                crate::services::instagram::MediaType::Image => {
+                    bot.send_photo(message.chat().id, InputFile::url(media_item.url.clone()))
+                        .await?;
+                }
+                crate::services::instagram::MediaType::Video => {
+                    bot.send_video(message.chat().id, InputFile::url(media_item.url.clone()))
+                        .await?;
+                }
+            },
+            crate::services::instagram::InstagramContent::Multiple(items) => {
                 let media_group = items
                     .into_iter()
-                    .map(|item| match item.content_type {
-                        ContentType::Image => InputMedia::Photo(InputMediaPhoto::new(InputFile::url(item.url))),
-                        ContentType::Reel => InputMedia::Video(InputMediaVideo::new(InputFile::url(item.url))),
+                    .map(|item| match item.media_type {
+                        crate::services::instagram::MediaType::Image => {
+                            InputMedia::Photo(InputMediaPhoto::new(InputFile::url(item.url.clone())))
+                        }
+                        crate::services::instagram::MediaType::Video => {
+                            InputMedia::Video(InputMediaVideo::new(InputFile::url(item.url.clone())))
+                        }
                     })
                     .collect::<Vec<_>>();
 
                 bot.send_media_group(message.chat().id, media_group).await?;
             }
-            MediaContent::Story(_story_content) => todo!(),
+            crate::services::instagram::InstagramContent::Story(media_item) => match media_item.media_type {
+                crate::services::instagram::MediaType::Image => {
+                    bot.send_photo(message.chat().id, InputFile::url(media_item.url.clone()))
+                        .await?;
+                }
+                crate::services::instagram::MediaType::Video => {
+                    bot.send_video(message.chat().id, InputFile::url(media_item.url.clone()))
+                        .await?;
+                }
+            },
         }
     }
 

@@ -46,7 +46,6 @@ pub struct TelegramConfig(pub String);
 
 #[derive(Clone, Debug)]
 pub struct InstagramConfig {
-    pub api_endpoint: String,
     pub doc_id: String,
 }
 
@@ -133,9 +132,6 @@ pub fn build_config(secret_store: &SecretStore) -> BotResult<AppConfig> {
                 .ok_or_else(|| BotError::SecretKeyError("Missing TELEGRAM_BOT_TOKEN".to_string()))?,
         ),
         instagram: InstagramConfig {
-            api_endpoint: secret_store
-                .get("INSTAGRAM_API_ENDPOINT")
-                .ok_or_else(|| BotError::SecretKeyError("Missing INSTAGRAM_API_ENDPOINT".to_string()))?,
             doc_id: secret_store
                 .get("INSTAGRAM_DOC_ID")
                 .ok_or_else(|| BotError::SecretKeyError("Missing INSTAGRAM_DOC_ID".to_string()))?,

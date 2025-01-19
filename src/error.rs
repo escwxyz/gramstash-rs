@@ -59,6 +59,16 @@ pub enum InstagramError {
     ApiError(String),
     #[error("Content not found: {0}")]
     ContentNotFound(String),
+    #[error("Max attempts reached: {0}")]
+    MaxAttemptsReached(String),
+    #[error("Bad request: {0}")]
+    BadRequest(String),
+    #[error("Not found: {0}")]
+    NotFound(String),
+    #[error("Login required")]
+    LoginRequired,
+    #[error("Too many requests")]
+    TooManyRequests,
 }
 
 #[derive(Debug, thiserror::Error)]

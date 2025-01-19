@@ -13,7 +13,7 @@ use crate::{
     state::AppState,
 };
 
-use super::instagram::MediaInfo;
+use super::instagram::InstagramMedia;
 
 #[derive(Clone, Default, Serialize, Deserialize, Debug)]
 pub enum DialogueState {
@@ -23,7 +23,7 @@ pub enum DialogueState {
     AwaitingDownloadLink(MessageId),
     ConfirmDownload {
         shortcode: String,
-        media_info: MediaInfo,
+        instagram_media: InstagramMedia,
     },
     // Authentication
     AwaitingUsername(MessageId),

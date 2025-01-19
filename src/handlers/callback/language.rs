@@ -59,7 +59,7 @@ pub async fn handle_callback_language_change(
         "ask_for_download_link" => {
             super::download::handle_callback_asking_for_download_link(bot, dialogue, message).await?
         }
-        "confirm_download" => super::download::handle_callback_confirm_download(bot, dialogue, message).await?,
+        "confirm_download" => super::download::handle_callback_confirm_download(bot, dialogue, message, ctx).await?,
         "cancel_download" => super::download::handle_callback_cancel_download(bot, message).await?,
 
         // profile

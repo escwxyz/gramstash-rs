@@ -169,6 +169,7 @@ impl InteractionService {
         // Commit transaction
         tx.commit().await.map_err(|e| BotError::TursoError(e.to_string()))?;
 
+        // TODO: Turso error: Hrana: `stream error: `Error { message: "SQLite error: database is locked", code: "SQLITE_BUSY" }``
         Ok(())
     }
 }

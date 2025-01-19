@@ -1,7 +1,10 @@
 use std::{sync::Arc, time::Duration};
 
 use chrono::Utc;
-use reqwest::cookie::{CookieStore, Jar};
+use reqwest::{
+    cookie::{CookieStore, Jar},
+    Client,
+};
 use serde::Deserialize;
 use url::Url;
 
@@ -35,7 +38,7 @@ pub struct Credentials {
 }
 
 pub struct AuthService {
-    pub client: reqwest::Client,
+    pub client: Client,
     pub cookie_jar: Arc<Jar>,
 }
 
@@ -48,7 +51,7 @@ impl AuthService {
         Ok(Self { client, cookie_jar })
     }
 
-    pub fn restore_cookies(&mut self, session: &SessionData) -> BotResult<()> {
+    pub fn restore_cookies(&mut self, session: &SessionData) -> BotResult<Arc<Jar>> {
         info!("Restoring cookies...");
         self.cookie_jar = Arc::new(Jar::default());
 
@@ -81,7 +84,7 @@ impl AuthService {
 
         self.client = Self::create_client(Arc::clone(&self.cookie_jar))?;
 
-        Ok(())
+        Ok(Arc::clone(&self.cookie_jar))
     }
 
     pub async fn login(&self, credentials: Credentials) -> BotResult<SessionData> {
@@ -177,9 +180,10 @@ impl AuthService {
             .client
             .post("https://www.instagram.com/api/v1/web/accounts/login/ajax/")
             .header("X-CSRFToken", csrf_token)
-            .header("X-IG-App-ID", "936619743392459")
-            .header("X-ASBD-ID", "198387")
-            .header("X-IG-WWW-Claim", "0")
+            // ! These parts are used for iPhone headers
+            // .header("X-IG-App-ID", "936619743392459")
+            // .header("X-ASBD-ID", "198387")
+            // .header("X-IG-WWW-Claim", "0")
             .header("Content-Type", "application/x-www-form-urlencoded")
             .form(&form_data)
             .send()

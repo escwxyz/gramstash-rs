@@ -42,7 +42,7 @@ async fn handle_callback(
         }
         "confirm_download" => {
             interaction.set_last_interface(ctx.telegram_user_id.to_string(), "confirm_download");
-            download::handle_callback_confirm_download(&bot, dialogue, message).await?
+            download::handle_callback_confirm_download(&bot, dialogue, message, ctx).await?
         }
         "cancel_download" => {
             interaction.set_last_interface(ctx.telegram_user_id.to_string(), "cancel_download");

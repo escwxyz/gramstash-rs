@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod cache;
 pub mod dialogue;
+pub mod http;
 pub mod instagram;
 pub mod interaction;
 pub mod language;
