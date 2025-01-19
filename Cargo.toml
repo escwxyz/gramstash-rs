@@ -25,7 +25,7 @@ regex = "1.11.1"
 reqwest = { version = "0.11.27", features = ["json", "socks", "cookies"] }
 rust-i18n = "3.1.2"
 serde = { version = "1.0.216", features = ["derive"] }
-serde_json = "1.0.134"
+serde_json = "1.0.136"
 sha2 = "0.10"
 shuttle-runtime = "0.51.0"
 shuttle-turso = "0.51.0"
