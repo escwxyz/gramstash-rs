@@ -12,7 +12,7 @@ use teloxide::types::MaybeInaccessibleMessage;
 use crate::{
     error::HandlerResult,
     handlers::RequestContext,
-    services::{cache::CacheService, dialogue::DialogueState},
+    services::{cache::CacheService, dialogue::DialogueState, instagram::InstagramContent},
     utils::keyboard,
 };
 
@@ -46,7 +46,7 @@ pub(super) async fn handle_callback_confirm_download(
     info!("handle_callback_confirm_download");
 
     if let Some(DialogueState::ConfirmDownload {
-        shortcode,
+        identifier,
         instagram_media,
     }) = dialogue.get().await?
     {
@@ -57,13 +57,18 @@ pub(super) async fn handle_callback_confirm_download(
 
         bot.delete_message(message.chat().id, download_msg.id).await?;
 
-        CacheService::cache_media_to_redis(
-            &ctx.telegram_user_id.to_string(),
-            &instagram_media.author.username,
-            &shortcode,
-            &instagram_media,
-        )
-        .await?;
+        let is_story = matches!(instagram_media.content, InstagramContent::Story(_));
+
+        if !is_story {
+            // Cache the media item to redis if it's not a story, story is already cached in the story fetching process
+            CacheService::cache_media_to_redis(
+                &ctx.telegram_user_id.to_string(),
+                &instagram_media.author.username,
+                &identifier,
+                &instagram_media,
+            )
+            .await?;
+        }
 
         match &instagram_media.content {
             crate::services::instagram::InstagramContent::Single(media_item) => match media_item.media_type {

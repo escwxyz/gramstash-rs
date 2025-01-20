@@ -22,7 +22,7 @@ pub enum DialogueState {
     // Download
     AwaitingDownloadLink(MessageId),
     ConfirmDownload {
-        shortcode: String,
+        identifier: String,
         instagram_media: InstagramMedia,
     },
     // Authentication

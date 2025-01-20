@@ -13,7 +13,7 @@ use super::cache::CacheService;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum InstagramIdentifier {
-    Story { username: String, shortcode: String },
+    Story { username: String, story_id: String },
     Post { shortcode: String },
     Reel { shortcode: String },
 }
@@ -319,6 +319,7 @@ pub struct GraphStoryItemImage {
     pub id: String,
     pub display_url: String,
     pub taken_at_timestamp: i64,
+    // pub expiring_at_timestamp: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -382,7 +383,7 @@ impl InstagramService {
         match path_segments.as_slice() {
             ["stories", username, story_id] => Ok(InstagramIdentifier::Story {
                 username: username.to_string(),
-                shortcode: story_id.to_string(),
+                story_id: story_id.to_string(),
             }),
             ["p", shortcode, ..] => Ok(InstagramIdentifier::Post {
                 shortcode: shortcode.to_string(),
@@ -407,6 +408,7 @@ impl InstagramService {
         let data = self.doc_id_graphql_query(&doc_id, variables).await?;
         self.parse_post_response(data)
     }
+
     pub async fn get_story(
         &self,
         telegram_user_id: &str,
@@ -418,27 +420,18 @@ impl InstagramService {
             return Ok(cached);
         }
 
-        // First, fetch user IDs from stories feed
-        let user_ids = self.fetch_user_ids(http).await?;
+        // Fetch all user ids or only the target user id
+        let user_ids = self.fetch_user_ids(http, Some(target_instagram_username)).await?;
 
-        // Find the user ID that matches our target username
+        // Fetch all stories belonging to the user ids
         let stories = self.fetch_stories(http, user_ids).await?;
 
-        // Process and cache all stories from all reels
-        for reel in stories {
-            // Skip reels that don't match our target username
-            if reel.owner.username != target_instagram_username {
-                continue;
-            }
-
-            for item in reel.items {
-                let media: InstagramMedia = item.try_into()?;
-
-                // Cache each story
+        if let Some(reel) = stories.first() {
+            for item in reel.items.iter() {
+                let media: InstagramMedia = item.clone().try_into()?;
                 CacheService::cache_media_to_redis(telegram_user_id, target_instagram_username, &media.id, &media)
                     .await?;
 
-                // If this is the story we're looking for, return it
                 if media.id == story_id {
                     return Ok(media);
                 }
@@ -455,7 +448,12 @@ impl InstagramService {
     }
 
     /// Fetch user IDs from the stories feed
-    async fn fetch_user_ids(&self, http: &HttpService) -> BotResult<Vec<String>> {
+    async fn fetch_user_ids(
+        &self,
+        http: &HttpService,
+        target_instagram_username: Option<&str>,
+    ) -> BotResult<Vec<String>> {
+        info!("Fetching user IDs...");
         let variables = serde_json::json!({
             "only_stories": true
         });
@@ -475,16 +473,49 @@ impl InstagramService {
                 )))
             })?;
 
+        // {
+        //     "node": {
+        //       "can_reply": true,
+        //       "expiring_at": 1737431150,
+        //       "id": "2267629874",
+        //       "latest_reel_media": 1737295160,
+        //       "muted": false,
+        //       "prefetch_count": 0,
+        //       "ranked_position": 2,
+        //       "seen": null,
+        //       "seen_ranked_position": 2,
+        //       "user": {
+        //         "id": "2267629874",
+        //         "profile_pic_url": "https://scontent-lax3-2.cdninstagram.com/v/t51.2885-19/462178502_1075515874120935_2177629506287086586_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_ht=scontent-lax3-2.cdninstagram.com&_nc_cat=103&_nc_ohc=jT9Z65UUNlQQ7kNvgEFuG-i&_nc_gid=3bf0da0658334e07baa3647812cf6c9e&edm=APrQDZQBAAAA&ccb=7-5&oh=00_AYBJQoqI8fWIsVpysHZ8v6VSQfl66ebI8QVu1zG1DuZIQQ&oe=67937F46&_nc_sid=01a934",
+        //         "username": "yvweii_"
+        //       }
+        //     }
+        //   },
+
+        // Use iterator chaining for cleaner collection
         let user_ids: Vec<String> = edges
             .iter()
-            .filter_map(|edge| edge["node"]["id"].as_str().map(String::from))
+            .filter_map(|edge| {
+                let id = edge["node"]["id"].as_str()?;
+                let username = edge["node"]["user"]["username"].as_str()?;
+
+                match target_instagram_username {
+                    Some(target) if username == target => Some(id.to_string()),
+                    None => Some(id.to_string()),
+                    _ => None,
+                }
+            })
             .collect();
 
         Ok(user_ids)
     }
 
     /// Fetch stories based on user IDs
-    async fn fetch_stories(&self, http: &HttpService, instagram_user_ids: Vec<String>) -> BotResult<Vec<GraphReel>> {
+    pub async fn fetch_stories(
+        &self,
+        http: &HttpService,
+        instagram_user_ids: Vec<String>,
+    ) -> BotResult<Vec<GraphReel>> {
         let variables = serde_json::json!({
             "reel_ids": instagram_user_ids,
             "precomposed_overlay": false

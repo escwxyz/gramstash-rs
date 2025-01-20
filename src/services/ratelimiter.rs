@@ -16,13 +16,13 @@ impl RateLimiter {
         })
     }
 
-    pub async fn check_rate_limit(&self, telegram_user_id: &str, shortcode: &str) -> BotResult<bool> {
+    pub async fn check_rate_limit(&self, telegram_user_id: &str, identifier: &str) -> BotResult<bool> {
         let mut conn = AppState::get()?.redis.get_connection().await?;
 
         let key = format!(
             "rate_limit:{}:{}:{}",
             telegram_user_id,
-            shortcode,
+            identifier,
             chrono::Utc::now().date_naive()
         );
 

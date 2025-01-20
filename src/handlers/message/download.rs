@@ -1,4 +1,4 @@
-use crate::error::{BotError, HandlerResult};
+use crate::error::{BotError, BotResult, HandlerResult};
 
 use crate::handlers::RequestContext;
 use crate::services::cache::CacheService;
@@ -22,6 +22,8 @@ pub(super) async fn handle_message_awaiting_download_link(
     ctx: RequestContext,
 ) -> HandlerResult<()> {
     info!("handle_message_awaiting_download_link");
+
+    let telegram_user_id = ctx.telegram_user_id.to_string();
 
     bot.delete_message(msg.chat.id, message_id).await?; // TODO
 
@@ -48,11 +50,11 @@ pub(super) async fn handle_message_awaiting_download_link(
 
     let parsed_url = parse_url(&url)?;
 
-    let (shortcode, content_type, instagram_username) = {
+    let (identifier, content_type, target_instagram_username) = {
         let identifier = AppState::get()?.instagram.parse_instagram_url(&parsed_url)?;
 
         match identifier {
-            InstagramIdentifier::Story { username, shortcode } => (shortcode, "story", Some(username)),
+            InstagramIdentifier::Story { username, story_id } => (story_id, "story", Some(username)),
             InstagramIdentifier::Post { shortcode } => (shortcode, "post", None),
             InstagramIdentifier::Reel { shortcode } => (shortcode, "reel", None),
         }
@@ -60,17 +62,14 @@ pub(super) async fn handle_message_awaiting_download_link(
 
     // check cache first
 
-    let cached_media_info = CacheService::get_media_from_redis(&ctx.telegram_user_id.to_string(), &shortcode).await?;
+    let cached_instagram_media = CacheService::get_media_from_redis(&telegram_user_id, &identifier).await?;
 
-    info!("Checking rate limit for shortcode: {}", shortcode);
+    info!("Checking rate limit for: {}", identifier);
 
     // check rate limit
     let rate_limiter = RateLimiter::new()?;
 
-    if !rate_limiter
-        .check_rate_limit(&ctx.telegram_user_id.to_string(), &shortcode)
-        .await?
-    {
+    if !rate_limiter.check_rate_limit(&telegram_user_id, &identifier).await? {
         bot.edit_message_text(
             msg.chat.id,
             processing_msg.id,
@@ -85,32 +84,51 @@ pub(super) async fn handle_message_awaiting_download_link(
         return Ok(());
     }
 
-    if let Some(media_info) = cached_media_info {
-        info!("Cache hit for shortcode: {}", shortcode);
-        process_media_content(&bot, &dialogue, &msg, &processing_msg, &shortcode, &media_info).await?;
+    if let Some(instagram_media) = cached_instagram_media {
+        info!("Cache hit for identifier: {}", identifier);
+        process_media_content(&bot, &dialogue, &msg, &processing_msg.id, &identifier, &instagram_media).await?;
         return Ok(());
     }
 
     let state = AppState::get()?;
 
-    let media_info = match content_type {
+    let (instagram_media, message_to_edit): (BotResult<InstagramMedia>, MessageId) = match content_type {
         "story" => {
+            let validating_msg = bot
+                .edit_message_text(
+                    msg.chat.id,
+                    processing_msg.id,
+                    t!("messages.download.download_story.validating_session"),
+                )
+                .await?;
+
             let session_data = state.session.get_valid_session(&msg.chat.id.to_string()).await?;
 
-            // todo!()
             if let Some(session_data) = session_data {
                 let mut auth_service = state.auth.lock().await;
                 auth_service.restore_cookies(&session_data)?;
                 let http = HttpService::new(false, DeviceType::Desktop, Some(auth_service.client.clone()))?;
-                state
-                    .instagram
-                    .get_story(
-                        &ctx.telegram_user_id.to_string(),
-                        &instagram_username.unwrap_or_default(),
-                        &shortcode,
-                        &http,
+
+                let fetching_stories_msg = bot
+                    .edit_message_text(
+                        msg.chat.id,
+                        validating_msg.id,
+                        t!("messages.download.download_story.fetching_stories"),
                     )
-                    .await
+                    .await?;
+
+                (
+                    state
+                        .instagram
+                        .get_story(
+                            &telegram_user_id,
+                            &target_instagram_username.unwrap_or_default(),
+                            &identifier,
+                            &http,
+                        )
+                        .await,
+                    fetching_stories_msg.id,
+                )
             } else {
                 bot.edit_message_text(msg.chat.id, processing_msg.id, t!("messages.download.session_expired"))
                     .reply_markup(keyboard::ProfileMenu::get_profile_menu_inline_keyboard(false))
@@ -126,21 +144,22 @@ pub(super) async fn handle_message_awaiting_download_link(
         }
         _ => {
             let instagram_service = state.instagram;
-            instagram_service.fetch_post_info(&shortcode).await
+            (instagram_service.fetch_post_info(&identifier).await, processing_msg.id)
         }
     };
 
-    match media_info {
+    match instagram_media {
         Ok(instagram_media) => {
-            process_media_content(&bot, &dialogue, &msg, &processing_msg, &shortcode, &instagram_media).await?;
+            process_media_content(&bot, &dialogue, &msg, &message_to_edit, &identifier, &instagram_media).await?;
         }
         Err(e) => {
             let msg = bot
                 .edit_message_text(
                     msg.chat.id,
-                    processing_msg.id,
-                    &format!("❌ Error: {}\n\nPlease try again.", e), // TODO: translate & reply_markup
+                    message_to_edit,
+                    t!("messages.download.download_failed", error = e.to_string()),
                 )
+                .reply_markup(keyboard::DownloadMenu::get_download_menu_inline_keyboard())
                 .await?;
 
             dialogue
@@ -153,11 +172,10 @@ pub(super) async fn handle_message_awaiting_download_link(
     Ok(())
 }
 
-// TODO
 async fn show_media_preview(
     bot: &Throttle<Bot>,
     msg: &Message,
-    processing_msg: &Message,
+    processing_msg_id: &MessageId,
     instagram_media: &InstagramMedia,
 ) -> ResponseResult<()> {
     let preview_text = match &instagram_media.content {
@@ -214,7 +232,7 @@ async fn show_media_preview(
         }
     };
 
-    bot.edit_message_text(msg.chat.id, processing_msg.id, preview_text)
+    bot.edit_message_text(msg.chat.id, *processing_msg_id, preview_text)
         .reply_markup(keyboard::DownloadMenu::get_confirm_download_keyboard())
         .await?;
 
@@ -225,20 +243,20 @@ async fn process_media_content(
     bot: &Throttle<Bot>,
     dialogue: &Dialogue<DialogueState, ErasedStorage<DialogueState>>,
     msg: &Message,
-    processing_msg: &Message,
-    shortcode: &str,
+    processing_msg_id: &MessageId,
+    identifier: &str,
     instagram_media: &InstagramMedia,
 ) -> HandlerResult<()> {
     let instagram_media_clone = instagram_media.clone();
 
     dialogue
         .update(DialogueState::ConfirmDownload {
-            shortcode: shortcode.to_string(),
+            identifier: identifier.to_string(),
             instagram_media: instagram_media_clone,
         })
         .await?;
 
-    show_media_preview(bot, msg, processing_msg, &instagram_media).await?;
+    show_media_preview(bot, msg, processing_msg_id, &instagram_media).await?;
 
     Ok(())
 }
