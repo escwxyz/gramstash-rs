@@ -24,7 +24,7 @@ redis = { version = "0.24", default-features = false, features = ["tokio-comp", 
 regex = "1.11.1"
 reqwest = { version = "0.12.12", features = ["json", "socks", "cookies"] }
 rust-i18n = "3.1.2"
-serde = { version = "1.0.216", features = ["derive"] }
+serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.134"
 sha2 = "0.10"
 shuttle-runtime = "0.51.0"
