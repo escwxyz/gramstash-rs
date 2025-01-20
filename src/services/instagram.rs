@@ -154,17 +154,19 @@ impl TryFrom<GraphStoryItem> for InstagramMedia {
     type Error = BotError;
 
     fn try_from(story: GraphStoryItem) -> Result<Self, Self::Error> {
-        let (id, media_type, url, timestamp) = match story {
+        let (id, media_type, url, timestamp, owner) = match story {
             GraphStoryItem::Image(GraphStoryItemImage {
                 id,
                 display_url,
                 taken_at_timestamp,
+                owner,
                 ..
-            }) => (id, MediaType::Image, display_url, taken_at_timestamp),
+            }) => (id, MediaType::Image, display_url, taken_at_timestamp, owner),
             GraphStoryItem::Video(GraphStoryItemVideo {
                 id,
                 video_resources,
                 taken_at_timestamp,
+                owner,
                 ..
             }) => {
                 let video_url = video_resources
@@ -172,7 +174,7 @@ impl TryFrom<GraphStoryItem> for InstagramMedia {
                     .ok_or_else(|| BotError::InvalidUrl("No video resources found".into()))?
                     .src
                     .clone();
-                (id, MediaType::Video, video_url, taken_at_timestamp)
+                (id, MediaType::Video, video_url, taken_at_timestamp, owner)
             }
         };
 
@@ -180,8 +182,8 @@ impl TryFrom<GraphStoryItem> for InstagramMedia {
             id: id.clone(),
             shortcode: None,
             author: InstagramAuthor {
-                id: String::new(), // Story items don't contain author info directly
-                username: String::new(),
+                id: owner.id,
+                username: owner.username,
             },
             timestamp: DateTime::from_timestamp(timestamp, 0).unwrap(),
             caption: None,
@@ -319,7 +321,7 @@ pub struct GraphStoryItemImage {
     pub id: String,
     pub display_url: String,
     pub taken_at_timestamp: i64,
-    // pub expiring_at_timestamp: i64,
+    pub owner: Owner,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -328,6 +330,7 @@ pub struct GraphStoryItemVideo {
     pub display_url: String,
     pub video_resources: Vec<VideoResource>,
     pub taken_at_timestamp: i64,
+    pub owner: Owner,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

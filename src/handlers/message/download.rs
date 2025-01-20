@@ -223,8 +223,7 @@ async fn show_media_preview(
         }
         crate::services::instagram::InstagramContent::Story(_) => {
             t!(
-                "messages.download.media_preview_story",
-                count = 1,
+                "messages.download.media_preview_signle_story",
                 username = instagram_media.author.username,
                 timestamp = instagram_media.timestamp,
                 caption = instagram_media.caption.clone().unwrap_or_default()
