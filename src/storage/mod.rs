@@ -41,6 +41,7 @@ pub trait Cache: Send + Sync + 'static {
         ttl: Option<Duration>,
     ) -> Result<(), StorageError>;
     async fn del(&self, key: &str) -> Result<(), StorageError>;
+    async fn keys(&self, pattern: &str) -> Result<Vec<String>, StorageError>;
 }
 
 #[derive(Clone)]

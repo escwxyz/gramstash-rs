@@ -69,4 +69,10 @@ impl Cache for RedisClient {
         conn.del::<_, i32>(key).await?;
         Ok(())
     }
+
+    async fn keys(&self, pattern: &str) -> Result<Vec<String>, StorageError> {
+        let mut conn = self.get_connection().await?;
+        let keys: Vec<String> = conn.keys(pattern).await?;
+        Ok(keys)
+    }
 }

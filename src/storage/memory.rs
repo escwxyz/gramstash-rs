@@ -7,9 +7,13 @@ pub struct MemoryCache<T: Clone> {
 }
 
 impl<T: Clone> MemoryCache<T> {
-    pub fn new(capacity: usize) -> Self {
-        Self {
-            cache: Arc::new(DashMap::with_capacity(capacity)),
+    pub fn new(capacity: usize) -> Option<Self> {
+        if capacity == 0 {
+            None
+        } else {
+            Some(Self {
+                cache: Arc::new(DashMap::with_capacity(capacity)),
+            })
         }
     }
 
@@ -29,7 +33,11 @@ impl<T: Clone> MemoryCache<T> {
         self.cache.remove(key);
     }
 
-    // pub fn iter(&self) -> impl Iterator<Item = (String, T)> {
-    //     self.cache.iter()
-    // }
+    pub fn keys(&self, pattern: &str) -> Vec<String> {
+        self.cache
+            .iter()
+            .filter(|entry| entry.key().starts_with(pattern))
+            .map(|entry| entry.key().clone())
+            .collect()
+    }
 }
