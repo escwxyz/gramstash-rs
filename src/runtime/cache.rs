@@ -27,82 +27,149 @@ impl Default for CacheOptions {
     }
 }
 
-#[derive(Clone)]
-pub struct CacheManager<T: Clone> {
-    memory: Option<MemoryCache<T>>,
-    redis: RedisClient,
+#[derive(Debug, thiserror::Error)]
+pub enum CacheError {
+    #[error("Cache not found")]
+    NotFound,
 }
 
-impl<T> CacheManager<T>
-where
-    T: Clone + Serialize + DeserializeOwned + Send + Sync + 'static,
-{
-    pub async fn new(redis_url: &str, memory_capacity: usize) -> Result<Self, StorageError> {
-        let redis = RedisClient::new(redis_url).await?;
+#[derive(Clone)]
+pub struct CacheManager {
+    memory: Option<MemoryCache<Vec<u8>>>,
+    redis: Option<RedisClient>,
+}
+
+impl CacheManager {
+    pub async fn new(redis_url: Option<&str>, memory_capacity: usize) -> Result<Self, StorageError> {
+        let redis = if let Some(url) = redis_url {
+            Some(RedisClient::new(&url).await?)
+        } else {
+            None
+        };
         Ok(Self {
             memory: MemoryCache::new(memory_capacity),
             redis,
         })
     }
 
-    pub async fn get(&self, key: &str, options: &CacheOptions) -> Result<Option<T>, StorageError> {
+    pub async fn get<T: DeserializeOwned>(&self, key: &str, options: &CacheOptions) -> Result<Option<T>, StorageError> {
         let key = self.build_key(key, options);
 
-        match options.cache_type {
-            CacheType::Memory => Ok(self.memory.as_ref().unwrap().get(&key).map(|v| v.clone())),
-            CacheType::Redis => self.redis.get(&key).await,
-
-            CacheType::Both => {
-                if let Some(value) = self.memory.as_ref().unwrap().get(&key) {
-                    Ok(Some(value.clone()))
+        match (options.cache_type, &self.memory, &self.redis) {
+            // Memory only
+            (CacheType::Memory, Some(memory), _) => {
+                if let Some(bytes) = memory.get(&key) {
+                    Ok(serde_json::from_slice::<T>(&bytes).map(Some).unwrap())
                 } else {
-                    if let Some(value) = self.redis.get::<T>(&key).await? {
-                        self.memory.as_ref().unwrap().set(&key, &value);
-                        Ok(Some(value))
-                    } else {
-                        Ok(None)
-                    }
+                    Ok(None)
                 }
             }
+            // Redis only
+            (CacheType::Redis, _, Some(redis)) => redis.get(&key).await,
+            // Both caches
+            (CacheType::Both, Some(memory), Some(redis)) => {
+                if let Some(bytes) = memory.get(&key) {
+                    return Ok(serde_json::from_slice::<T>(&bytes).map(Some).unwrap());
+                }
+                if let Some(value) = redis.get(&key).await? {
+                    memory.set(&key, &value);
+                    return Ok(serde_json::from_slice::<T>(&value).map(Some).unwrap());
+                }
+                Ok(None)
+            }
+            // Fallback to available cache
+            (CacheType::Both, Some(memory), None) => {
+                if let Some(bytes) = memory.get(&key) {
+                    return Ok(serde_json::from_slice::<T>(&bytes).map(Some).unwrap());
+                }
+                Ok(None)
+            }
+            (CacheType::Both, None, Some(redis)) => redis.get(&key).await,
+            // No cache available
+            _ => Ok(None),
         }
     }
 
-    pub async fn set(&self, key: &str, value: T, options: &CacheOptions) -> Result<(), StorageError> {
+    pub async fn set<T: Serialize>(&self, key: &str, value: T, options: &CacheOptions) -> Result<(), StorageError> {
         let key = self.build_key(key, options);
 
-        match options.cache_type {
-            CacheType::Memory => {
-                self.memory.as_ref().unwrap().set(&key, &value);
+        match (options.cache_type, &self.memory, &self.redis) {
+            // Memory only
+            (CacheType::Memory, Some(memory), _) => {
+                let bytes = serde_json::to_vec(&value).map_err(StorageError::from)?;
+                memory.set(&key, &bytes);
                 Ok(())
             }
-            CacheType::Redis => self.redis.set(&key, &value, options.ttl).await,
-            CacheType::Both => {
-                self.memory.as_ref().unwrap().set(&key, &value);
-                self.redis.set(&key, &value, options.ttl).await
+            // Redis only
+            (CacheType::Redis, _, Some(redis)) => {
+                let bytes = serde_json::to_vec(&value).map_err(StorageError::from)?;
+                redis.set(&key, &bytes, options.ttl).await
             }
+            // Both caches
+            (CacheType::Both, Some(memory), Some(redis)) => {
+                let bytes = serde_json::to_vec(&value).map_err(StorageError::from)?;
+                memory.set(&key, &bytes);
+                redis.set(&key, &bytes, options.ttl).await
+            }
+            // Fallback to available cache
+            (CacheType::Both, Some(memory), None) => {
+                let bytes = serde_json::to_vec(&value).map_err(StorageError::from)?;
+                memory.set(&key, &bytes);
+                Ok(())
+            }
+            (CacheType::Both, None, Some(redis)) => {
+                let bytes = serde_json::to_vec(&value).map_err(StorageError::from)?;
+                redis.set(&key, &bytes, options.ttl).await
+            }
+            // No cache available
+            _ => Ok(()), // TODO: return error
         }
     }
 
     pub async fn del(&self, key: &str, options: &CacheOptions) -> Result<(), StorageError> {
         let key = self.build_key(key, options);
 
-        match options.cache_type {
-            CacheType::Memory => {
-                self.memory.as_ref().unwrap().del(&key);
+        match (options.cache_type, &self.memory, &self.redis) {
+            // Memory only
+            (CacheType::Memory, Some(memory), _) => {
+                memory.del(&key);
                 Ok(())
             }
-            CacheType::Redis => self.redis.del(&key).await,
-            CacheType::Both => {
-                self.memory.as_ref().unwrap().del(&key);
-                self.redis.del(&key).await
+            // Redis only
+            (CacheType::Redis, _, Some(redis)) => redis.del(&key).await,
+            // Both caches
+            (CacheType::Both, Some(memory), Some(redis)) => {
+                memory.del(&key);
+                redis.del(&key).await
             }
+            // Fallback to available cache
+            (CacheType::Both, Some(memory), None) => {
+                memory.del(&key);
+                Ok(())
+            }
+            (CacheType::Both, None, Some(redis)) => redis.del(&key).await,
+            // No cache available
+            _ => Ok(()), // TODO: return error
         }
     }
 
     pub async fn keys(&self, pattern: &str, options: &CacheOptions) -> Result<Vec<String>, StorageError> {
-        match options.cache_type {
-            CacheType::Memory => Ok(self.memory.as_ref().unwrap().keys(pattern)),
-            CacheType::Redis | CacheType::Both => self.redis.keys(pattern).await,
+        match (options.cache_type, &self.memory, &self.redis) {
+            // Memory only
+            (CacheType::Memory, Some(memory), _) => Ok(memory.keys(pattern)),
+            // Redis only
+            (CacheType::Redis, _, Some(redis)) => redis.keys(pattern).await,
+            // Both caches
+            (CacheType::Both, Some(memory), Some(redis)) => {
+                let memory_keys = memory.keys(pattern);
+                let redis_keys = redis.keys(pattern).await?;
+                Ok(memory_keys.into_iter().chain(redis_keys).collect())
+            }
+            // Fallback to available cache
+            (CacheType::Both, Some(memory), None) => Ok(memory.keys(pattern)),
+            (CacheType::Both, None, Some(redis)) => redis.keys(pattern).await,
+            // No cache available
+            _ => Ok(vec![]), // TODO: return error
         }
     }
 
