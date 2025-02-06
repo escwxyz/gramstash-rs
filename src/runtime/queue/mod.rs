@@ -4,7 +4,7 @@ use dashmap::DashMap;
 use priority::PriorityQueue;
 use std::sync::Arc;
 
-use crate::platform::{DownloadState, MediaFile, MediaInfo, PostDownloadState};
+use crate::platform::{DownloadState, MediaFile, PostDownloadState};
 
 use super::{
     task::{DownloadTask, PostDownloadTask, TaskWithResult},
@@ -62,12 +62,9 @@ impl TaskQueueManager {
         self.post_download_queue.pop().await
     }
 
-    pub fn add_pending_confirmation(&self, media_info: MediaInfo, context: TaskContext) {
-        let media_file: MediaFile = media_info.into();
-
+    pub fn add_pending_confirmation(&self, media_file: MediaFile, context: TaskContext) {
         let post_task = PostDownloadTask::new(media_file.clone(), context);
-
-        self.pending_confirmations.insert(media_file.identifier, post_task);
+        self.pending_confirmations.insert(media_file.id, post_task);
     }
 }
 

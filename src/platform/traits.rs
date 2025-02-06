@@ -5,24 +5,31 @@ use teloxide::{adaptors::Throttle, types::ChatId, Bot};
 
 use crate::error::HandlerResult;
 
-use super::{MediaFile, MediaInfo, Platform, PlatformError, PlatformIdentifier};
-
-pub trait IntoMediaInfo {
-    fn into_media_info(self) -> Result<MediaInfo, PlatformError>;
-}
+use super::{MediaFile, Platform, PlatformError, PlatformIdentifier};
 
 #[async_trait]
 pub trait PlatformCapability: Send + Sync + Any {
     fn as_any(&self) -> &dyn Any;
 
     fn platform_id(&self) -> Platform;
+    #[allow(unused)]
     fn platform_name(&self) -> &str;
 
     async fn parse_url(&self, url_str: &str) -> Result<PlatformIdentifier, PlatformError>;
 
-    async fn fetch_resource(&self, identifier: &PlatformIdentifier) -> HandlerResult<MediaInfo>;
+    async fn fetch_resource(&self, identifier: &PlatformIdentifier) -> HandlerResult<MediaFile>;
 
-    // 发送媒体到 Telegram，在此之前可以缓存或者上传媒体
+    #[allow(unused)]
+    async fn pre_process(
+        &self,
+        bot: &Throttle<Bot>,
+        chat_id: ChatId,
+        media_info: &MediaFile,
+    ) -> HandlerResult<MediaFile>;
+
     async fn send_to_telegram(&self, bot: &Throttle<Bot>, chat_id: ChatId, media_file: &MediaFile)
         -> HandlerResult<()>;
+
+    #[allow(unused)]
+    async fn post_process(&self, bot: &Throttle<Bot>, chat_id: ChatId, media_info: &MediaFile) -> HandlerResult<()>;
 }

@@ -33,7 +33,7 @@ use crate::{
     state::AppState,
 };
 
-use super::{model::PlatformIdentifier, MediaFile, MediaInfo, Platform, PlatformCapability, PlatformError};
+use super::{model::PlatformIdentifier, MediaFile, Platform, PlatformCapability, PlatformError};
 
 pub struct PlatformInstagram {
     http_service: HttpService,
@@ -79,7 +79,7 @@ impl PlatformCapability for PlatformInstagram {
         }
     }
 
-    async fn fetch_resource(&self, identifier: &PlatformIdentifier) -> HandlerResult<MediaInfo> {
+    async fn fetch_resource(&self, identifier: &PlatformIdentifier) -> HandlerResult<MediaFile> {
         match identifier {
             PlatformIdentifier::Instagram(InstagramIdentifier::Story {
                 username: _,
@@ -106,26 +106,43 @@ impl PlatformCapability for PlatformInstagram {
                 let response = self
                     .http_service
                     .get_json("https://www.instagram.com/graphql/query/", Some(params))
-                    .await
-                    .unwrap();
+                    .await?;
 
-                let media = response
+                // TODO: sometimes response is null when status is ok
+                // {"data": Object {"xdt_shortcode_media": Null}, "extensions": Object {"is_final": Bool(true)}, "status": String("ok")}
+
+                let media_value = response
                     .get("data")
                     .and_then(|d| d.get("xdt_shortcode_media"))
                     .ok_or_else(|| PlatformError::ParsingError("Missing xdt_shortcode_media".to_string()))?;
 
-                let media_data = serde_json::from_value::<XDTGraphMedia>(media.clone())
+                let media_data = serde_json::from_value::<XDTGraphMedia>(media_value.clone())
                     .map_err(|e| PlatformError::ParsingError(format!("Failed to deserialize media: {}", e)))?;
 
                 let media = match media_data {
-                    XDTGraphMedia::Image(media) => TryInto::<InstagramMedia>::try_into(media).unwrap(),
-                    XDTGraphMedia::Video(media) => TryInto::<InstagramMedia>::try_into(media).unwrap(),
-                    XDTGraphMedia::Sidecar(sidecar) => TryInto::<InstagramMedia>::try_into(sidecar).unwrap(),
+                    XDTGraphMedia::Image(image) => TryInto::<InstagramMedia>::try_into(image)?,
+                    XDTGraphMedia::Video(video) => TryInto::<InstagramMedia>::try_into(video)?,
+                    XDTGraphMedia::Sidecar(sidecar) => TryInto::<InstagramMedia>::try_into(sidecar)?,
                 };
 
                 return Ok(media.try_into()?);
             }
         }
+    }
+    #[allow(unused)]
+    async fn pre_process(
+        &self,
+        bot: &Throttle<Bot>,
+        chat_id: ChatId,
+        media_file: &MediaFile,
+    ) -> HandlerResult<MediaFile> {
+        // TODO
+        Ok(media_file.clone())
+    }
+    #[allow(unused)]
+    async fn post_process(&self, bot: &Throttle<Bot>, chat_id: ChatId, media_file: &MediaFile) -> HandlerResult<()> {
+        // TODO
+        Ok(())
     }
 
     async fn send_to_telegram(

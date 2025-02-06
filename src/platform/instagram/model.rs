@@ -3,9 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::platform::{
-    traits::IntoMediaInfo, MediaAuthor, MediaContentType, MediaInfo, MediaItem, MediaType, Platform, PlatformError,
-};
+use crate::platform::{MediaAuthor, MediaContentType, MediaFile, MediaFileItem, MediaType, Platform};
 
 use super::InstagramError;
 
@@ -18,25 +16,17 @@ pub enum InstagramIdentifier {
 
 // --- ---
 
-impl IntoMediaInfo for InstagramMedia {
-    fn into_media_info(self) -> Result<MediaInfo, PlatformError> {
-        Ok(self.try_into()?)
-    }
-}
-
-// InstagramMedia <=> MediaInfo
-impl TryFrom<InstagramMedia> for MediaInfo {
+// InstagramMedia <=> MediaFile
+impl TryFrom<InstagramMedia> for MediaFile {
     type Error = InstagramError;
 
     fn try_from(media: InstagramMedia) -> Result<Self, Self::Error> {
         let (content_type, items) = match media.content {
             InstagramContent::Single(item) => {
-                let media_item = MediaItem {
+                let media_item = MediaFileItem {
                     id: item.id,
                     media_type: item.media_type,
                     url: Url::parse(&item.url).map_err(|e| InstagramError::InvalidUrl(e.to_string()))?,
-                    thumbnail: Url::parse(&item.thumbnail_url)
-                        .map_err(|e| InstagramError::InvalidUrl(e.to_string()))?,
                     duration: None,
                     created_at: item.timestamp,
                 };
@@ -46,12 +36,10 @@ impl TryFrom<InstagramMedia> for MediaInfo {
                 let media_items = items
                     .into_iter()
                     .map(|item| {
-                        Ok(MediaItem {
+                        Ok(MediaFileItem {
                             id: item.id,
                             media_type: item.media_type,
                             url: Url::parse(&item.url).map_err(|e| InstagramError::InvalidUrl(e.to_string()))?,
-                            thumbnail: Url::parse(&item.thumbnail_url)
-                                .map_err(|e| InstagramError::InvalidUrl(e.to_string()))?,
                             duration: None,
                             created_at: item.timestamp,
                         })
@@ -60,12 +48,10 @@ impl TryFrom<InstagramMedia> for MediaInfo {
                 (MediaContentType::Multiple, media_items)
             }
             InstagramContent::Story(item) => {
-                let media_item = MediaItem {
+                let media_item = MediaFileItem {
                     id: item.id,
                     media_type: item.media_type,
                     url: Url::parse(&item.url).map_err(|e| InstagramError::InvalidUrl(e.to_string()))?,
-                    thumbnail: Url::parse(&item.thumbnail_url)
-                        .map_err(|e| InstagramError::InvalidUrl(e.to_string()))?,
                     duration: None,
                     created_at: item.timestamp,
                 };
@@ -73,8 +59,8 @@ impl TryFrom<InstagramMedia> for MediaInfo {
             }
         };
 
-        Ok(MediaInfo {
-            identifier: media.shortcode,
+        Ok(MediaFile {
+            id: media.shortcode,
             created_at: media.timestamp,
             title: None,
             description: media.caption,
@@ -83,6 +69,7 @@ impl TryFrom<InstagramMedia> for MediaInfo {
                 username: media.author.username,
             }),
             content_type,
+            thumbnail: Url::parse(&media.thumbnail_url).ok(),
             items,
             platform: Platform::Instagram,
         })
@@ -118,7 +105,7 @@ pub struct InstagramMediaItem {
     pub id: String,
     pub media_type: MediaType,
     pub url: String,
-    pub thumbnail_url: String,
+    pub thumbnail_url: Option<String>,
     pub timestamp: DateTime<Utc>,
 }
 
@@ -145,8 +132,8 @@ impl TryFrom<XDTGraphImage> for InstagramMedia {
             content: InstagramContent::Single(InstagramMediaItem {
                 id: image.id.clone(),
                 media_type: MediaType::Image,
-                url: image.display_url.clone(),
-                thumbnail_url: image.display_url.clone(),
+                url: image.display_url,
+                thumbnail_url: None,
                 timestamp: DateTime::from_timestamp(image.taken_at_timestamp, 0)
                     .context("Failed to parse timestamp")
                     .unwrap(),
@@ -178,8 +165,8 @@ impl TryFrom<XDTGraphVideo> for InstagramMedia {
             content: InstagramContent::Single(InstagramMediaItem {
                 id: video.id.clone(),
                 media_type: MediaType::Video,
-                url: video.video_url.clone(),
-                thumbnail_url: video.display_url.clone(),
+                url: video.video_url,
+                thumbnail_url: Some(video.display_url),
                 timestamp: DateTime::from_timestamp(video.taken_at_timestamp, 0)
                     .context("Failed to parse timestamp")
                     .unwrap(),
@@ -201,7 +188,7 @@ impl TryFrom<XDTGraphSidecar> for InstagramMedia {
                     id,
                     media_type: MediaType::Image,
                     url: display_url.clone(),
-                    thumbnail_url: display_url.clone(),
+                    thumbnail_url: Some(display_url),
                     timestamp: DateTime::from_timestamp(sidecar.taken_at_timestamp, 0).unwrap(),
                 })),
                 SidecarNode::Video {
@@ -212,12 +199,20 @@ impl TryFrom<XDTGraphSidecar> for InstagramMedia {
                 } => Some(Ok(InstagramMediaItem {
                     id,
                     media_type: MediaType::Video,
-                    url: video_url.clone(),
-                    thumbnail_url: display_url.clone(),
+                    url: video_url,
+                    thumbnail_url: Some(display_url),
                     timestamp: DateTime::from_timestamp(sidecar.taken_at_timestamp, 0).unwrap(),
                 })),
             })
             .collect::<Result<Vec<_>, InstagramError>>()?;
+        // TODO better error handling
+        let first_item = items.first().unwrap();
+        // TODO: reduce clone
+        let thumbnail_url = match first_item.media_type {
+            MediaType::Image => first_item.url.clone(),
+            MediaType::Video => first_item.clone().thumbnail_url.unwrap(),
+            MediaType::Audio => first_item.url.clone(),
+        };
 
         Ok(InstagramMedia {
             id: sidecar.id,
@@ -226,7 +221,7 @@ impl TryFrom<XDTGraphSidecar> for InstagramMedia {
                 id: sidecar.owner.id,
                 username: sidecar.owner.username,
             },
-            thumbnail_url: items.first().unwrap().thumbnail_url.clone(),
+            thumbnail_url,
             timestamp: DateTime::from_timestamp(sidecar.taken_at_timestamp, 0)
                 .context("Failed to parse timestamp")
                 .unwrap(),
@@ -293,7 +288,7 @@ impl TryFrom<GraphStoryItem> for InstagramMedia {
                 id,
                 media_type,
                 url,
-                thumbnail_url,
+                thumbnail_url: None,
                 timestamp: DateTime::from_timestamp(timestamp, 0)
                     .context("Failed to parse timestamp")
                     .unwrap(),

@@ -1,13 +1,9 @@
-use crate::{error::BotError, service::Cacheable, state::AppState};
+use crate::{error::BotError, platform::MediaFile, state::AppState};
 
-use super::{traits::IntoMediaInfo, DownloadState, Platform, PlatformCapability, PlatformError, PlatformRegistry};
+use super::{DownloadState, Platform, PlatformCapability, PlatformError, PlatformRegistry};
 
 impl PlatformRegistry {
-    pub async fn handle_download<
-        P: PlatformCapability + 'static,
-        C: IntoMediaInfo + 'static,
-        T: Cacheable + IntoMediaInfo + 'static,
-    >(
+    pub async fn handle_download<P: PlatformCapability + 'static>(
         &self,
         platform: &Platform,
         url: &str,
@@ -31,21 +27,21 @@ impl PlatformRegistry {
 
         let cache_service = AppState::get()?.service_registry.cache;
 
-        if let Some(cached) = cache_service.get::<T>(&identifier).await? {
+        if let Some(cached) = cache_service.get::<MediaFile>(&identifier).await? {
             info!("cache hit");
-            return Ok(DownloadState::Success(cached.into_media_info()?));
+            return Ok(DownloadState::Success(cached));
         }
 
         info!("cache missed");
 
         info!("fetching resource");
         match platform_service.fetch_resource(&resource).await {
-            Ok(media_info) => {
+            Ok(media_file) => {
                 info!("resource fetched");
-                Ok(DownloadState::Success(media_info))
+                Ok(DownloadState::Success(media_file))
             }
-            Err(_) => {
-                info!("resource fetch failed");
+            Err(e) => {
+                info!("resource fetch failed: {:?}", e);
                 Ok(DownloadState::Error)
             }
         }

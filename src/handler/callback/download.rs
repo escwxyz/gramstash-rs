@@ -71,12 +71,10 @@ pub(super) async fn handle_callback_confirm_download(
 ) -> HandlerResult<()> {
     info!("handle_callback_confirm_download");
 
-    if let Some(DialogueState::ConfirmDownload { media_info }) = dialogue.get().await? {
+    if let Some(DialogueState::ConfirmDownload { media_file }) = dialogue.get().await? {
         let queue_manager = &AppState::get()?.runtime.queue_manager;
 
-        let state = queue_manager
-            .handle_download_confirmation(&media_info.identifier)
-            .await?;
+        let state = queue_manager.handle_download_confirmation(&media_file.id).await?;
 
         match state {
             PostDownloadState::Success => dialogue.update(DialogueState::Start).await?,

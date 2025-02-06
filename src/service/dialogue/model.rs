@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use teloxide::types::MessageId;
 
-use crate::platform::{MediaInfo, Platform};
+use crate::platform::{MediaFile, Platform};
 
 #[derive(Clone, Default, Serialize, Deserialize, Debug)]
 pub enum DialogueState {
@@ -14,7 +14,7 @@ pub enum DialogueState {
         platform: Platform,
     },
     ConfirmDownload {
-        media_info: MediaInfo,
+        media_file: MediaFile,
     },
     // Authentication
     AwaitingUsername(MessageId),

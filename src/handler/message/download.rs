@@ -67,8 +67,8 @@ pub(super) async fn handle_message_awaiting_download_link(
         crate::platform::DownloadState::RateLimited => {
             dialogue.update(DialogueState::Start).await?;
         }
-        crate::platform::DownloadState::Success(media_info) => {
-            dialogue.update(DialogueState::ConfirmDownload { media_info }).await?;
+        crate::platform::DownloadState::Success(media_file) => {
+            dialogue.update(DialogueState::ConfirmDownload { media_file }).await?;
         }
         crate::platform::DownloadState::Error => {
             dialogue.update(DialogueState::Start).await?;

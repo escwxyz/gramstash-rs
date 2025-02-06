@@ -123,17 +123,42 @@ src/
 
 ## Roadmap 🛣️
 
-- [x] Basic post/reel downloading
+### Basic Features
+
 - [x] Redis integration
 - [x] Rate limiting
 - [x] Dialogue state management
 - [x] Session management
-- [x] Story downloading
+- [x] Localization
+- [x] Job queue
+- [ ] Background task scheduling
+- [ ] Membership & Payment
+- [ ] Session
+- [ ] User Configuration
+- [ ] User Statistics
+- [ ] Admin
+
+### Platforms
+
+#### Instagram
+
+- [x] Image & Reel post downloading
+- [ ] Story downloading
 - [ ] Highlight downloading
-- [ ] Profile based content downloading
-- [x] Internationalization
-- [ ] Metrics
-- [ ] Monetization
+- [ ] Profile based bulk downloading
+
+#### Youtube
+
+- [ ] Video downloading
+- [ ] Shorts downloading
+- [ ] Playlist downloading
+- [ ] Video to Audio conversion
+
+#### BiliBili
+
+- [ ] Video downloading
+- [ ] Video to Audio conversion
+- [ ] Playlist downloading
 
 ...
 
@@ -157,7 +182,7 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 ## Known Issues 🐛
 
 - Due to the current limitation of `teloxide_tests`, we either have to use the default `Bot` in `BotService` without any adapters or temporarily disable the tests. See [here](https://github.com/LasterAlex/teloxide_tests/issues/25) for more details.
-- User input is automatically processed by Telegram, currently we restore the display text back to the raw text, which is most likely not the perfect solution.
+- ~~User input is automatically processed by Telegram, currently we restore the display text back to the raw text, which is most likely not the perfect solution.~~
 
 ## Security 🔒
 

@@ -9,7 +9,7 @@ use url::Url;
 
 use crate::service::Cacheable;
 
-use super::{instagram::model::InstagramIdentifier, traits::IntoMediaInfo, PlatformError};
+use super::{instagram::model::InstagramIdentifier, PlatformError};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Ord, PartialOrd)]
 pub enum MediaType {
@@ -61,35 +61,12 @@ impl FromStr for Platform {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
-pub struct MediaInfo {
-    pub identifier: String,
-    pub created_at: DateTime<Utc>,
-    pub title: Option<String>,
-    pub description: Option<String>,
-    pub author: Option<MediaAuthor>,
-    pub content_type: MediaContentType,
-    pub items: Vec<MediaItem>,
-    pub platform: Platform,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 pub enum MediaContentType {
     Single,
     Multiple,
     Story,
-    // 为其他平台预留
     Playlist,
     Album,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
-pub struct MediaItem {
-    pub id: String,
-    pub media_type: MediaType,
-    pub url: Url,
-    pub thumbnail: Url,
-    pub duration: Option<Duration>,
-    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
@@ -102,11 +79,17 @@ pub struct MediaAuthor {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 pub struct MediaFile {
-    pub identifier: String,
+    pub id: String,
     pub created_at: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub author: Option<MediaAuthor>,
     pub content_type: MediaContentType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumbnail: Option<Url>,
     pub items: Vec<MediaFileItem>,
     pub platform: Platform,
 }
@@ -116,6 +99,9 @@ pub struct MediaFileItem {
     pub id: String,
     pub media_type: MediaType,
     pub url: Url,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration: Option<Duration>,
+    pub created_at: DateTime<Utc>,
 }
 
 impl Cacheable for MediaFile {
@@ -124,65 +110,15 @@ impl Cacheable for MediaFile {
     }
 
     fn cache_key(&self) -> String {
-        format!("{}:{}", self.platform.to_string().to_lowercase(), self.identifier)
-    }
-}
-
-// MediaInfo => MediaFile
-impl From<MediaInfo> for MediaFile {
-    fn from(info: MediaInfo) -> Self {
-        MediaFile {
-            identifier: info.identifier,
-            created_at: info.created_at,
-            title: info.title,
-            author: info.author,
-            content_type: info.content_type,
-            items: info
-                .items
-                .into_iter()
-                .map(|item| MediaFileItem {
-                    id: item.id,
-                    media_type: item.media_type,
-                    url: item.url,
-                })
-                .collect(),
-            platform: info.platform,
-        }
-    }
-}
-
-// MediaFile => MediaInfo, lost some fields
-impl IntoMediaInfo for MediaFile {
-    fn into_media_info(self) -> Result<MediaInfo, PlatformError> {
-        Ok(MediaInfo {
-            identifier: self.identifier,
-            created_at: self.created_at,
-            title: self.title,
-            description: None,
-            author: self.author,
-            content_type: self.content_type,
-            items: self
-                .items
-                .into_iter()
-                .map(|item| MediaItem {
-                    id: item.id,
-                    media_type: item.media_type,
-                    url: item.url.clone(),
-                    thumbnail: item.url.clone(),
-                    duration: None,
-                    created_at: self.created_at,
-                })
-                .collect(),
-            platform: self.platform,
-        })
+        format!("{}:{}", self.platform.to_string().to_lowercase(), self.id)
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DownloadState {
     RateLimited,
-    Success(MediaInfo),
-    Error,
+    Success(MediaFile),
+    Error, // TODO: add error inside
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
