@@ -97,4 +97,15 @@ impl Cache for RedisClient {
         let keys: Vec<String> = conn.keys(pattern).await?;
         Ok(keys)
     }
+
+    async fn ttl(&self, key: &str) -> Result<Option<Duration>, StorageError> {
+        let mut conn = self.get_connection().await?;
+        let ttl: Option<i64> = conn.ttl(key).await?;
+
+        if ttl.is_none() {
+            return Ok(None);
+        }
+
+        Ok(Some(Duration::from_secs(ttl.unwrap() as u64)))
+    }
 }

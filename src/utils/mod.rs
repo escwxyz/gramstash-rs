@@ -33,3 +33,17 @@ pub fn reconstruct_raw_text(text: &str, entities: &[MessageEntityRef]) -> String
 
     raw_text
 }
+
+pub fn seconds_to_human_readable(seconds: u64) -> String {
+    let hours = seconds / 3600;
+    let minutes = (seconds % 3600) / 60;
+    let seconds = seconds % 60;
+
+    if hours > 0 {
+        format!("{}h {}m {}s", hours, minutes, seconds)
+    } else if minutes > 0 {
+        format!("{}m {}s", minutes, seconds)
+    } else {
+        format!("{}s", seconds)
+    }
+}

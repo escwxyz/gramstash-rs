@@ -80,7 +80,9 @@ pub(super) async fn handle_message_username(
         )
         .await?;
 
-    let telegram_user_id = UserContext::global().user_id().to_string();
+    let context = UserContext::global();
+
+    let telegram_user_id = context.user_id().to_string();
 
     let state = AppState::get()?;
     let session_service = state.service_registry.session;
@@ -176,7 +178,6 @@ pub(super) async fn handle_message_password(
         return Ok(());
     }
 
-    // IMPORTANT: Delete the password message immediately
     bot.delete_message(msg.chat.id, msg.id).await?;
 
     let status_msg = bot
@@ -184,7 +185,8 @@ pub(super) async fn handle_message_password(
         .await?;
 
     let state = AppState::get()?;
-    let telegram_user_id = UserContext::global().user_id().to_string();
+    let context = UserContext::global();
+    let telegram_user_id = context.user_id().to_string();
 
     let auth_service = state.service_registry.auth.lock().await;
 

@@ -23,6 +23,7 @@ pub trait Cache: Send + Sync + 'static {
     ) -> Result<(), StorageError>;
     async fn del(&self, key: &str) -> Result<(), StorageError>;
     async fn keys(&self, pattern: &str) -> Result<Vec<String>, StorageError>;
+    async fn ttl(&self, key: &str) -> Result<Option<Duration>, StorageError>;
 }
 
 #[derive(Clone)]

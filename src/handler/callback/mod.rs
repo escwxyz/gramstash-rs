@@ -36,7 +36,9 @@ async fn handle_callback(
         .message
         .ok_or_else(|| BotError::DialogueStateError("No message".into()))?;
 
-    let telegram_user_id = UserContext::global().user_id().to_string();
+    let context = UserContext::global();
+
+    let telegram_user_id = context.user_id().to_string();
 
     match data.as_str() {
         // download
@@ -79,6 +81,11 @@ async fn handle_callback(
                 .set_last_interface(&telegram_user_id, "profile_menu")
                 .await?;
             profile::handle_callback_profile_menu(&bot, message).await?
+        }
+
+        "show_usage" => {
+            interaction.set_last_interface(&telegram_user_id, "show_usage").await?;
+            profile::handle_callback_show_usage(&bot, message).await?
         }
         // "cancel_auth" => {
         //     interaction

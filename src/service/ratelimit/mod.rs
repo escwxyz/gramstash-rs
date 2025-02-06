@@ -1,9 +1,14 @@
+mod model;
+
+pub use model::RateLimitInfo;
+
 use chrono::Utc;
 use std::time::Duration;
 
 use crate::{
     runtime::{CacheManager, CacheOptions, CacheType},
     storage::StorageError,
+    utils::seconds_to_human_readable,
 };
 
 #[derive(Clone)]
@@ -53,5 +58,49 @@ impl RateLimitService {
 
         self.cache.set::<u32>(&key, 1, &options).await?;
         Ok(true)
+    }
+
+    pub async fn get_rate_limit_info(&self, telegram_user_id: &str) -> Result<RateLimitInfo, StorageError> {
+        let today = Utc::now().date_naive();
+        let options = CacheOptions {
+            cache_type: CacheType::Redis,
+            ttl: Some(self.window_seconds),
+            prefix: None,
+        };
+        let pattern = format!("rate_limit:{}:*:{}", telegram_user_id, today);
+        let keys = self.cache.keys(&pattern, &options).await?;
+
+        if keys.is_empty() {
+            return Ok(RateLimitInfo {
+                total_requests: 0,
+                total_used_requests: 0,
+                remaining_requests: self.max_requests,
+                reset_time: seconds_to_human_readable(self.window_seconds.as_secs()),
+            });
+        }
+
+        let mut total_requests = 0; // combined request number to all resources today
+        let total_used_requests = keys.len(); // total requests to different resources used today
+
+        let mut max_ttl = Duration::from_secs(0);
+
+        for key in keys {
+            if let Some(count) = self.cache.get::<u32>(&key, &options).await? {
+                total_requests += count;
+                if let Some(ttl) = self.cache.ttl(&key, &options).await? {
+                    max_ttl = max_ttl.max(ttl);
+                }
+            }
+        }
+
+        let remaining_requests = self.max_requests - total_used_requests;
+        let reset_time = seconds_to_human_readable(max_ttl.as_secs());
+
+        Ok(RateLimitInfo {
+            total_requests,
+            total_used_requests,
+            remaining_requests,
+            reset_time,
+        })
     }
 }

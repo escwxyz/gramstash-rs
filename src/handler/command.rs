@@ -13,6 +13,7 @@ use crate::service::dialogue::model::DialogueState;
 use super::keyboard::{get_language_menu_keyboard, get_main_menu_keyboard};
 
 async fn handle_language(bot: Throttle<Bot>, msg: Message) -> HandlerResult<()> {
+    bot.delete_message(msg.chat.id, msg.id).await?;
     bot.send_message(msg.chat.id, t!("commands.language"))
         .reply_markup(get_language_menu_keyboard())
         .await?;
@@ -45,6 +46,8 @@ async fn handle_start(
         telegram_user_id = context.user_id().to_string()
     );
 
+    bot.delete_message(msg.chat.id, msg.id).await?;
+
     bot.send_message(msg.chat.id, welcome_text)
         .reply_markup(get_main_menu_keyboard())
         .await?;
@@ -65,6 +68,7 @@ async fn handle_start(
 }
 
 async fn handle_help(bot: Throttle<Bot>, msg: Message) -> HandlerResult<()> {
+    bot.delete_message(msg.chat.id, msg.id).await?;
     bot.send_message(msg.chat.id, t!("commands.help"))
         .reply_markup(get_main_menu_keyboard())
         .await?;
@@ -73,6 +77,7 @@ async fn handle_help(bot: Throttle<Bot>, msg: Message) -> HandlerResult<()> {
 }
 
 async fn handle_unknown_command(bot: Throttle<Bot>, msg: Message) -> HandlerResult<()> {
+    bot.delete_message(msg.chat.id, msg.id).await?;
     bot.send_message(msg.chat.id, t!("commands.unknown_command")).await?;
     Ok(())
 }

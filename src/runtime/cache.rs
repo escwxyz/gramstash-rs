@@ -139,6 +139,15 @@ impl CacheManager {
         }
     }
 
+    pub async fn ttl(&self, key: &str, options: &CacheOptions) -> Result<Option<Duration>, StorageError> {
+        let key = self.build_key(key, options);
+        match (options.cache_type, &self.redis) {
+            (CacheType::Redis, redis) => redis.ttl(&key).await,
+            (CacheType::Memory, _) => Ok(None),
+            (CacheType::Both, redis) => redis.ttl(&key).await,
+        }
+    }
+
     fn build_key(&self, key: &str, options: &CacheOptions) -> String {
         if let Some(ref prefix) = options.prefix {
             format!("{}:{}", prefix, key)

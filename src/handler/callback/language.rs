@@ -22,7 +22,9 @@ pub async fn handle_callback_language_change(
 
     let language = Language::from_str(lang_code).unwrap_or(Language::English);
 
-    let user_id = UserContext::global().user_id().to_string();
+    let context = UserContext::global();
+
+    let user_id = context.user_id().to_string();
 
     let app_state = AppState::get()?;
     app_state
@@ -51,8 +53,10 @@ pub async fn handle_callback_language_change(
         .unwrap()
         .unwrap_or_default();
 
+    let context = UserContext::global();
+
     // Update commands
-    if UserContext::global().is_admin() {
+    if context.is_admin() {
         command::setup_admin_commands(bot, message.chat().id).await?;
     } else {
         command::setup_user_commands(bot).await?;

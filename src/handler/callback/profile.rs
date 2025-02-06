@@ -8,15 +8,57 @@ use teloxide::{
 };
 
 use crate::{
+    context::UserContext,
     error::HandlerResult,
-    handler::keyboard::{get_cancel_auth_keyboard, get_profile_menu_keyboard},
+    handler::{
+        get_back_to_main_menu_keyboard,
+        keyboard::{get_cancel_auth_keyboard, get_profile_menu_keyboard},
+    },
     service::dialogue::model::DialogueState,
+    state::AppState,
 };
 
 pub async fn handle_callback_profile_menu(bot: &Throttle<Bot>, message: MaybeInaccessibleMessage) -> HandlerResult<()> {
     info!("handle_callback_profile_menu");
     bot.edit_message_text(message.chat().id, message.id(), t!("callbacks.profile.profile_menu"))
         .reply_markup(get_profile_menu_keyboard())
+        .await?;
+
+    Ok(())
+}
+
+pub async fn handle_callback_show_usage(bot: &Throttle<Bot>, message: MaybeInaccessibleMessage) -> HandlerResult<()> {
+    info!("handle_callback_show_usage");
+
+    let processing_msg = bot
+        .edit_message_text(
+            message.chat().id,
+            message.id(),
+            t!("callbacks.profile.usage_processing"),
+        )
+        .await?;
+
+    let context = UserContext::global();
+
+    let telegram_user_id = context.user_id().to_string();
+
+    let state = AppState::get()?;
+
+    let rate_limit_service = state.service_registry.ratelimit;
+
+    let rate_limit_info = rate_limit_service.get_rate_limit_info(&telegram_user_id).await?;
+
+    // TODO: add more data besides rate limit info
+    let usage_text = t!(
+        "callbacks.profile.usage",
+        total_requests = rate_limit_info.total_requests,
+        total_used_requests = rate_limit_info.total_used_requests,
+        remaining_requests = rate_limit_info.remaining_requests,
+        reset_time = rate_limit_info.reset_time
+    );
+
+    bot.edit_message_text(message.chat().id, processing_msg.id, usage_text)
+        .reply_markup(get_back_to_main_menu_keyboard())
         .await?;
 
     Ok(())

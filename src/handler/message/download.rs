@@ -18,7 +18,7 @@ pub(super) async fn handle_message_awaiting_download_link(
 ) -> HandlerResult<()> {
     info!("handle_message_awaiting_download_link");
 
-    bot.delete_message(msg.chat.id, message_id).await?; // TODO
+    bot.delete_message(msg.chat.id, message_id).await?;
 
     let processing_msg = bot
         .send_message(msg.chat.id, t!("messages.download.processing_request"))
@@ -44,13 +44,17 @@ pub(super) async fn handle_message_awaiting_download_link(
         }
     };
 
+    bot.delete_message(msg.chat.id, msg.id).await?; // Delete the URL message from User
+
+    let context = UserContext::global();
+
     let download_task = DownloadTask::new(
         url_str,
         TaskContext {
-            user_id: UserContext::global().user_id().0,
+            user_id: context.user_id().0,
             chat_id: msg.chat.id.0,
             message_id: processing_msg.id.0,
-            user_tier: UserContext::global().user_tier().await,
+            user_tier: context.user_tier().await,
             platform,
         },
     );

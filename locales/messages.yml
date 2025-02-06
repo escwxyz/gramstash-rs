@@ -209,6 +209,21 @@ callbacks.download.select_platform:
   fr: "🔍 Sélectionner la plateforme"
   ja: "🔍 プラットフォームを選択"
   es: "🔍 Seleccionar plataforma"
+callbacks.profile.usage:
+  en: "📈 Usage:\n\nTotal combined requests: %{total_requests}\nTotal used different resources: %{total_used_requests}\nRemaining requests: %{remaining_requests}\nReset time: %{reset_time}"
+  zh: "📈 使用情况:\n\n总请求数: %{total_requests}\n已使用不同资源的请求数: %{total_used_requests}\n剩余请求数: %{remaining_requests}\n重置时间: %{reset_time}"
+  de: "📈 Nutzung:\n\nGesamtanfragen: %{total_requests}\nVerwendete Anfragen: %{total_used_requests}\nVerbleibende Anfragen: %{remaining_requests}\nNeustart: %{reset_time}"
+  fr: "📈 Utilisation:\n\nTotal des requêtes: %{total_requests}\nRequêtes utilisées: %{total_used_requests}\nRequêtes restantes: %{remaining_requests}\nTemps de réinitialisation: %{reset_time}"
+  ja: "📈 使用状況:\n\n総要求数: %{total_requests}\n使用済み要求数: %{total_used_requests}\n残りの要求数: %{remaining_requests}\nリセット時間: %{reset_time}"
+  es: "📈 Uso:\n\nTotal de solicitudes: %{total_requests}\nSolicitudes utilizadas: %{total_used_requests}\nSolicitudes restantes: %{remaining_requests}\nTiempo de reinicio: %{reset_time}"
+callbacks.profile.usage_processing:
+  en: "📈 Processing usage data..."
+  zh: "📈 正在处理使用情况数据..."
+  de: "📈 Verarbeitung der Nutzungsdaten..."
+  fr: "📈 Traitement des données d'utilisation..."
+  ja: "📈 使用状況データの処理中..."
+  es: "📈 Procesando datos de uso..."
+
 messages.download.session_expired:
   en: "⚠️ Your session has expired. Please login again."
   zh: "⚠️ 你的会话已过期。请重新登录。"

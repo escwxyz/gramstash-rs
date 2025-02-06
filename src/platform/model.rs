@@ -1,5 +1,4 @@
 use std::{
-    default,
     fmt::{self, Display},
     str::FromStr,
 };
