@@ -1,41 +1,40 @@
 use serde::{Deserialize, Serialize};
+use tokio::sync::oneshot;
 use uuid::Uuid;
 
-use super::queue::priority::Priority;
+use crate::{
+    context::UserTier,
+    platform::{DownloadState, MediaFile, Platform, PostDownloadState},
+};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Ord, PartialOrd)]
-pub enum UserTier {
-    Subscriber = 3,
-    OneTimePaid = 2,
-    Free = 1,
-}
-
-impl From<UserTier> for Priority {
-    fn from(tier: UserTier) -> Self {
-        match tier {
-            UserTier::Subscriber => Priority::High,
-            UserTier::OneTimePaid => Priority::Normal,
-            UserTier::Free => Priority::Low,
-        }
-    }
+pub trait Task: Send + Sync + 'static {
+    type Result: Send + Sync + 'static;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 pub struct TaskContext {
-    pub user_id: i64,
+    pub user_id: u64,
     pub chat_id: i64,
     pub message_id: i32,
     pub user_tier: UserTier,
+    pub platform: Platform,
 }
 
-// TODO
+pub struct TaskWithResult<T: Task> {
+    pub task: T,
+    pub result_tx: oneshot::Sender<T::Result>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 pub struct DownloadTask {
     pub id: String,
     pub url: String,
     pub context: TaskContext,
     pub created_at: chrono::DateTime<chrono::Utc>,
-    pub attempts: u32,
+}
+
+impl Task for DownloadTask {
+    type Result = DownloadState;
 }
 
 impl DownloadTask {
@@ -45,31 +44,29 @@ impl DownloadTask {
             url,
             context,
             created_at: chrono::Utc::now(),
-            attempts: 0,
         }
     }
 }
 
-// TODO
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
-pub struct CacheTask {
+pub struct PostDownloadTask {
     pub id: String,
-    pub download_task_id: String,
-    pub file_id: String,
+    pub media_file: MediaFile,
     pub context: TaskContext,
     pub created_at: chrono::DateTime<chrono::Utc>,
-    pub attempts: u32,
 }
 
-impl CacheTask {
-    pub fn new(download_task_id: String, file_id: String, context: TaskContext) -> Self {
+impl Task for PostDownloadTask {
+    type Result = PostDownloadState;
+}
+
+impl PostDownloadTask {
+    pub fn new(media_file: MediaFile, context: TaskContext) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
-            download_task_id,
-            file_id,
+            media_file,
             context,
             created_at: chrono::Utc::now(),
-            attempts: 0,
         }
     }
 }

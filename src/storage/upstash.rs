@@ -2,11 +2,16 @@ use async_trait::async_trait;
 use redis::{aio::MultiplexedConnection, AsyncCommands, Client};
 use serde::{de::DeserializeOwned, Serialize};
 
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{Arc, OnceLock},
+    time::Duration,
+};
 
 use crate::storage::StorageError;
 
 use super::Cache;
+
+pub static REDIS_CLIENT: OnceLock<RedisClient> = OnceLock::new();
 
 #[derive(Clone)]
 pub struct RedisClient {
@@ -14,7 +19,12 @@ pub struct RedisClient {
 }
 
 impl RedisClient {
-    pub async fn new(url: &str) -> Result<Self, StorageError> {
+    pub async fn init(url: &str) -> Result<(), StorageError> {
+        if REDIS_CLIENT.get().is_some() {
+            info!("Redis client already initialized");
+            return Ok(());
+        }
+
         info!("Initializing RedisClient...");
         let redis = Arc::new(Client::open(url)?);
 
@@ -24,8 +34,20 @@ impl RedisClient {
             return Err(StorageError::Redis("Redis connection test failed".to_string()));
         }
         info!("Redis connection test successful");
+
+        let client = Self { inner: redis };
+        REDIS_CLIENT
+            .set(client)
+            .map_err(|_| StorageError::Redis("Failed to set global Redis client".into()))?;
+
         info!("RedisClient initialized");
-        Ok(Self { inner: redis })
+        Ok(())
+    }
+
+    pub fn get() -> Result<&'static RedisClient, StorageError> {
+        REDIS_CLIENT
+            .get()
+            .ok_or_else(|| StorageError::Redis("Redis client not initialized".into()))
     }
 
     pub async fn get_connection(&self) -> Result<MultiplexedConnection, StorageError> {
@@ -51,11 +73,11 @@ impl Cache for RedisClient {
     async fn set<T: Serialize + Send + Sync>(
         &self,
         key: &str,
-        value: &T,
+        value: T,
         ttl: Option<Duration>,
     ) -> Result<(), StorageError> {
         let mut conn = self.get_connection().await?;
-        let serialized = serde_json::to_string(value)?;
+        let serialized = serde_json::to_string(&value)?;
         if let Some(ttl) = ttl {
             conn.set_ex::<_, _, String>(key, serialized, ttl.as_secs()).await?;
         } else {

@@ -119,12 +119,12 @@ callbacks.profile.auth_login:
   ja: "🔑 Instagram のユーザー名を入力してください"
   es: "🔑 Por favor, ingrese su nombre de usuario de Instagram"
 callbacks.download.ask_for_download_link:
-  en: "🔍 Please send me a message containing an Instagram content URL (post, story, reel, highlight) you want to download."
-  zh: "🔍 请发送包含 Instagram 内容的 URL（帖子、Story、Reel、Highlight）的消息。"
-  de: "🔍 Bitte senden Sie mir eine Nachricht mit einer Instagram-Inhalts-URL (Post, Story, Reel, Highlight), die Sie herunterladen möchten."
-  fr: "🔍 Veuillez envoyer un message contenant une URL Instagram (post, story, reel, highlight) que vous souhaitez télécharger."
-  ja: "🔍 Instagram のコンテンツ URL（投稿、ストーリー、リール、ハイライト）を含むメッセージを送信してください。"
-  es: "🔍 Envíe un mensaje que contenga una URL de Instagram (post, story, reel, highlight) que desea descargar."
+  en: "🔍 Please send me a message containing an %{platform} content URL you want to download."
+  zh: "🔍 请发送包含 %{platform} 内容的 URL 的消息。"
+  de: "🔍 Bitte senden Sie mir eine Nachricht mit einer %{platform} Inhalts-URL, die Sie herunterladen möchten."
+  fr: "🔍 Veuillez envoyer un message contenant une URL %{platform} que vous souhaitez télécharger."
+  ja: "🔍 %{platform} のコンテンツ URL を含むメッセージを送信してください。"
+  es: "🔍 Envíe un mensaje que contenga una URL de %{platform} que desea descargar."
 callbacks.download.downloading:
   en: "⬇️ Downloading..."
   zh: "⬇️ 正在下载..."
@@ -202,6 +202,13 @@ callbacks.profile.confirming_logout:
   fr: "🔄 Déconnexion ..."
   ja: "🔄 ログアウト中 ..."
   es: "🔄 Cerrando sesión ..."
+callbacks.download.select_platform:
+  en: "🔍 Select Platform"
+  zh: "🔍 选择平台"
+  de: "🔍 Plattform auswählen"
+  fr: "🔍 Sélectionner la plateforme"
+  ja: "🔍 プラットフォームを選択"
+  es: "🔍 Seleccionar plataforma"
 messages.download.session_expired:
   en: "⚠️ Your session has expired. Please login again."
   zh: "⚠️ 你的会话已过期。请重新登录。"

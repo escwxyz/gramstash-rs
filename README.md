@@ -5,6 +5,8 @@
 
 A Telegram bot that allows users to download media content from Instagram, including posts, reels, and stories. Built with Rust for performance.
 
+> **Warning:** This project is under active development and is not ready for production use, the codebase is not stable and is subject to change, the readme is not up to date.
+
 ## Features 🌟
 
 - Download Instagram posts and reels
@@ -19,7 +21,7 @@ A Telegram bot that allows users to download media content from Instagram, inclu
 
 ### Prerequisites
 
-- Rust 1.70 or higher
+- Rust 1.75 or higher
 - A Telegram Bot Token (get it from [@BotFather](https://t.me/botfather))
 - [Upstash](https://upstash.com/) account (for Redis and Rate Limiting)
 - [Shuttle](https://shuttle.dev/) account (for deployment)
@@ -48,11 +50,76 @@ TURSO_TOKEN = "your-turso-token"
 
 ## Architecture 🏗️
 
-- `src/bot.rs` - Core bot logic and dialogue state management
-- `src/config.rs` - Configuration management
-- `src/handlers/` - Message and callback handlers
-- `src/services/` - Instagram API integration and related services
-- `src/utils/` - Helper functions and error handling
+```
+src/
+├── storage/                    # Storage Layer (Base Layer)
+│   ├── mod.rs
+│   ├── redis/                 # Redis implementations
+│   │   ├── mod.rs
+│   │   ├── queue.rs
+│   │   ├── cache.rs
+│   │   └── session.rs
+│   └── turso/                 # SQL implementations
+│       ├── mod.rs
+│       ├── user.rs
+│       └── metrics.rs
+│
+├── runtime/                   # Runtime Layer (Thread Management)
+│   ├── mod.rs
+│   ├── worker/               # Worker thread pools
+│   │   ├── mod.rs
+│   │   ├── download.rs
+│   │   └── background.rs
+│   ├── queue/                # Queue implementations
+│   │   ├── mod.rs
+│   │   └── priority.rs
+│   ├── server/               # HTTP server
+│   │   ├── mod.rs
+│   │   ├── routes/
+│   │   └── middleware/
+│   └── cache/                # Cache management
+│       ├── mod.rs
+│       └── media.rs
+│
+├── services/                 # Core Services Layer
+│   ├── mod.rs
+│   ├── metrics/
+│   │   ├── mod.rs
+│   │   └── collector.rs
+│   ├── ratelimit/
+│   │   ├── mod.rs
+│   │   └── upstash.rs
+│   ├── auth/
+│   │   ├── mod.rs
+│   │   └── session.rs
+│   └── payment/
+│       ├── mod.rs
+│       └── stripe.rs
+│
+├── platforms/               # Platform Layer
+│   ├── mod.rs
+│   ├── traits.rs           # Common platform traits
+│   ├── instagram/
+│   │   ├── mod.rs
+│   │   ├── api.rs
+│   │   ├── models.rs
+│   │   └── download.rs
+│   └── tiktok/            # Future extension
+│       ├── mod.rs
+│       └── api.rs
+│
+├── handlers/              # User Interface Layer
+│   ├── mod.rs
+│   ├── command/
+│   ├── callback/
+│   └── message/
+│
+└── core/                 # Core Types & Utils
+    ├── mod.rs
+    ├── error.rs
+    ├── config.rs
+    └── state.rs
+```
 
 ## Roadmap 🛣️
 

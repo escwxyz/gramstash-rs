@@ -132,3 +132,25 @@ buttons.back_to_main_menu:
   fr: "🔙 Retour au menu principal"
   ja: "🔙 メインメニューに戻る"
   es: "🔙 Volver al menú principal"
+
+buttons.platforms.instagram:
+  en: "📷 Instagram"
+  zh: "📷 Instagram"
+  de: "📷 Instagram"
+  fr: "📷 Instagram"
+  ja: "📷 Instagram"
+  es: "📷 Instagram"
+buttons.platforms.youtube:
+  en: "📺 YouTube"
+  zh: "📺 YouTube"
+  de: "📺 YouTube"
+  fr: "📺 YouTube"
+  ja: "📺 YouTube"
+  es: "📺 YouTube"
+buttons.platforms.bilibili:
+  en: "🎥 Bilibili"
+  zh: "🎥 Bilibili"
+  de: "🎥 Bilibili"
+  fr: "🎥 Bilibili"
+  ja: "🎥 Bilibili"
+  es: "🎥 Bilibili"

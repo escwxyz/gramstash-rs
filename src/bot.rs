@@ -6,23 +6,20 @@ use teloxide::Bot;
 
 use crate::config::AppConfig;
 use crate::error::{BotResult, HandlerResult};
-use crate::handlers::get_handler;
-use crate::services::dialogue::DialogueService;
+use crate::handler::get_handler;
+use crate::service::dialogue::DialogueService;
 use crate::state::AppState;
 use crate::utils::http;
 
 pub struct BotService {
     pub bot: Throttle<Bot>,
+    // pub worker_pool: Arc<WorkerPool<DownloadWorker>>,
 }
 
 impl BotService {
     pub async fn new() -> BotResult<Self> {
         info!("Initializing AppState...");
         let config = AppConfig::get()?;
-        let state = AppState::new(&config).await?;
-        AppState::set_global(state.clone())?;
-        info!("AppState initialized");
-
         let builder = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .connect_timeout(std::time::Duration::from_secs(10))
@@ -31,8 +28,11 @@ impl BotService {
             .user_agent(http::DEFAULT_USER_AGENT);
 
         let client = http::build_client(builder)?;
-
         let bot = Bot::with_client(config.telegram.0.clone(), client).throttle(Limits::default());
+
+        let state = AppState::new(&config, bot.clone()).await?;
+        AppState::set_global(state.clone())?;
+        info!("AppState initialized");
 
         Ok(Self { bot })
     }
@@ -48,16 +48,15 @@ impl BotService {
         }
 
         let bot = self.bot.clone();
-        let state = AppState::get()?;
         let config = AppConfig::get()?;
-        let storage = DialogueService::get_dialogue_storage(&config.dialogue).await?;
+        let storage = DialogueService::get_dialogue_storage(&config.storage).await?;
 
         crate::command::setup_user_commands(&bot).await?;
 
         let handler = get_handler();
 
         Dispatcher::builder(bot, handler)
-            .dependencies(dptree::deps![storage, state]) // ! because of unit testing, we neeed to put AppState as a dependency for easier access in testings
+            .dependencies(dptree::deps![storage]) // ! because of unit testing, we neeed to put AppState as a dependency for easier access in testings
             .error_handler(LoggingErrorHandler::with_custom_text(
                 "An error has occurred in the dispatcher",
             ))

@@ -1,12 +1,13 @@
 use dashmap::DashMap;
+use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
-pub struct MemoryCache<T: Clone> {
+pub struct MemoryCache<T: Clone + Send + Sync + 'static> {
     cache: Arc<DashMap<String, T>>,
 }
 
-impl<T: Clone> MemoryCache<T> {
+impl<T: Clone + Send + Sync + Serialize + DeserializeOwned + 'static> MemoryCache<T> {
     pub fn new(capacity: usize) -> Option<Self> {
         if capacity == 0 {
             None
@@ -17,7 +18,10 @@ impl<T: Clone> MemoryCache<T> {
         }
     }
 
-    pub fn get(&self, key: &str) -> Option<T> {
+    pub fn get(&self, key: &str) -> Option<T>
+    where
+        T: DeserializeOwned,
+    {
         if let Some(value) = self.cache.get(key) {
             return Some(value.value().clone());
         } else {
@@ -25,8 +29,11 @@ impl<T: Clone> MemoryCache<T> {
         }
     }
 
-    pub fn set(&self, key: &str, value: &T) {
-        self.cache.insert(key.to_string(), value.clone());
+    pub fn set(&self, key: &str, value: T)
+    where
+        T: Serialize,
+    {
+        self.cache.insert(key.to_string(), value);
     }
 
     pub fn del(&self, key: &str) {

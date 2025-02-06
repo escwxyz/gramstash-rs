@@ -12,14 +12,6 @@ use teloxide::{
 
 use crate::error::HandlerResult;
 
-// #[derive(BotCommands, Clone)]
-// #[command(rename_rule = "lowercase")]
-// pub enum UserCommand {
-//     Start,
-//     Language,
-//     Help,
-// }
-
 #[derive(BotCommands, Clone, Deserialize, PartialEq, Debug)]
 #[command(rename_rule = "lowercase")]
 pub enum Command {
