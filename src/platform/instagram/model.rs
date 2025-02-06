@@ -3,11 +3,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{
-    platform::{
-        traits::IntoMediaInfo, MediaAuthor, MediaContentType, MediaInfo, MediaItem, MediaType, Platform, PlatformError,
-    },
-    service::Cacheable,
+use crate::platform::{
+    traits::IntoMediaInfo, MediaAuthor, MediaContentType, MediaInfo, MediaItem, MediaType, Platform, PlatformError,
 };
 
 use super::InstagramError;
@@ -101,16 +98,6 @@ pub struct InstagramMedia {
     pub content: InstagramContent,
     pub thumbnail_url: String,
     pub timestamp: DateTime<Utc>,
-}
-
-impl Cacheable for InstagramMedia {
-    fn cache_prefix() -> &'static str {
-        "instagram:media"
-    }
-
-    fn cache_key(&self) -> String {
-        self.id.clone()
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

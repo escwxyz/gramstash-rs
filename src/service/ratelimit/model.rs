@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 #[derive(Debug, Clone)]
 pub struct RateLimitInfo {
     pub total_requests: u32,        // combined request number to all resources today

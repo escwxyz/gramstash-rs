@@ -75,6 +75,7 @@ pub async fn handle_callback_language_change(
         // profile
         "profile_menu" | "cancel_auth" => super::profile::handle_callback_profile_menu(bot, message).await?,
         "auth_login" => super::profile::handle_callback_auth_login(bot, dialogue, message).await?,
+        "show_usage" => super::profile::handle_callback_show_usage(bot, message).await?,
 
         // navigation
         "back_to_main_menu" => super::navigation::handle_callback_back_to_main_menu(bot, dialogue, message).await?,

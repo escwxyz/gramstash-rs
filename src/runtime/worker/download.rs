@@ -16,8 +16,8 @@ use tokio::sync::broadcast;
 use crate::{
     handler::{get_confirm_download_keyboard, get_download_ask_for_link_keyboard, get_main_menu_keyboard},
     platform::{
-        instagram::model::InstagramMedia, traits::PlatformCapability, DownloadState, Platform, PlatformInstagram,
-        PostDownloadState,
+        instagram::model::InstagramMedia, traits::PlatformCapability, DownloadState, MediaFile, Platform,
+        PlatformInstagram, PostDownloadState,
     },
     runtime::{
         queue::TaskQueueManager,
@@ -60,7 +60,7 @@ impl DownloadWorker {
             crate::platform::Platform::Instagram => {
                 info!("Processing Instagram download task");
                 platform_registry
-                    .handle_download::<PlatformInstagram, InstagramMedia>(
+                    .handle_download::<PlatformInstagram, InstagramMedia, MediaFile>(
                         &task.context.platform,
                         &task.url,
                         &telegram_user_id,

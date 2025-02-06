@@ -9,7 +9,7 @@ use url::Url;
 
 use crate::service::Cacheable;
 
-use super::{instagram::model::InstagramIdentifier, PlatformError};
+use super::{instagram::model::InstagramIdentifier, traits::IntoMediaInfo, PlatformError};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Ord, PartialOrd)]
 pub enum MediaType {
@@ -128,7 +128,7 @@ impl Cacheable for MediaFile {
     }
 }
 
-// MediaInfo <=> MediaFile
+// MediaInfo => MediaFile
 impl From<MediaInfo> for MediaFile {
     fn from(info: MediaInfo) -> Self {
         MediaFile {
@@ -148,6 +148,33 @@ impl From<MediaInfo> for MediaFile {
                 .collect(),
             platform: info.platform,
         }
+    }
+}
+
+// MediaFile => MediaInfo, lost some fields
+impl IntoMediaInfo for MediaFile {
+    fn into_media_info(self) -> Result<MediaInfo, PlatformError> {
+        Ok(MediaInfo {
+            identifier: self.identifier,
+            created_at: self.created_at,
+            title: self.title,
+            description: None,
+            author: self.author,
+            content_type: self.content_type,
+            items: self
+                .items
+                .into_iter()
+                .map(|item| MediaItem {
+                    id: item.id,
+                    media_type: item.media_type,
+                    url: item.url.clone(),
+                    thumbnail: item.url.clone(),
+                    duration: None,
+                    created_at: self.created_at,
+                })
+                .collect(),
+            platform: self.platform,
+        })
     }
 }
 

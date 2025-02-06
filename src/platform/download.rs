@@ -3,7 +3,11 @@ use crate::{error::BotError, service::Cacheable, state::AppState};
 use super::{traits::IntoMediaInfo, DownloadState, Platform, PlatformCapability, PlatformError, PlatformRegistry};
 
 impl PlatformRegistry {
-    pub async fn handle_download<P: PlatformCapability + 'static, C: Cacheable + IntoMediaInfo + 'static>(
+    pub async fn handle_download<
+        P: PlatformCapability + 'static,
+        C: IntoMediaInfo + 'static,
+        T: Cacheable + IntoMediaInfo + 'static,
+    >(
         &self,
         platform: &Platform,
         url: &str,
@@ -15,7 +19,7 @@ impl PlatformRegistry {
             .ok_or_else(|| PlatformError::ResourceError("Platform not found".into()))?;
         let resource = platform_service.parse_url(url).await?;
         info!("resource: {:?}", resource);
-        let identifier = self.generate_identifier(&resource);
+        let identifier = self.generate_identifier(&resource); // <platform>:<identifier>
         info!("identifier: {:?}", identifier);
 
         let ratelimit = AppState::get()?.service_registry.ratelimit;
@@ -26,11 +30,13 @@ impl PlatformRegistry {
         }
 
         let cache_service = AppState::get()?.service_registry.cache;
-        info!("checking cache");
-        if let Some(cached) = cache_service.get::<C>(&identifier).await? {
+
+        if let Some(cached) = cache_service.get::<T>(&identifier).await? {
             info!("cache hit");
             return Ok(DownloadState::Success(cached.into_media_info()?));
         }
+
+        info!("cache missed");
 
         info!("fetching resource");
         match platform_service.fetch_resource(&resource).await {
