@@ -32,7 +32,7 @@ shuttle-runtime = "0.51.0"
 shuttle-turso = "0.51.0"
 teloxide = { git = "https://github.com/teloxide/teloxide.git", features = ["macros", "redis-storage", "throttle"] }
 thiserror = "2.0.11"
-tokio = { version = "1.42.0", features = ["full"] }
+tokio = { version = "1.43.0", features = ["full"] }
 url = "2.5.2"
 uuid = "1.12.0"
 
