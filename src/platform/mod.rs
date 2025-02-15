@@ -67,10 +67,4 @@ impl PlatformRegistry {
             .map(|platform| platform.key().clone())
             .collect::<Vec<_>>()
     }
-
-    // pub fn get_auth_platform(&self, platform: &Platform) -> Option<Arc<dyn PlatformAuth>> {
-    //     self.platforms
-    //         .get(platform)
-    //         .and_then(|p| p.value().as_any().downcast_ref::<Arc<dyn PlatformAuth>>().cloned())
-    // }
 }

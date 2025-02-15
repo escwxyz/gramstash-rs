@@ -29,6 +29,7 @@ pub trait Cache: Send + Sync + 'static {
 #[derive(Clone)]
 pub struct StorageManager {
     turso: &'static TursoClient,
+    #[allow(dead_code)]
     redis: &'static RedisClient,
 }
 
@@ -45,10 +46,6 @@ impl StorageManager {
         let turso = TursoClient::get()?;
 
         Ok(Self { redis, turso })
-    }
-
-    pub fn redis(&self) -> &RedisClient {
-        self.redis
     }
 
     pub fn turso(&self) -> &TursoClient {
