@@ -29,7 +29,7 @@ serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.137"
 sha2 = "0.10"
 shuttle-runtime = "0.51.0"
-shuttle-turso = "0.51.0"
+shuttle-turso = "0.52.0"
 teloxide = { git = "https://github.com/teloxide/teloxide.git", features = ["macros", "redis-storage", "throttle"] }
 thiserror = "2.0.11"
 tokio = { version = "1.43.0", features = ["full"] }
