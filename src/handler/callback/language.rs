@@ -35,15 +35,16 @@ pub async fn handle_callback_language_change(
 
     rust_i18n::set_locale(&language.to_string());
 
-    bot.edit_message_text(
-        message.chat().id,
-        status_message.id,
-        t!(
-            "callbacks.language.change_language",
-            language = t!(format!("buttons.language_menu.{}", language.to_string()))
-        ),
-    )
-    .await?;
+    let status_msg = bot
+        .edit_message_text(
+            message.chat().id,
+            status_message.id,
+            t!(
+                "callbacks.language.change_language",
+                language = t!(format!("buttons.language_menu.{}", language.to_string()))
+            ),
+        )
+        .await?;
 
     let LastInterfaceState { interface, .. } = app_state
         .service_registry
@@ -61,6 +62,8 @@ pub async fn handle_callback_language_change(
     } else {
         command::setup_user_commands(bot).await?;
     }
+
+    bot.delete_message(message.chat().id, status_msg.id).await?;
 
     match interface.as_str() {
         // download
