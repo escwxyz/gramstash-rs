@@ -30,7 +30,7 @@ pub trait PlatformAuth: PlatformCapability {
 
         let host = match platform {
             Platform::Instagram => "https://www.instagram.com",
-            _ => todo!(),
+            _ => return Err(AuthError::Other("Platform not supported".into())),
         };
 
         let cookies = jar.cookies(&host.parse().unwrap());
@@ -52,7 +52,7 @@ pub trait PlatformAuth: PlatformCapability {
         let platform = self.platform_id();
         let (host, domain) = match platform {
             Platform::Instagram => ("https://www.instagram.com", ".instagram.com"),
-            _ => todo!(),
+            _ => return Err(AuthError::Other("Platform not supported".into())),
         };
         let base_url = Url::parse(host).unwrap();
         let http_service = self.get_http_service();

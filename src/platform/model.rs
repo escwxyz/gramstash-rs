@@ -126,3 +126,97 @@ pub enum PostDownloadState {
     Success,
     Error,
 }
+
+impl MediaFile {
+    pub fn get_preview_text(&self) -> String {
+        let mut preview = String::new();
+
+        if let Some(title) = &self.title {
+            preview.push_str(&format!("📝 {}\n\n", title));
+        }
+
+        if let Some(author) = &self.author {
+            preview.push_str(&format!("👤 {}\n\n", author.username));
+        }
+
+        if let Some(desc) = &self.description {
+            let truncated_desc = if desc.len() > 100 {
+                format!("{}...", &desc[0..97])
+            } else {
+                desc.clone()
+            };
+
+            preview.push_str(&format!("📄 {}\n\n", truncated_desc));
+        }
+
+        match self.content_type {
+            MediaContentType::Single => {
+                if let Some(first_item) = self.items.first() {
+                    match first_item.media_type {
+                        MediaType::Image => {
+                            let text = t!("messages.download.preview.single_image");
+
+                            preview.push_str(&format!("📷 {}\n\n", text));
+                        }
+                        MediaType::Video => {
+                            let duration = first_item.duration.map(|d| format!("{}", d.num_seconds()));
+
+                            let text = match duration {
+                                Some(duration) => t!(
+                                    "messages.download.preview.single_video_with_duration",
+                                    duration = duration
+                                ),
+                                None => t!("messages.download.preview.single_video"),
+                            };
+
+                            preview.push_str(&format!("🎥 {}\n\n", text));
+                        }
+                        _ => todo!(),
+                    }
+                }
+            }
+
+            MediaContentType::Multiple => {
+                let mut image_count = 0;
+                let mut video_count = 0;
+                let mut audio_count = 0;
+
+                for item in &self.items {
+                    match item.media_type {
+                        MediaType::Image => image_count += 1,
+                        MediaType::Video => video_count += 1,
+                        MediaType::Audio => audio_count += 1,
+                    }
+                }
+
+                if image_count > 0 && video_count == 0 && audio_count == 0 {
+                    let text = t!("messages.download.preview.multiple_images", count = image_count);
+
+                    preview.push_str(&format!("📷 {}\n\n", text));
+                } else if video_count > 0 && image_count == 0 && audio_count == 0 {
+                    let text = t!("messages.download.preview.multiple_videos", count = video_count);
+
+                    preview.push_str(&format!("🎥 {}\n\n", text));
+                } else if audio_count > 0 && image_count == 0 && video_count == 0 {
+                    let text = t!("messages.download.preview.multiple_audios", count = audio_count);
+
+                    preview.push_str(&format!("🎵 {}\n\n", text));
+                } else {
+                    todo!()
+
+                    // preview.push_str(&format!("📦 *{}*:\n",
+                    //     t!("messages.download.preview.multiple_files"),
+                    //     image_count,
+                    //     video_count,
+                    //     audio_count,
+                    // ));
+                }
+            }
+            _ => todo!(),
+        }
+
+        preview.push_str(&format!("⏰ {}\n", self.created_at.format("%Y-%m-%d %H:%M:%S")));
+
+        preview
+    }
+}

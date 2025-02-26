@@ -85,8 +85,8 @@ impl PlatformCapability for PlatformInstagram {
                 username: _,
                 story_id: _,
             }) => {
-                // TODO
-                todo!()
+                error!("Not implemented yet");
+                Err(Box::new(PlatformError::NotImplemented))
             }
             PlatformIdentifier::Instagram(
                 InstagramIdentifier::Post { shortcode } | InstagramIdentifier::Reel { shortcode },
@@ -116,8 +116,18 @@ impl PlatformCapability for PlatformInstagram {
                     .and_then(|d| d.get("xdt_shortcode_media"))
                     .ok_or_else(|| PlatformError::ParsingError("Missing xdt_shortcode_media".to_string()))?;
 
-                let media_data = serde_json::from_value::<XDTGraphMedia>(media_value.clone())
-                    .map_err(|e| PlatformError::ParsingError(format!("Failed to deserialize media: {}", e)))?;
+                if media_value.is_null() {
+                    return Err(PlatformError::ResourceError("Resource not found or deleted".into()).into());
+                }
+
+                let media_data = serde_json::from_value::<XDTGraphMedia>(media_value.clone()).map_err(|e| {
+                    error!("Failed to deserialize media: {}", e);
+                    error!(
+                        "Raw media data: {}",
+                        serde_json::to_string_pretty(&media_value).unwrap_or_default()
+                    );
+                    PlatformError::ParsingError(format!("Failed to deserialize media: {}", e))
+                })?;
 
                 let media = match media_data {
                     XDTGraphMedia::Image(image) => TryInto::<InstagramMedia>::try_into(image)?,

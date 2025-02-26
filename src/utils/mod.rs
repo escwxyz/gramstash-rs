@@ -3,7 +3,9 @@ pub mod http;
 #[cfg(test)]
 pub mod test;
 
-use teloxide::types::{MessageEntityKind, MessageEntityRef};
+use teloxide::types::{MessageEntityKind, MessageEntityRef, UserId};
+
+use crate::{config::AppConfig, error::BotError};
 
 /// Reconstructs the original raw text from a message by analyzing its entities.
 /// Handles nested formatting by applying inner wrappers first.
@@ -46,4 +48,9 @@ pub fn seconds_to_human_readable(seconds: u64) -> String {
     } else {
         format!("{}s", seconds)
     }
+}
+
+pub fn is_admin(user_id: UserId) -> Result<bool, BotError> {
+    let config = AppConfig::get()?;
+    Ok(config.admin.telegram_user_id == user_id)
 }

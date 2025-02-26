@@ -5,10 +5,10 @@ use teloxide::prelude::*;
 use teloxide::{types::Message, Bot};
 
 use crate::command::{self, Command};
-use crate::config::AppConfig;
 use crate::context::UserContext;
 use crate::error::{BotError, HandlerResult};
 use crate::service::dialogue::model::DialogueState;
+use crate::utils::is_admin;
 
 use super::keyboard::{get_language_menu_keyboard, get_main_menu_keyboard};
 
@@ -30,9 +30,7 @@ async fn handle_start(
 
     let first_name = msg.from.clone().unwrap().first_name;
 
-    let config = AppConfig::get()?;
-
-    let is_admin = config.admin.telegram_user_id == user_id;
+    let is_admin = is_admin(user_id)?;
 
     UserContext::ensure_initialized(user_id, first_name, is_admin).await;
 
@@ -82,6 +80,23 @@ async fn handle_unknown_command(bot: Throttle<Bot>, msg: Message) -> HandlerResu
     Ok(())
 }
 
+// async fn handle_stats(bot: Throttle<Bot>, msg: Message) -> HandlerResult<()> {
+//     bot.delete_message(msg.chat.id, msg.id).await?;
+
+//     let processing_msg = bot.send_message(msg.chat.id, t!("commands.stats.processing")).await?;
+
+//     // let total_users = cache_service.keys(pattern)
+
+//     // get stats from db
+//     // stats include
+//     // - total number of users
+//     // TODO
+//     bot.edit_message_text(msg.chat.id, processing_msg.id, t!("commands.stats"))
+//         .await?;
+
+//     Ok(())
+// }
+
 async fn handle_command(
     bot: Throttle<Bot>,
     msg: Message,
@@ -92,7 +107,7 @@ async fn handle_command(
         Command::Start => handle_start(bot, dialogue, msg).await?,
         Command::Help => handle_help(bot, msg).await?,
         Command::Language => handle_language(bot, msg).await?,
-        // Command::Stats | Command::Status if !ctx.is_admin => handle_unknown_command(bot, msg).await?,
+        // Command::Stats if is_admin(msg.clone().from.unwrap().id)? => handle_stats(bot, msg).await?,
         _ => handle_unknown_command(bot, msg).await?,
     }
 

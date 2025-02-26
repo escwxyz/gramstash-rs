@@ -75,59 +75,5 @@ pub(super) async fn handle_message_awaiting_download_link(
         }
     }
 
-    // let (instagram_media, message_to_edit): (BotResult<InstagramMedia>, MessageId) = match content_type {
-    //     "story" => {
-    //         todo!()
-    //         // let validating_msg = bot
-    //         //     .edit_message_text(
-    //         //         msg.chat.id,
-    //         //         processing_msg.id,
-    //         //         t!("messages.download.download_story.validating_session"),
-    //         //     )
-    //         //     .await?;
-
-    //         // let session_data = state.session.get_valid_session(&msg.chat.id.to_string()).await?;
-
-    //         // if let Some(session_data) = session_data {
-    //         //     let mut auth_service = state.auth.lock().await;
-    //         //     auth_service.restore_cookies(&session_data)?;
-    //         //     let http = HttpService::new(false, DeviceType::Desktop, Some(auth_service.client.clone()))?;
-
-    //         //     let fetching_stories_msg = bot
-    //         //         .edit_message_text(
-    //         //             msg.chat.id,
-    //         //             validating_msg.id,
-    //         //             t!("messages.download.download_story.fetching_stories"),
-    //         //         )
-    //         //         .await?;
-
-    //         //     (
-    //         //         state
-    //         //             .instagram
-    //         //             .get_story(
-    //         //                 &telegram_user_id,
-    //         //                 &target_instagram_username.unwrap_or_default(),
-    //         //                 &identifier,
-    //         //                 &http,
-    //         //             )
-    //         //             .await,
-    //         //         fetching_stories_msg.id,
-    //         //     )
-    //         // } else {
-    //         //     bot.edit_message_text(msg.chat.id, processing_msg.id, t!("messages.download.session_expired"))
-    //         //         .reply_markup(keyboard::ProfileMenu::get_profile_menu_inline_keyboard(false))
-    //         //         .await?;
-
-    //         //     dialogue
-    //         //         .update(DialogueState::Start)
-    //         //         .await
-    //         //         .map_err(|e| BotError::DialogueStateError(e.to_string()))?;
-
-    //         //     return Ok(());
-    //         // }
-    //     }
-    //     _ => (instagram_service.fetch_resource(&identifier).await, processing_msg.id),
-    // };
-
     Ok(())
 }

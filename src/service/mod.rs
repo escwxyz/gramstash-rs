@@ -20,6 +20,7 @@ mod interaction;
 mod language;
 mod ratelimit;
 mod session;
+mod user;
 
 pub use auth::*;
 pub use cache::Cacheable;

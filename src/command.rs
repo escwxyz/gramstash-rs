@@ -37,7 +37,6 @@ impl Command {
         ]
     }
 
-    #[allow(unused)]
     pub fn admin_commands() -> Vec<BotCommand> {
         vec![
             BotCommand::new("start", t!("commands.description.start")),

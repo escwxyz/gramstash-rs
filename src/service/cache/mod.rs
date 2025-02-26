@@ -51,14 +51,24 @@ impl CacheService {
             .await
             .map_err(CacheError::Storage)
     }
-    #[allow(dead_code)]
-    pub async fn delete<T: Cacheable>(&self, key: &str) -> Result<(), CacheError> {
-        let options = CacheOptions {
-            cache_type: CacheType::Redis,
-            ttl: None,
-            prefix: Some(T::cache_prefix().to_string()),
-        };
 
-        self.cache.del(key, &options).await.map_err(CacheError::Storage)
-    }
+    // pub async fn keys<T: Cacheable>(&self, pattern: &str) -> Result<Vec<String>, CacheError> {
+    //     let options = CacheOptions {
+    //         cache_type: CacheType::Redis,
+    //         ttl: None,
+    //         prefix: Some(T::cache_prefix().to_string()),
+    //     };
+
+    //     self.cache.keys(pattern, &options).await.map_err(CacheError::Storage)
+    // }
+
+    // pub async fn delete<T: Cacheable>(&self, key: &str) -> Result<(), CacheError> {
+    //     let options = CacheOptions {
+    //         cache_type: CacheType::Redis,
+    //         ttl: None,
+    //         prefix: Some(T::cache_prefix().to_string()),
+    //     };
+
+    //     self.cache.del(key, &options).await.map_err(CacheError::Storage)
+    // }
 }

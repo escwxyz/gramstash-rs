@@ -10,4 +10,6 @@ pub enum PlatformError {
     Instagram(#[from] InstagramError),
     #[error("Invalid platform: {0}")]
     InvalidPlatform(String),
+    #[error("Not implemented yet")]
+    NotImplemented,
 }

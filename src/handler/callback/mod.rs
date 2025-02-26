@@ -16,9 +16,12 @@ use crate::{
 use teloxide::{
     adaptors::Throttle,
     dispatching::{dialogue::ErasedStorage, UpdateHandler},
+    payloads::SendMessageSetters,
     prelude::*,
     types::CallbackQuery,
 };
+
+use super::get_main_menu_keyboard;
 
 async fn handle_callback(
     bot: Throttle<Bot>,
@@ -113,7 +116,11 @@ async fn handle_callback(
             let lang_code = s.split(":").nth(1).unwrap_or("en");
             language::handle_callback_language_change(&bot, dialogue, message, lang_code).await?
         }
-        _ => todo!(),
+        _ => {
+            bot.send_message(message.chat().id, t!("callback.unknown"))
+                .reply_markup(get_main_menu_keyboard())
+                .await?;
+        }
     }
 
     bot.answer_callback_query(&q.id).cache_time(1).await?;

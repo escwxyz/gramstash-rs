@@ -13,7 +13,6 @@ use crate::utils::http;
 
 pub struct BotService {
     pub bot: Throttle<Bot>,
-    // pub worker_pool: Arc<WorkerPool<DownloadWorker>>,
 }
 
 impl BotService {
@@ -56,7 +55,7 @@ impl BotService {
         let handler = get_handler();
 
         Dispatcher::builder(bot, handler)
-            .dependencies(dptree::deps![storage]) // ! because of unit testing, we neeed to put AppState as a dependency for easier access in testings
+            .dependencies(dptree::deps![storage])
             .error_handler(LoggingErrorHandler::with_custom_text(
                 "An error has occurred in the dispatcher",
             ))

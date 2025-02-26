@@ -74,7 +74,6 @@ impl PolarPaymentProvider {
         Ok(products_response.items)
     }
 
-    // 辅助方法：获取月度订阅价格
     async fn get_monthly_price_id(&self) -> Result<String, PaymentError> {
         let products = self.get_products().await?;
 
@@ -97,22 +96,18 @@ impl PolarPaymentProvider {
 #[async_trait]
 impl PaymentProvider for PolarPaymentProvider {
     async fn create_checkout_session(&self, user_id: &str) -> Result<String, PaymentError> {
-        // 调用 Polar API 创建结账会话
         todo!()
     }
 
     async fn handle_webhook(&self, payload: &[u8], signature: &str) -> Result<WebhookEvent, PaymentError> {
-        // 处理 Polar webhook
         todo!()
     }
 
     async fn get_subscription(&self, subscription_id: &str) -> Result<Subscription, PaymentError> {
-        // 获取订阅信息
         todo!()
     }
 
     async fn create_trial(&self, user_id: &str) -> Result<Subscription, PaymentError> {
-        // 创建试用订阅
         todo!()
     }
 

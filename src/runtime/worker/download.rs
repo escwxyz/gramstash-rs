@@ -6,9 +6,9 @@ use std::sync::{
 use async_trait::async_trait;
 use teloxide::{
     adaptors::Throttle,
-    payloads::{EditMessageTextSetters, SendMessageSetters},
+    payloads::{EditMessageTextSetters, SendMessageSetters, SendPhotoSetters},
     prelude::Requester,
-    types::{ChatId, MessageId},
+    types::{ChatId, InputFile, MessageId},
     Bot,
 };
 use tokio::sync::broadcast;
@@ -61,13 +61,9 @@ impl DownloadWorker {
                     .await
                     .map_err(|e| RuntimeError::TaskError(e.to_string()))?
             }
-            crate::platform::Platform::Youtube => {
-                info!("Processing Youtube download task");
-                todo!()
-            }
-            crate::platform::Platform::Bilibili => {
-                info!("Processing Bilibili download task");
-                todo!()
+            _ => {
+                error!("Not implemented yet");
+                DownloadState::Error
             }
         };
 
@@ -90,17 +86,36 @@ impl DownloadWorker {
 
                 queue_manager.add_pending_confirmation(media_info.clone(), task.context.clone());
 
-                // TODO, send preview message
+                let preview_text = media_info.get_preview_text();
 
-                self.bot
-                    .edit_message_text(
-                        ChatId(task.context.chat_id),
-                        MessageId(task.context.message_id),
-                        "TODO: some preview message",
-                    )
-                    .reply_markup(get_confirm_download_keyboard())
-                    .await
-                    .unwrap();
+                if let Some(thumbnail_url) = &media_info.thumbnail {
+                    self.bot
+                        .delete_message(ChatId(task.context.chat_id), MessageId(task.context.message_id))
+                        .await
+                        .map_err(|e| RuntimeError::TaskError(format!("Failed to delete message: {}", e)))?;
+
+                    let new_message = self
+                        .bot
+                        .send_photo(ChatId(task.context.chat_id), InputFile::url(thumbnail_url.clone()))
+                        .caption(preview_text)
+                        .reply_markup(get_confirm_download_keyboard())
+                        .await
+                        .map_err(|e| RuntimeError::TaskError(format!("Failed to send preview message: {}", e)))?;
+
+                    let mut updated_context = task.context.clone();
+                    updated_context.message_id = new_message.id.0;
+                    queue_manager.update_pending_confirmation_context(media_info.id.clone(), updated_context);
+                } else {
+                    self.bot
+                        .edit_message_text(
+                            ChatId(task.context.chat_id),
+                            MessageId(task.context.message_id),
+                            preview_text,
+                        )
+                        .reply_markup(get_confirm_download_keyboard())
+                        .await
+                        .map_err(|e| RuntimeError::TaskError(format!("Failed to edit message: {}", e)))?;
+                }
 
                 Ok(DownloadState::Success(media_info))
             }
@@ -113,7 +128,7 @@ impl DownloadWorker {
                     )
                     .reply_markup(get_main_menu_keyboard())
                     .await
-                    .unwrap(); // TODO error handling
+                    .map_err(|e| RuntimeError::TaskError(format!("Something went wrong: {}", e)))?;
 
                 Ok(DownloadState::Error)
             }

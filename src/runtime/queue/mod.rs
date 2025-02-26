@@ -66,6 +66,12 @@ impl TaskQueueManager {
         let post_task = PostDownloadTask::new(media_file.clone(), context);
         self.pending_confirmations.insert(media_file.id, post_task);
     }
+
+    pub fn update_pending_confirmation_context(&self, media_file_id: String, context: TaskContext) {
+        if let Some(mut post_task) = self.pending_confirmations.get_mut(&media_file_id) {
+            post_task.context = context;
+        }
+    }
 }
 
 // #[cfg(test)]
