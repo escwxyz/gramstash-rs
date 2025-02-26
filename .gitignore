@@ -4,3 +4,4 @@ Secrets*.toml
 .env
 /coverage_output
 .DS_Store
+.ignore

@@ -5,6 +5,7 @@ use teloxide::prelude::*;
 use teloxide::{types::Message, Bot};
 
 use crate::command::{self, Command};
+use crate::config::AppConfig;
 use crate::context::UserContext;
 use crate::error::{BotError, HandlerResult};
 use crate::service::dialogue::model::DialogueState;
@@ -67,7 +68,8 @@ async fn handle_start(
 
 async fn handle_help(bot: Throttle<Bot>, msg: Message) -> HandlerResult<()> {
     bot.delete_message(msg.chat.id, msg.id).await?;
-    bot.send_message(msg.chat.id, t!("commands.help"))
+    let download_limit = AppConfig::get()?.service.ratelimit.daily_limit;
+    bot.send_message(msg.chat.id, t!("commands.help", download_limit = download_limit))
         .reply_markup(get_main_menu_keyboard())
         .await?;
 
