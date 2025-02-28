@@ -20,7 +20,7 @@ dashmap = "6.1.0"
 libsql = "0.6.0"
 log = "0.4.25"
 pretty_env_logger = "0.5.0"
-rand = "0.8.5"
+rand = "0.9.0"
 redis = { version = "0.24", default-features = false, features = ["tokio-comp", "connection-manager", "tokio-native-tls-comp", "tls", "tls-native-tls"] }
 regex = "1.11.1"
 reqwest = { version = "0.12.12", features = ["json", "socks", "cookies"] }
