@@ -3908,7 +3908,7 @@ dependencies = [
  "rmp-serde",
  "serde",
  "serde_json",
- "shuttle-common",
+ "shuttle-common 0.51.0",
  "tokio",
  "tokio-tungstenite",
  "url",
@@ -3959,6 +3959,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "shuttle-common"
+version = "0.54.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64746d5d93631ad127e671227ec7afbbc99277d0e3ee0e79d96d29cb4062f253"
+dependencies = [
+ "chrono",
+ "http 1.2.0",
+ "semver",
+ "serde",
+ "serde_json",
+ "strum 0.27.1",
+ "tracing",
+ "typeshare",
+ "zeroize",
+]
+
+[[package]]
 name = "shuttle-proto"
 version = "0.51.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3967,7 +3984,7 @@ dependencies = [
  "futures-core",
  "prost",
  "prost-types",
- "shuttle-common",
+ "shuttle-common 0.51.0",
  "tonic 0.10.2",
 ]
 
@@ -3984,9 +4001,9 @@ dependencies = [
  "serde_json",
  "shuttle-api-client",
  "shuttle-codegen",
- "shuttle-common",
+ "shuttle-common 0.51.0",
  "shuttle-proto",
- "shuttle-service",
+ "shuttle-service 0.51.0",
  "strfmt",
  "tokio",
  "tokio-stream",
@@ -4005,22 +4022,36 @@ dependencies = [
  "anyhow",
  "async-trait",
  "serde",
- "shuttle-common",
+ "shuttle-common 0.51.0",
+ "strfmt",
+ "thiserror 2.0.11",
+]
+
+[[package]]
+name = "shuttle-service"
+version = "0.54.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e7f5004ff4b393c909a1543f63d1518282e7a10480151da3f1f2d827d9e149e"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "serde",
+ "shuttle-common 0.54.0",
  "strfmt",
  "thiserror 2.0.11",
 ]
 
 [[package]]
 name = "shuttle-turso"
-version = "0.51.0"
+version = "0.54.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e877a52856ed094108a749cd9425a28576e6ed3bf5edea28fb9f6673cb5e7032"
+checksum = "046dea40972aeea7030743b8fb208a437b6071cfe149c23b2273ef9e69d279ce"
 dependencies = [
  "async-trait",
  "dunce",
  "libsql",
  "serde",
- "shuttle-service",
+ "shuttle-service 0.54.0",
  "url",
 ]
 
@@ -4137,6 +4168,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "strum"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f64def088c51c9510a8579e3c5d67c65349dcf755e5479ad3d010aa6454e2c32"
+dependencies = [
+ "strum_macros 0.27.1",
+]
+
+[[package]]
 name = "strum_macros"
 version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4154,6 +4194,19 @@ name = "strum_macros"
 version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn 2.0.91",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c77a8c5abcaf0f9ce05d62342b7d298c346515365c36b673df4ebe3ced01fde8"
 dependencies = [
  "heck 0.5.0",
  "proc-macro2",
