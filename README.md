@@ -5,7 +5,14 @@
 
 A Telegram bot that allows users to download media content from Instagram, including posts, reels, and stories. Built with Rust for performance.
 
-> **Warning:** This project is under active development and is not ready for production use, the codebase is not stable and is subject to change, the readme is not up to date.
+> **NOTE** It's a proof of concept project, far away from completion. It is working for posts and reels, downloading stories requires user authentication which is unsafe to do here in Telegram. To deploy it, you need to set up a Shuttle account, use it at your own risk.
+
+## Demos 🌠
+
+![](./assets/1.jpeg)
+![](./assets/2.jpeg)
+![](./assets/3.jpeg)
+![](./assets/4.jpeg)
 
 ## Features 🌟
 
