@@ -57,6 +57,8 @@ TURSO_TOKEN = "your-turso-token"
 
 ## Architecture 🏗️
 
+![](./assets/mermaid-flow.svg)
+
 ```
 src/
 ├── storage/                    # Storage Layer (Base Layer)
